@@ -4,7 +4,7 @@ Documento vivo. Cada decisión lleva su motivo en una línea. La fuente de verda
 del diseño es [`plan-diseno.pdf`](plan-diseno.pdf); si algo de aquí lo
 contradice, manda el plan y hay que avisar.
 
-Estado: **fase 1 hecha** (esqueleto, lanzador y CI). Las decisiones están en la sección 12. Las que
+Estado: **fase 2 hecha** (intérprete). Las decisiones están en la sección 12. Las que
 llevan **PROVISIONAL** son propuestas mías aceptadas para poder avanzar; se
 listan en `docs/PROGRESS.md` («Decisiones por revisar»). Los números que no
 vienen del plan van marcados en los JSON y en `docs/BALANCE.md`.
@@ -75,13 +75,14 @@ java-wave-defense/
 │       ├── lexer/                 # Token, TokenType, Lexer
 │       ├── ast/                   # sealed Node/Stmt/Expr como records
 │       ├── parser/                # Parser descendente recursivo
-│       ├── check/                 # Checker: desbloqueos, tipos, ámbitos, conteo de memoria
-│       ├── runtime/               # Compiler (AST → árbol ejecutable tipado), Executor, presupuesto
-│       ├── api/                   # TurretApi, EnemyRef, AmmoType, ApiCatalog, Feature
-│       └── diag/                  # CompileError, ScriptFault, códigos de error
+│       ├── ScriptCompiler.java    # fachada: texto → CompileResult
+│       ├── check/                 # Checker: desbloqueos, tipos, ámbitos, memoria; emite el árbol
+│       ├── runtime/               # Nodes (fábricas), Frame, CompiledScript (ejecuta un ciclo)
+│       ├── api/                   # TurretApi, ScriptApi (vocabulario), Feature, Unlocks, límites
+│       └── diag/                  # ErrorCode, CompileError, FaultType, CycleOutcome
 ├── core-sim/                      # simulación determinista. Java puro (+ Jackson)
 │   └── src/{main,test}/java/io/github/yeray06/wavedefense/sim/
-│       ├── data/                  # records de balance + carga y validación de JSON
+│       ├── data/                  # carga y validación de JSON (ScriptApiLoader…)
 │       ├── world/                 # Simulation, PathTrack, Enemy, Bullet, pools, Core
 │       ├── turret/                # Turret, Heat, Magazine, TurretApiAdapter
 │       ├── wave/                  # WaveDirector, SpawnSchedule, WaveReport
@@ -181,13 +182,25 @@ texto ─► Lexer ─► tokens ─► Parser ─► AST ─► Checker ─► 
   es añadir records y casos al `switch`; el compilador de Java avisa de los
   `switch` que se quedan sin cubrir.
 - **Checker**: una pasada que resuelve nombres y ámbitos, comprueba tipos
-  estáticos (`int`, `double`, `boolean`, `Enemigo`, `Municion`), aplica los
-  desbloqueos y cuenta la memoria.
-- **Compiler**: convierte el AST comprobado en un árbol de nodos ejecutables
-  tipados (`IntNode.eval()`, `BoolNode.eval()`, `RefNode.eval()`…) con las
-  variables en ranuras de arrays primitivos. Motivo: cero reservas de memoria
-  por ciclo (nada de `Integer` ni `Object[]` de valores) y sin comprobaciones
-  de tipo en tiempo de ejecución.
+  estáticos (`int`, `boolean`, `Enemigo`; `Municion` solo como constante),
+  la asignación definitiva como javac («puede que la variable aún no tenga
+  valor»), aplica los desbloqueos y cuenta la memoria.
+- **Árbol ejecutable**: el mismo checker lo construye mientras comprueba, con
+  las fábricas de `runtime/Nodes` (`IntEval`, `BoolEval`, `RefEval`, `Exec`),
+  y las variables en ranuras de arrays primitivos. Cambio respecto a la
+  propuesta: no hay una pasada «Compiler» aparte, porque habría resuelto cada
+  nombre dos veces. El árbol solo se usa si no hubo errores. Motivo de los
+  nodos tipados: cero reservas de memoria por ciclo (lo comprueba
+  `AllocationTest`: 0 bytes en 100.000 ciclos) y ninguna comprobación de tipo
+  en ejecución.
+- **Fachada**: `ScriptCompiler.compile(texto, desbloqueos, memoria)` devuelve
+  `CompileResult` (errores ordenados, script ejecutable si no hay errores,
+  memoria usada por línea para el editor). Nunca lanza: un fallo del propio
+  compilador se convierte en `INTERNAL_ERROR`.
+- **Errores**: cada uno es un `ErrorCode` con línea, columna y argumentos. El
+  texto en español está en `i18n/messages.properties` (`script.error.*`); el
+  módulo no contiene ningún texto para el jugador. Máximo 50 errores por
+  compilación.
 
 ### 4.3 Desbloqueos (`Feature`)
 
@@ -198,7 +211,7 @@ El checker recibe el conjunto comprado; el MVP solo vende los cuatro primeros.
 |---|---|
 | Gratis | Sentencias `disparar();` y `recargar();`, comentarios. |
 | if/else y comparaciones | `if`, `else`, `else if`, `== != < > <= >=`, paréntesis, literales `int` y `true`/`false`; lecturas de la torreta `municion()`, `calor()`, `hayEnemigos()`. |
-| Variables | Tipos `int`, `boolean` y `Enemigo`; declaración, asignación, `null`; aritmética `+ - * / %`, `++`, `+=` (y por simetría `--`, `-=`, `*=`, `/=`, `%=`, PROVISIONAL D-21); llamadas `enemigoMasCercano()`, `objetivo()`, `apuntar(e)`, `e.vida()`, `e.velocidad()`, `e.blindado()`, `e.distanciaAlNucleo()`. |
+| Variables | Tipos `int`, `boolean` y `Enemigo`; declaración (también `int a = 1, b;`), asignación, `null`; aritmética `+ - * / %` y `-` unario, `++`, `+=` (y por simetría `--`, `-=`, `*=`, `/=`, `%=`, PROVISIONAL D-21); llamadas `enemigoMasCercano()`, `objetivo()`, `apuntar(e)`, `e.vida()`, `e.velocidad()`, `e.blindado()`, `e.distanciaAlNucleo()`. |
 | `&&`, `||`, `!` | Solo esos tres operadores. |
 | while | Solo el bucle `while`. |
 | Oleada 6 (no se compra) | `usarMunicion(NORMAL)` / `usarMunicion(PERFORANTE)`. |
@@ -227,12 +240,17 @@ plan con `if/else` ocupa 3 líneas de memoria; el de `for` de la oleada 12,
 - El script se ejecuta entero, de forma síncrona, en el tick de simulación en
   que toca el ciclo. La simulación no avanza mientras corre, así que el
   resultado es determinista.
-- **BucleInfinitoException**: cada `while` lleva un contador por ciclo; a la
-  vuelta 1.001 salta (el plan dice «pasa de 1.000 vueltas»). Además hay un
-  presupuesto global de pasos por ciclo (100.000 nodos, en `turret.json`) que
-  también lanza BucleInfinito: cubre `while` anidados (999 × 999).
-- **Profundidad**: el parser limita el anidamiento (64 niveles) para que
-  ningún script provoque `StackOverflowError`.
+- **BucleInfinitoException**: cada vez que se entra en un `while` empieza su
+  cuenta; la vuelta 1.001 salta en la línea del `while` (el plan dice «pasa de
+  1.000 vueltas»). Cambio respecto a la propuesta: la cuenta es **por
+  entrada**, no por ciclo, para que un `while` dentro de otro no salte por
+  sumar vueltas de entradas distintas. Además hay un presupuesto de 100.000
+  pasos por ciclo (sentencias y vueltas) que también lanza BucleInfinito, en
+  la línea del bucle más interno: cubre `while` anidados (999 × 999).
+- **Profundidad**: el parser corta a 64 niveles de anidamiento (sentencias y
+  expresiones; un paréntesis gasta 2) para que ningún script provoque
+  `StackOverflowError`. Probado con 100.000 llaves, paréntesis, `!` y `=`.
+- Los límites (1.000, 100.000, 64) están en `data/script-api.json`.
 - **Ninguna excepción de Java sale del intérprete**: las excepciones del juego
   son un `ScriptFault` (tipo + línea) que el ejecutor devuelve como resultado,
   no como `throw` hacia la simulación. Como red de seguridad, el `Executor`
@@ -243,6 +261,11 @@ plan con `if/else` ocupa 3 líneas de memoria; el de `for` de la oleada 12,
   `NullPointerException`, `BucleInfinitoException` y `ArithmeticException`
   (división o resto entre cero, como en Java real; D-08). Todas cuelgan la
   torreta 3 s y muestran su línea. Los `int` desbordan como en Java.
+- Implementación: una única señal precreada y sin traza de pila desenrolla el
+  script (excepción del juego o `recargar()`), así que lanzarla no reserva
+  memoria. `CompiledScript.run()` devuelve `COMPLETED`, `RELOADING` o
+  `FAULT` (tipo + línea) y nunca lanza. Si la simulación lanza algo, se
+  devuelve `INTERNAL_ERROR` con la línea y la causa para el log.
 
 **Sin hilo aparte** (D-19, aprobado por Yeray aunque el plan proponía un
 hilo): con el presupuesto de pasos ningún script puede bloquear, y un hilo
@@ -252,13 +275,21 @@ rompería el determinismo y complicaría pausar, x3 y los tests.
 
 ```java
 public interface TurretApi {           // lo único que ve un script
-  void fire();  void reload();  int ammo();  int heat();  boolean hasEnemies();
-  EnemyRef nearestEnemy();  EnemyRef target();  void aim(EnemyRef e);
-  void useAmmo(AmmoType t);
-  int health(EnemyRef e); int speed(EnemyRef e);
-  boolean armored(EnemyRef e); int distanceToCore(EnemyRef e);
+  FireResult fire();                   // FIRED, NO_AMMO u OVERHEATED
+  void reload();  int ammo();  int heat();  boolean hasEnemies();
+  long nearestEnemy();  long target();  void aim(long enemy);
+  void useAmmo(AmmoType type);
+  boolean exists(long enemy);          // el intérprete lo consulta antes de cada uso
+  int health(long enemy);  int speed(long enemy);
+  boolean armored(long enemy);  int distanceToCore(long enemy);
 }
 ```
+
+- Los enemigos viajan como asas `long` (`EnemyHandle.NONE` = `null`) en vez
+  de objetos `EnemyRef`: así leerlos no reserva memoria. La simulación decide
+  la codificación (índice del pool + generación).
+- `apuntar(null)` también lanza NullPointerException (es «usar un enemigo que
+  no existe»). Comparar enemigos con `==` nunca falla, como en Java.
 
 - **Objetivo (D-20)**: `apuntar(e)` fija el objetivo en la torreta y se
   mantiene entre ciclos. `objetivo()` devuelve ese enemigo, o `null` si no hay
@@ -279,11 +310,36 @@ public interface TurretApi {           // lo único que ve un script
   un entero. Con esta escala la distancia también gana resolución (camino de
   2.500 u).
 
-- `EnemyRef` es un asa opaca (índice + generación). Si el enemigo murió o el
-  hueco del pool se reutilizó, la generación no coincide y salta
-  NullPointerException, como en Java con una referencia muerta.
-- Los nombres que ve el jugador (`disparar`, `Enemigo`, `PERFORANTE`…) salen
-  de `script-api.json`, no del código, para poder cambiar el tema.
+- Si el enemigo murió o el hueco del pool se reutilizó, `exists()` da
+  `false` y salta NullPointerException, como en Java con una referencia
+  muerta.
+- Los nombres que ve el jugador (`disparar`, `Enemigo`, `PERFORANTE`…) y qué
+  desbloquea cada llamada salen de `data/script-api.json`, no del código, para
+  poder cambiar el tema. `ScriptApiLoader` (en `core-sim`) lo valida: ids
+  conocidos y sin repetir, nombres que sean identificadores Java válidos y no
+  palabras reservadas, un solo requisito por llamada.
+
+### 4.7 Java de verdad: javac como árbitro
+
+`JavacAgreementTest` compila con el `javac` real (solo en los tests) una
+colección de scripts. Todo lo que el juego acepta lo acepta javac, y el juego
+rechaza lo que javac rechaza. Las desviaciones están listadas en el test:
+
+- **Más estricto que Java** (con mensaje claro): asignaciones y `++`/`--`
+  solo como instrucción propia; `break`, `continue`, `switch`, `?:`, `&`,
+  `|`, `<<`, conversiones de tipo, `double`, literales hexadecimales,
+  octales y con sufijo; variables de tipo `Municion`; `System` y cualquier
+  clase fuera de la API. `return` se trata como parte de «métodos» y los
+  arrays como parte de «for y listas».
+- **Más permisivo que Java**: no se comprueba el código inalcanzable
+  (`while (true) {}` seguido de otra instrucción); en el juego ese bucle lanza
+  BucleInfinitoException, que enseña lo mismo.
+
+### 4.8 Convención de datos: `notFromPlan`
+
+Cada fichero de `assets/data/` lleva una lista `notFromPlan` con la ruta de
+cada número que no sale del plan (por ejemplo `limits.maxStepsPerCycle`).
+Así se ve en el propio dato qué es provisional.
 - No existe ninguna otra clase, ni `System`, ni `String`: `System.exit(0)` da
   «símbolo desconocido».
 
@@ -509,8 +565,14 @@ provisional contradice el plan.
 | D-18 | Nombre interno | PROVISIONAL | `java-wave-defense` / `JavaWaveDefense`; paquete `io.github.yeray06.wavedefense`. El nombre visible va en `i18n/messages.properties`. |
 | D-19 | Hilo aparte | CERRADA | Sin hilo; presupuesto de pasos. |
 | D-20 | No soltar al objetivo | CERRADA | `apuntar(e)` persiste entre ciclos; nueva lectura `objetivo()`; sin `apuntar`, el más cercano. Comprobación en fase 3 con el simulador. |
-| D-21 | Operadores simétricos | PROVISIONAL | Además de `++` y `+=`: `--`, `-=`, `*=`, `/=`, `%=`. Prefijo y sufijo, como en Java. |
+| D-21 | Operadores simétricos | PROVISIONAL | Además de `++` y `+=`: `--`, `-=`, `*=`, `/=`, `%=`. Prefijo y sufijo, pero solo como instrucción propia (D-23). |
 | D-22 | Lecturas de enemigo sin `double` | CERRADA | `vida()`, `velocidad()` y `distanciaAlNucleo()` devuelven `int`; velocidades enteras en u/s con base 100, validadas al cargar (4.6). |
+| D-23 | Asignaciones dentro de expresiones | PROVISIONAL | `x = 3`, `x++` y compañía solo como instrucción propia; `if ((x = 3) > 2)` o `y = x++` dan error. Java lo permite, pero esconde lógica y confunde al que empieza. |
+| D-24 | Palabras de Java que no se venden | PROVISIONAL | `break`, `continue`, `switch`, `do`, `throw`… dan «no está disponible en este juego». `return` cuenta como «métodos» y los arrays como «for y listas». |
+| D-25 | Cuenta del `while` | PROVISIONAL | 1.000 vueltas por entrada en el bucle, no por ciclo; más un presupuesto de 100.000 pasos por ciclo (no viene del plan). |
+| D-26 | `apuntar(null)` | PROVISIONAL | Lanza NullPointerException, como cualquier uso de un enemigo inexistente. |
+| D-27 | Código inalcanzable | PROVISIONAL | No se comprueba (javac sí). El bucle infinito salta en ejecución. |
+| D-28 | Un error por pieza y línea | PROVISIONAL | Si una línea usa varias cosas de la misma pieza bloqueada (`if`, `==`, `municion()`), sale un solo «Aún no has desbloqueado if/else». |
 
 Decisiones de stack también cerradas: Kotlin DSL sí; LWJGL el de libGDX
 1.14.2 sin sobrescribir.

@@ -49,6 +49,10 @@ cada decisión técnica en una línea. Di sin rodeos cuándo algo es mala idea.
 - Código en inglés; textos al jugador en español.
 - Tests JUnit: intérprete (cada construcción y cada error), simulación (misma
   semilla → mismo resultado), economía contra la tabla del plan.
+- Lo que el juego acepta lo acepta `javac` (`JavacAgreementTest`); toda
+  desviación de Java va listada en ese test y en ARCHITECTURE.md §4.7.
+- Cada JSON de `assets/data/` lista en `notFromPlan` los números que no salen
+  del plan. Errores y textos del intérprete: códigos + `i18n/messages.properties`.
 - Spotless (desde la raíz) + .editorconfig; `-Xlint:all -Werror`. CI en GitHub
   Actions (Ubuntu y Windows) en cada PR y en push a main (nunca dos veces por
   commit: los minutos son limitados). Antes de push: `./gradlew build`.
