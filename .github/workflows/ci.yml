@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        # Windows is the first target; Linux keeps the other desktops honest.
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up JDK (version from .java-version)
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version-file: .java-version
+
+      # Also validates the checksum of gradle-wrapper.jar.
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Build, test and check formatting
+        shell: bash
+        run: ./gradlew build --stacktrace
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: test-reports-${{ matrix.os }}
+          path: '**/build/reports/tests/'
+          retention-days: 7
