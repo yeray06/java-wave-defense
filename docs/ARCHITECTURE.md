@@ -4,7 +4,7 @@ Documento vivo. Cada decisión lleva su motivo en una línea. La fuente de verda
 del diseño es [`plan-diseno.pdf`](plan-diseno.pdf); si algo de aquí lo
 contradice, manda el plan y hay que avisar.
 
-Estado: **fase 0 cerrada**. Las decisiones están en la sección 12. Las que
+Estado: **fase 1 hecha** (esqueleto, lanzador y CI). Las decisiones están en la sección 12. Las que
 llevan **PROVISIONAL** son propuestas mías aceptadas para poder avanzar; se
 listan en `docs/PROGRESS.md` («Decisiones por revisar»). Los números que no
 vienen del plan van marcados en los JSON y en `docs/BALANCE.md`.
@@ -17,13 +17,13 @@ Comprobado el 2026-10-02 contra Maven Central y el portal de plugins de Gradle.
 
 | Pieza | Versión | Motivo |
 |---|---|---|
-| JDK | 21 LTS (D-15) | El que tiene el contenedor; la red no deja bajar el 25. Records, sealed y `switch` con patrones ya están en 21. La versión se declara en un único sitio (`javaVersion` en `gradle/libs.versions.toml`) para subir a 25 cambiando una línea. |
+| JDK | 21 LTS (D-15) | El que tiene el contenedor; la red no deja bajar el 25. Records, sealed y `switch` con patrones ya están en 21. La versión está en un único sitio, el fichero `.java-version`, que leen Gradle (toolchain) y GitHub Actions (`setup-java`). Subir a 25 = cambiar esa línea. |
 | libGDX | 1.14.2 (última publicada) | Pedido. LWJGL 3.3.3, el que trae libGDX, sin sobrescribir. |
 | Gradle | 9.8.0 (wrapper) | Última estable; funciona con Java 21 y con 25. |
 | DSL de Gradle | Kotlin DSL + catálogo `gradle/libs.versions.toml` | Autocompletado en IntelliJ y versiones en un único sitio. ⚠️ gdx-liftoff genera Groovy: mantengo su estructura de módulos y carpetas, no su DSL. |
 | JSON (módulos puros) | Jackson databind 2.22.x | `core-sim` no puede usar `Json` de libGDX; Jackson soporta records y da línea/columna en errores de datos. |
 | Tests | JUnit Jupiter 6.1.x (D-16) | Versión actual; misma API Jupiter que la 5; pide Java 17+. |
-| Formato | Spotless 8.x + google-java-format | Formato automático, sin discusiones de estilo. |
+| Formato | Spotless 8.10.3, aplicado una vez desde la raíz: google-java-format para Java y ktfmt (estilo Google) para `*.gradle.kts` | Formato automático. ⚠️ google-java-format va en la versión que fija Spotless: la 1.37.0 rompe su código de enlace (`NoSuchMethodError` en `Style.valueOf`). Necesita `--add-exports` de `jdk.compiler` en `org.gradle.jvmargs`. |
 | Empaquetado | Construo 2.2.x (plugin Gradle) | Genera Windows/Linux/macOS con JRE recortado **desde Linux**; jpackage obliga a ejecutar en cada SO. |
 | Fuente | JetBrains Mono (OFL 1.1) vía gdx-freetype | Monoespaciada, libre, nítida a cualquier escala. Se incluye `OFL.txt`. |
 
@@ -45,6 +45,7 @@ java-wave-defense/
 ├── .editorconfig
 ├── .gitattributes                 # LF en el repo, CRLF solo en gradlew.bat
 ├── .gitignore
+├── .java-version                 # versión de Java: única fuente para Gradle y CI
 ├── .github/workflows/ci.yml       # build + tests + spotlessCheck en cada push y PR
 ├── CLAUDE.md
 ├── README.md                      # ejecutar, testear y empaquetar
@@ -63,10 +64,9 @@ java-wave-defense/
 │   │   ├── turret.json            # cargador, calor, ciclos, memoria, recarga, cuelgue, rango
 │   │   ├── shop.json              # árbol de sintaxis y hardware (precios, requisitos)
 │   │   ├── script-api.json        # nombre visible y desbloqueo de cada llamada
-│   │   ├── map.json               # camino y huecos de torreta
-│   │   └── names.json             # nombres visibles tematizables (enemigos, torretas…)
+│   │   └── map.json               # camino y huecos de torreta
 │   ├── i18n/
-│   │   └── messages.properties    # español (por defecto); messages_en.properties más tarde
+│   │   └── messages.properties    # todos los textos y nombres visibles (también los tematizables); español por defecto
 │   └── fonts/
 │       ├── JetBrainsMono-Regular.ttf
 │       └── OFL.txt
@@ -264,10 +264,20 @@ public interface TurretApi {           // lo único que ve un script
   mantiene entre ciclos. `objetivo()` devuelve ese enemigo, o `null` si no hay
   objetivo fijado, ha muerto o ha salido de rango (en esos dos casos además se
   suelta). Sin objetivo fijado, `disparar()` tira al enemigo más cercano.
-- **Lecturas enteras (PROVISIONAL D-22)**: como Variables no trae `double`,
-  `e.vida()`, `e.velocidad()` y `e.distanciaAlNucleo()` devuelven `int`.
-  `vida()` redondea hacia arriba (un enemigo vivo nunca da 0); las otras dos,
-  hacia abajo. La simulación sigue usando `double` por dentro.
+- **Lecturas enteras (D-22, cerrada en la fase 1)**: como Variables no trae
+  `double`, `e.vida()`, `e.velocidad()` y `e.distanciaAlNucleo()` devuelven
+  `int`. `vida()` redondea hacia arriba (un enemigo vivo nunca da 0);
+  `distanciaAlNucleo()`, hacia abajo.
+- **Unidades finas para la velocidad** (pedido de Yeray): la unidad del mundo
+  se elige para que la velocidad base sea **100 u/s** (antes 60). Las
+  velocidades se escriben en `enemies.json` como **enteros en u/s** (Básico
+  100, Regenerador 100, Blindado 80, Enjambre 120, Jefe 50), no como
+  multiplicadores, así que `velocidad()` devuelve el valor exacto sin
+  redondear: dos tipos con velocidad distinta nunca dan el mismo `int`. El
+  validador de datos rechaza velocidades no enteras o ≤ 0, y cuando lleguen
+  los modificadores (Rápido…) exigirá que velocidad × modificador siga siendo
+  un entero. Con esta escala la distancia también gana resolución (camino de
+  2.500 u).
 
 - `EnemyRef` es un asa opaca (índice + generación). Si el enemigo murió o el
   hueco del pool se reutilizó, la generación no coincide y salta
@@ -342,11 +352,20 @@ se escribe en la fase 7.
 
 ## 9. Herramientas y CI
 
-- Spotless con google-java-format, `.editorconfig` coherente con él.
-- GitHub Actions: `./gradlew build` (compila, tests, `spotlessCheck`) en
-  `ubuntu-latest`, y en `windows-latest` los tests de `platform` y `core-sim`
-  (rutas y renombrado atómico se comportan distinto en Windows).
-- Validación del wrapper de Gradle en CI.
+- Spotless desde la raíz (ver §1), `.editorconfig` coherente con él.
+- Compilación con `-Xlint:all -Werror`: un aviso del compilador rompe el build.
+- GitHub Actions (`.github/workflows/ci.yml`): `./gradlew build` (compila,
+  tests y `spotlessCheck`) en `ubuntu-latest` **y** `windows-latest`, en cada
+  push y PR. Windows primero porque es el objetivo; las rutas y el renombrado
+  atómico se comportan distinto allí.
+- `gradle/actions/setup-gradle` valida la suma del `gradle-wrapper.jar`. Ese
+  JAR es el único binario del repo: es parte estándar del wrapper, no una
+  salida de build ni una dependencia metida a mano.
+- **Test de humo de `game`**: ejecuta `create → render ×10 → dispose` del
+  juego real sobre el backend headless de libGDX. Ese backend ya no trae GL
+  simulado, así que el test instala un `GL20` vacío: comprueba el ciclo de
+  vida, no lo que se dibuja.
+- `sim-cli` y `script` existen como módulos vacíos hasta sus fases (2 y 3).
 
 ## 10. Reglas del juego tal y como se implementarán
 
@@ -375,8 +394,8 @@ los JSON y en `docs/BALANCE.md`.
 | `usarMunicion(tipo)` | Disponible desde la oleada 6; el tipo elegido se mantiene entre ciclos | Plan |
 | Perforante | Ignora la reducción del blindaje; un solo objetivo | PROVISIONAL (D-09) |
 | Script inicial de cada torreta | `disparar();` | PROVISIONAL (D-14) |
-| Rango | 200 u | No viene del plan (D-12) |
-| Balas | Proyectil guiado a 600 u/s; si el objetivo muere antes, bala perdida y contada en el informe | No viene del plan (D-12) |
+| Rango | 330 u | No viene del plan (D-12) |
+| Balas | Proyectil guiado a 1.000 u/s; si el objetivo muere antes, bala perdida y contada en el informe | No viene del plan (D-12) |
 | Presupuesto de pasos | 100.000 nodos por ciclo, además del límite de 1.000 vueltas por `while` | No viene del plan (4.5) |
 
 ### 10.2 Enemigos y oleadas
@@ -387,12 +406,13 @@ los JSON y en `docs/BALANCE.md`.
 | Dinero por enemigo | `2 · 1,15^(n−1)` | Plan |
 | Nº de enemigos | `min(6 + 2n, 60)` | Plan |
 | Núcleo | 20 vidas por oleada; cada enemigo que llega quita 1 | Plan |
-| Regenerador | Se cura si pasa 1 s sin daño, a 25 % de vida máx./s | 1 s Plan; ritmo No viene del plan |
-| Blindado | −80 % de daño con NORMAL; velocidad ×0,8 | 80 % Plan; velocidad No viene del plan |
-| Enjambre | Grupos de 10, juntos; vida ×0,3, dinero ×0,3, velocidad ×1,2; cada miembro cuenta como 1 enemigo | 10 Plan; resto No viene del plan |
-| Jefe 1 | Vida = 20 × vida de la oleada 10; alterna blindaje cada 5 s; si llega al núcleo se pierde la oleada; velocidad ×0,5 | Plan; velocidad No viene del plan |
+| Regenerador | Se cura si pasa 1 s sin daño, a 25 % de vida máx./s; 100 u/s | 1 s Plan; ritmo No viene del plan |
+| Blindado | −80 % de daño con NORMAL; 80 u/s | 80 % Plan; velocidad No viene del plan |
+| Enjambre | Grupos de 10, juntos; vida ×0,3, dinero ×0,3, 120 u/s; cada miembro cuenta como 1 enemigo | 10 Plan; resto No viene del plan |
+| Jefe 1 | Vida = 20 × vida de la oleada 10; alterna blindaje cada 5 s; si llega al núcleo se pierde la oleada; 50 u/s | Plan; velocidad No viene del plan |
 | Recompensa del jefe | 1.er derribo = 3 × dinero de la oleada 10 (549); los siguientes, como 20 enemigos normales de esa oleada | PROVISIONAL (D-10) |
-| Duración | ~45 s: camino de 1.500 u, velocidad base 60 u/s (25 s), salidas repartidas en 20 s | ~45 s Plan; números No viene del plan |
+| Básico | 100 u/s | No viene del plan (D-12, D-22) |
+| Duración | ~45 s: camino de 2.500 u, velocidad base 100 u/s (25 s), salidas repartidas en 20 s | ~45 s Plan; números No viene del plan |
 
 Composición (No viene del plan, D-12). B = Básico, R = Regenerador,
 Bl = Blindado, E = Enjambre:
@@ -483,11 +503,11 @@ provisional contradice el plan.
 | D-15 | JDK | CERRADA | JDK 21 LTS; versión en un único sitio para subir a 25. |
 | D-16 | JUnit | CERRADA | JUnit 6. |
 | D-17 | Métrica de la regla del doble | PROVISIONAL | Factor de vida `k` (sección 11). |
-| D-18 | Nombre interno | PROVISIONAL | `java-wave-defense` / `JavaWaveDefense`; paquete `io.github.yeray06.wavedefense`. El nombre visible va en `names.json`. |
+| D-18 | Nombre interno | PROVISIONAL | `java-wave-defense` / `JavaWaveDefense`; paquete `io.github.yeray06.wavedefense`. El nombre visible va en `i18n/messages.properties`. |
 | D-19 | Hilo aparte | CERRADA | Sin hilo; presupuesto de pasos. |
 | D-20 | No soltar al objetivo | CERRADA | `apuntar(e)` persiste entre ciclos; nueva lectura `objetivo()`; sin `apuntar`, el más cercano. Comprobación en fase 3 con el simulador. |
 | D-21 | Operadores simétricos | PROVISIONAL | Además de `++` y `+=`: `--`, `-=`, `*=`, `/=`, `%=`. Prefijo y sufijo, como en Java. |
-| D-22 | Lecturas de enemigo sin `double` | PROVISIONAL | `vida()`, `velocidad()` y `distanciaAlNucleo()` devuelven `int` (4.6). |
+| D-22 | Lecturas de enemigo sin `double` | CERRADA | `vida()`, `velocidad()` y `distanciaAlNucleo()` devuelven `int`; velocidades enteras en u/s con base 100, validadas al cargar (4.6). |
 
 Decisiones de stack también cerradas: Kotlin DSL sí; LWJGL el de libGDX
 1.14.2 sin sobrescribir.
