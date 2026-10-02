@@ -50,7 +50,8 @@ cada decisión técnica en una línea. Di sin rodeos cuándo algo es mala idea.
 - Tests JUnit: intérprete (cada construcción y cada error), simulación (misma
   semilla → mismo resultado), economía contra la tabla del plan.
 - Spotless (desde la raíz) + .editorconfig; `-Xlint:all -Werror`. CI en GitHub
-  Actions (Ubuntu y Windows) en cada push y PR. Antes de push: `./gradlew build`.
+  Actions (Ubuntu y Windows) en cada PR y en push a main (nunca dos veces por
+  commit: los minutos son limitados). Antes de push: `./gradlew build`.
 - Nada de código a medias ni "TODO: implementar".
 - Si el simulador contradice el plan, informar con datos; no ajustar.
 

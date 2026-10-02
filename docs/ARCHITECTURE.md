@@ -46,7 +46,7 @@ java-wave-defense/
 ├── .gitattributes                 # LF en el repo, CRLF solo en gradlew.bat
 ├── .gitignore
 ├── .java-version                 # versión de Java: única fuente para Gradle y CI
-├── .github/workflows/ci.yml       # build + tests + spotlessCheck en cada push y PR
+├── .github/workflows/ci.yml       # build + tests + spotlessCheck en cada PR y push a main
 ├── CLAUDE.md
 ├── README.md                      # ejecutar, testear y empaquetar
 ├── build.gradle.kts               # convenciones comunes (toolchain, Spotless, JUnit)
@@ -356,7 +356,10 @@ se escribe en la fase 7.
 - Compilación con `-Xlint:all -Werror`: un aviso del compilador rompe el build.
 - GitHub Actions (`.github/workflows/ci.yml`): `./gradlew build` (compila,
   tests y `spotlessCheck`) en `ubuntu-latest` **y** `windows-latest`, en cada
-  push y PR. Windows primero porque es el objetivo; las rutas y el renombrado
+  pull request y en cada push a `main`. Las ramas de fase no disparan en push:
+  ya las cubre su PR, y así nada se ejecuta dos veces por commit (repo privado,
+  minutos de Actions limitados). Un push nuevo cancela la ejecución anterior
+  del mismo PR. Windows primero porque es el objetivo; las rutas y el renombrado
   atómico se comportan distinto allí.
 - `gradle/actions/setup-gradle` valida la suma del `gradle-wrapper.jar`. Ese
   JAR es el único binario del repo: es parte estándar del wrapper, no una
