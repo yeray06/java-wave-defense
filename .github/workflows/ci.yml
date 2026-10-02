@@ -1,7 +1,10 @@
 name: CI
 
+# Push only on main; every other branch is covered by its pull request.
+# Avoids running twice per commit (Actions minutes are limited on a private repo).
 on:
   push:
+    branches: [main]
   pull_request:
 
 permissions:
