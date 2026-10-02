@@ -1,0 +1,31 @@
+{
+  "notFromPlan": ["limits.maxStepsPerCycle", "limits.maxNestingDepth"],
+  "limits": {
+    "maxLoopIterations": 1000,
+    "maxStepsPerCycle": 100000,
+    "maxNestingDepth": 64
+  },
+  "types": {
+    "enemy": "Enemigo",
+    "ammo": "Municion"
+  },
+  "calls": [
+    { "id": "FIRE", "name": "disparar", "unlock": {} },
+    { "id": "RELOAD", "name": "recargar", "unlock": {} },
+    { "id": "AMMO", "name": "municion", "unlock": { "feature": "IF_ELSE" } },
+    { "id": "HEAT", "name": "calor", "unlock": { "feature": "IF_ELSE" } },
+    { "id": "HAS_ENEMIES", "name": "hayEnemigos", "unlock": { "feature": "IF_ELSE" } },
+    { "id": "NEAREST_ENEMY", "name": "enemigoMasCercano", "unlock": { "feature": "VARIABLES" } },
+    { "id": "TARGET", "name": "objetivo", "unlock": { "feature": "VARIABLES" } },
+    { "id": "AIM", "name": "apuntar", "unlock": { "feature": "VARIABLES" } },
+    { "id": "USE_AMMO", "name": "usarMunicion", "unlock": { "wave": 6 } },
+    { "id": "HEALTH", "name": "vida", "unlock": { "feature": "VARIABLES" } },
+    { "id": "SPEED", "name": "velocidad", "unlock": { "feature": "VARIABLES" } },
+    { "id": "ARMORED", "name": "blindado", "unlock": { "feature": "VARIABLES" } },
+    { "id": "DISTANCE_TO_CORE", "name": "distanciaAlNucleo", "unlock": { "feature": "VARIABLES" } }
+  ],
+  "ammo": [
+    { "id": "NORMAL", "name": "NORMAL" },
+    { "id": "PIERCING", "name": "PERFORANTE" }
+  ]
+}
