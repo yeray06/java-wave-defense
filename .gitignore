@@ -1,0 +1,44 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# VS Code / Eclipse
+.vscode/
+.classpath
+.project
+.settings/
+bin/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Runtime output
+*.log
+logs/
+saves/
+*.hprof
+
+# Packaging output
+dist/
+*.zip
+*.exe
+*.msi
+*.dmg
+*.AppImage
+
+# Secrets (never commit)
+.env
+*.env
+local.properties
+steam_appid.txt
+*.vdf
