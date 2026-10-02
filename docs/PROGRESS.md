@@ -4,9 +4,9 @@
 
 | Fase | Estado | Rama |
 |---|---|---|
-| 0. Propuesta: árbol, decisiones y dudas | ✅ Hecha, dudas respondidas | `phase-0-propuesta` |
-| 1. Esqueleto Gradle, lanzador y CI | ⏳ Siguiente | — |
-| 2. Intérprete con tests | Pendiente | — |
+| 0. Propuesta: árbol, decisiones y dudas | ✅ Fusionada | `phase-0-propuesta` |
+| 1. Esqueleto Gradle, lanzador y CI | ✅ Hecha, en PR | `phase-1-esqueleto` |
+| 2. Intérprete con tests | ⏳ Siguiente | — |
 | 3. core-sim y sim-cli, `docs/BALANCE.md` | Pendiente | — |
 | 4. Juego: camino, torretas, enemigos, bucle | Solo con Yeray en casa | — |
 | 5. Editor, tienda, parte de oleada, informe | Solo con Yeray en casa | — |
@@ -22,11 +22,35 @@
 - `CLAUDE.md` con las reglas permanentes.
 - `.gitignore`.
 
-## Siguiente: fase 1
+## Fase 1 (hecha)
 
-Esqueleto Gradle (Kotlin DSL, JDK 21, versión de Java en un único sitio),
-lanzador LWJGL3 y CI. Nada bloquea: Maven Central y el portal de plugins
-responden desde la sesión.
+- Gradle 9.8.0 (wrapper) con Kotlin DSL, catálogo de versiones y los seis
+  módulos (`script`, `core-sim`, `platform`, `game`, `lwjgl3`, `sim-cli`).
+  Maven Central y el portal de plugins descargan bien desde la sesión.
+- JDK 21; la versión vive solo en `.java-version`.
+- `platform`: `PlatformServices` + `NoOpPlatformServices` y
+  `UserDataDirectory` (carpeta de usuario por SO, compatible con Auto-Cloud)
+  con tests de Windows, macOS y Linux.
+- `core-sim`: generador `SplitMix64` con semilla y tests (vector de
+  referencia, misma semilla → misma secuencia).
+- `game`: `WaveDefenseGame` (limpia la pantalla) y test de humo de su ciclo de
+  vida sobre el backend headless.
+- `lwjgl3`: lanzador 1280×720, título desde `i18n/messages.properties` y
+  `StartupHelper` para `-XstartOnFirstThread` en macOS.
+- Spotless + `.editorconfig` + `.gitattributes`; `-Xlint:all -Werror`.
+- CI en GitHub Actions: `./gradlew build` en Ubuntu y Windows.
+- D-22 cerrada con unidades finas (ver `docs/ARCHITECTURE.md` §4.6).
+- Problemas encontrados y resueltos: google-java-format 1.37.0 no funciona con
+  Spotless 8.10.3 (se usa la versión que fija Spotless); el backend headless
+  de libGDX 1.14.2 ya no trae GL simulado (el test instala uno vacío).
+
+Comprobado aquí: con Xvfb y GL por software (Mesa), el lanzador abre y pinta
+el área de 1280×720 con el color de fondo durante 20 s sin errores. Eso no
+sustituye la prueba en Windows con GPU real.
+
+## Siguiente: fase 2
+
+Intérprete con sus tests (lexer → parser → AST → checker → árbol ejecutable).
 
 ## Decisiones por revisar
 
@@ -50,8 +74,6 @@ Propuestas mías aplicadas como PROVISIONAL (detalle en
 - **D-18**: id interno `java-wave-defense` y paquete
   `io.github.yeray06.wavedefense`.
 - **D-21**: con Variables también `--`, `-=`, `*=`, `/=`, `%=`.
-- **D-22**: como Variables no trae `double`, `e.vida()`, `e.velocidad()` y
-  `e.distanciaAlNucleo()` devuelven `int` (vida redondeada hacia arriba).
 
 Números de balance que no vienen del plan (D-12): ver
 `docs/ARCHITECTURE.md` 10.1 y 10.2; irán marcados en JSON y en
@@ -59,4 +81,10 @@ Números de balance que no vienen del plan (D-12): ver
 
 ## Pendiente de probar en local
 
-Nada todavía (la fase 0 no tiene código).
+- [ ] `gradlew.bat :lwjgl3:run` en Windows abre una ventana de 1280×720 con
+  fondo gris muy oscuro y título «Defensa por oleadas».
+- [ ] La ventana se cierra con la X sin errores en consola.
+- [ ] Importar el repo en IntelliJ IDEA como proyecto Gradle y ejecutar
+  `Lwjgl3Launcher` con *Working directory* = `assets/`.
+- [ ] (Si hay un Mac a mano) el `StartupHelper` relanza con
+  `-XstartOnFirstThread` y la ventana abre.

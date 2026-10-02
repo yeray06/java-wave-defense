@@ -37,7 +37,7 @@ cada decisión técnica en una línea. Di sin rodeos cuándo algo es mala idea.
   carpeta de usuario del SO (compatible Steam Auto-Cloud).
 - Nada de reservar memoria en el bucle caliente (pools).
 - Steam solo a través de `PlatformServices` (implementación vacía en el MVP).
-- JDK 21 LTS (versión declarada en un único sitio para subir a 25). libGDX
+- JDK 21 LTS; la versión vive solo en `.java-version` (Gradle y CI la leen). libGDX
   1.14.2 con su LWJGL. Gradle Kotlin DSL. JUnit 6.
 - Decisiones de diseño cerradas y provisionales: `docs/ARCHITECTURE.md` §12.
   Las PROVISIONAL se listan en `docs/PROGRESS.md` («Decisiones por revisar»).
@@ -49,7 +49,9 @@ cada decisión técnica en una línea. Di sin rodeos cuándo algo es mala idea.
 - Código en inglés; textos al jugador en español.
 - Tests JUnit: intérprete (cada construcción y cada error), simulación (misma
   semilla → mismo resultado), economía contra la tabla del plan.
-- Spotless + .editorconfig. CI en GitHub Actions en cada push y PR.
+- Spotless (desde la raíz) + .editorconfig; `-Xlint:all -Werror`. CI en GitHub
+  Actions (Ubuntu y Windows) en cada PR y en push a main (nunca dos veces por
+  commit: los minutos son limitados). Antes de push: `./gradlew build`.
 - Nada de código a medias ni "TODO: implementar".
 - Si el simulador contradice el plan, informar con datos; no ajustar.
 
