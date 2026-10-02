@@ -37,6 +37,11 @@ cada decisión técnica en una línea. Di sin rodeos cuándo algo es mala idea.
   carpeta de usuario del SO (compatible Steam Auto-Cloud).
 - Nada de reservar memoria en el bucle caliente (pools).
 - Steam solo a través de `PlatformServices` (implementación vacía en el MVP).
+- JDK 21 LTS (versión declarada en un único sitio para subir a 25). libGDX
+  1.14.2 con su LWJGL. Gradle Kotlin DSL. JUnit 6.
+- Decisiones de diseño cerradas y provisionales: `docs/ARCHITECTURE.md` §12.
+  Las PROVISIONAL se listan en `docs/PROGRESS.md` («Decisiones por revisar»).
+  Una provisional nunca puede contradecir el plan.
 
 ## Calidad
 - SOLID sin sobreingeniería, composición antes que herencia, sin singletons ni

@@ -4,8 +4,10 @@ Documento vivo. Cada decisión lleva su motivo en una línea. La fuente de verda
 del diseño es [`plan-diseno.pdf`](plan-diseno.pdf); si algo de aquí lo
 contradice, manda el plan y hay que avisar.
 
-Estado: **propuesta de la fase 0**. Las secciones marcadas con ❓ están
-pendientes de que Yeray las confirme (ver «Dudas abiertas» al final).
+Estado: **fase 0 cerrada**. Las decisiones están en la sección 12. Las que
+llevan **PROVISIONAL** son propuestas mías aceptadas para poder avanzar; se
+listan en `docs/PROGRESS.md` («Decisiones por revisar»). Los números que no
+vienen del plan van marcados en los JSON y en `docs/BALANCE.md`.
 
 ---
 
@@ -15,27 +17,26 @@ Comprobado el 2026-10-02 contra Maven Central y el portal de plugins de Gradle.
 
 | Pieza | Versión | Motivo |
 |---|---|---|
-| JDK | 25 LTS (Temurin), fallback 21 | Pedido en el prompt. Records, sealed, `switch` con patrones. |
-| libGDX | 1.14.2 (última publicada) | Pedido. Trae LWJGL 3.3.3. |
-| Gradle | 9.8.0 (wrapper) | Última estable; ejecuta y compila con Java 25. |
+| JDK | 21 LTS (D-15) | El que tiene el contenedor; la red no deja bajar el 25. Records, sealed y `switch` con patrones ya están en 21. La versión se declara en un único sitio (`javaVersion` en `gradle/libs.versions.toml`) para subir a 25 cambiando una línea. |
+| libGDX | 1.14.2 (última publicada) | Pedido. LWJGL 3.3.3, el que trae libGDX, sin sobrescribir. |
+| Gradle | 9.8.0 (wrapper) | Última estable; funciona con Java 21 y con 25. |
 | DSL de Gradle | Kotlin DSL + catálogo `gradle/libs.versions.toml` | Autocompletado en IntelliJ y versiones en un único sitio. ⚠️ gdx-liftoff genera Groovy: mantengo su estructura de módulos y carpetas, no su DSL. |
 | JSON (módulos puros) | Jackson databind 2.22.x | `core-sim` no puede usar `Json` de libGDX; Jackson soporta records y da línea/columna en errores de datos. |
-| Tests | JUnit Jupiter ❓ 6.1.x (o 5.14.4) | JUnit 6 es la versión actual y tiene la misma API Jupiter que la 5. Ver duda D-16. |
+| Tests | JUnit Jupiter 6.1.x (D-16) | Versión actual; misma API Jupiter que la 5; pide Java 17+. |
 | Formato | Spotless 8.x + google-java-format | Formato automático, sin discusiones de estilo. |
 | Empaquetado | Construo 2.2.x (plugin Gradle) | Genera Windows/Linux/macOS con JRE recortado **desde Linux**; jpackage obliga a ejecutar en cada SO. |
 | Fuente | JetBrains Mono (OFL 1.1) vía gdx-freetype | Monoespaciada, libre, nítida a cualquier escala. Se incluye `OFL.txt`. |
 
 Avisos de compatibilidad:
 
-- Java 24+ avisa del acceso nativo de LWJGL (JEP 472). El lanzador añadirá
-  `--enable-native-access=ALL-UNNAMED` para que no salga el aviso ni falle en
-  el futuro.
+- Al subir a Java 24+: avisa del acceso nativo de LWJGL (JEP 472). Habrá que
+  añadir `--enable-native-access=ALL-UNNAMED` al lanzador. Con 21 no hace
+  falta.
 - macOS necesita `-XstartOnFirstThread`; se usa el `StartupHelper` que genera
   gdx-liftoff.
-- ⚠️ **Red de la sesión cloud**: Maven Central y el portal de plugins
-  responden, pero `api.foojay.io`, `api.adoptium.net` y `github.com`
-  (descargas de JDK) están bloqueados y en el contenedor solo hay JDK 21. Sin
-  esos dominios Gradle no puede descargar el JDK 25 por toolchain. Ver D-15.
+- **Red de la sesión cloud**: Maven Central y el portal de plugins
+  responden; las descargas de JDK están bloqueadas. Por eso se usa el JDK 21
+  instalado y no se configura descarga automática de toolchains.
 
 ## 2. Árbol de carpetas
 
@@ -193,22 +194,24 @@ texto ─► Lexer ─► tokens ─► Parser ─► AST ─► Checker ─► 
 `enum Feature { IF_ELSE, VARIABLES, LOGIC_OPS, WHILE, FOR, METHODS, TRY_CATCH, CLASSES }`.
 El checker recibe el conjunto comprado; el MVP solo vende los cuatro primeros.
 
-| Pieza | Qué habilita (propuesta ❓ D-07) |
+| Pieza | Qué habilita (D-07) |
 |---|---|
 | Gratis | Sentencias `disparar();` y `recargar();`, comentarios. |
-| if/else y comparaciones | `if`, `else`, `else if`, `== != < > <= >=`, paréntesis, literales `int`/`boolean`; llamadas `municion()`, `calor()`, `hayEnemigos()`. |
-| Variables | Declaraciones (`int`, `double`, `boolean`, `Enemigo`), asignación, `null`, aritmética `+ - *` (`/` y `%`: D-08); llamadas `enemigoMasCercano()`, `apuntar(e)`, `e.vida()`, `e.velocidad()`, `e.blindado()`, `e.distanciaAlNucleo()`. |
-| `&&`, `||`, `!` | Esos tres operadores. |
-| while | `while`. |
+| if/else y comparaciones | `if`, `else`, `else if`, `== != < > <= >=`, paréntesis, literales `int` y `true`/`false`; lecturas de la torreta `municion()`, `calor()`, `hayEnemigos()`. |
+| Variables | Tipos `int`, `boolean` y `Enemigo`; declaración, asignación, `null`; aritmética `+ - * / %`, `++`, `+=` (y por simetría `--`, `-=`, `*=`, `/=`, `%=`, PROVISIONAL D-21); llamadas `enemigoMasCercano()`, `objetivo()`, `apuntar(e)`, `e.vida()`, `e.velocidad()`, `e.blindado()`, `e.distanciaAlNucleo()`. |
+| `&&`, `||`, `!` | Solo esos tres operadores. |
+| while | Solo el bucle `while`. |
 | Oleada 6 (no se compra) | `usarMunicion(NORMAL)` / `usarMunicion(PERFORANTE)`. |
 
 Usar algo no desbloqueado da error de compilación con el texto del plan:
 «Aún no has desbloqueado while». Para llamadas: «Aún no has desbloqueado
 `municion()`: llega con if/else».
 
-### 4.4 Qué cuenta como línea de memoria ❓ D-06
+### 4.4 Qué cuenta como línea de memoria (D-06)
 
-Propuesta: **una línea = una sentencia**, no una línea física.
+**Una línea = una sentencia**, no una línea física. Frase para el jugador:
+«Cada instrucción ocupa una línea de memoria; las llaves, `else`, los
+comentarios y las líneas en blanco no ocupan».
 
 - Cuentan 1: cada declaración, asignación, llamada, cabecera de `if`
   (un `else if` es otro `if`) y cabecera de `while`.
@@ -217,7 +220,7 @@ Propuesta: **una línea = una sentencia**, no una línea física.
 Motivo: si contaran líneas físicas, el jugador metería todo en una línea y el
 límite dejaría de existir. Con sentencias, el formato da igual. El ejemplo del
 plan con `if/else` ocupa 3 líneas de memoria; el de `for` de la oleada 12,
-7. El editor muestra el contador `7/12` y marca qué líneas cuentan.
+7. El editor muestra el contador en vivo (`7/12`) y marca qué líneas cuentan.
 
 ### 4.5 Presupuesto y errores de ejecución
 
@@ -237,25 +240,34 @@ plan con `if/else` ocupa 3 líneas de memoria; el de `for` de la oleada 12,
   que lo convierte en un fallo interno con línea, lo registra en el log y
   cuelga la torreta como cualquier otra excepción.
 - Excepciones del MVP: `SinMunicionException`, `SobrecalentamientoException`,
-  `NullPointerException`, `BucleInfinitoException`. ❓ D-08 sobre la división
-  entre cero.
+  `NullPointerException`, `BucleInfinitoException` y `ArithmeticException`
+  (división o resto entre cero, como en Java real; D-08). Todas cuelgan la
+  torreta 3 s y muestran su línea. Los `int` desbordan como en Java.
 
-⚠️ **Diferencia con el plan**: la tabla de riesgos propone «ejecución en un
-hilo aparte». Propongo **no** usar hilo: con el presupuesto de pasos ningún
-script puede bloquear, y un hilo rompería el determinismo y complicaría
-pausar, x3 y los tests. Si un día se compila a bytecode real, entonces sí haría
-falta.
+**Sin hilo aparte** (D-19, aprobado por Yeray aunque el plan proponía un
+hilo): con el presupuesto de pasos ningún script puede bloquear, y un hilo
+rompería el determinismo y complicaría pausar, x3 y los tests.
 
 ### 4.6 La API cerrada
 
 ```java
 public interface TurretApi {           // lo único que ve un script
   void fire();  void reload();  int ammo();  int heat();  boolean hasEnemies();
-  EnemyRef nearestEnemy();  void aim(EnemyRef e);  void useAmmo(AmmoType t);
-  double health(EnemyRef e); double speed(EnemyRef e);
-  boolean armored(EnemyRef e); double distanceToCore(EnemyRef e);
+  EnemyRef nearestEnemy();  EnemyRef target();  void aim(EnemyRef e);
+  void useAmmo(AmmoType t);
+  int health(EnemyRef e); int speed(EnemyRef e);
+  boolean armored(EnemyRef e); int distanceToCore(EnemyRef e);
 }
 ```
+
+- **Objetivo (D-20)**: `apuntar(e)` fija el objetivo en la torreta y se
+  mantiene entre ciclos. `objetivo()` devuelve ese enemigo, o `null` si no hay
+  objetivo fijado, ha muerto o ha salido de rango (en esos dos casos además se
+  suelta). Sin objetivo fijado, `disparar()` tira al enemigo más cercano.
+- **Lecturas enteras (PROVISIONAL D-22)**: como Variables no trae `double`,
+  `e.vida()`, `e.velocidad()` y `e.distanciaAlNucleo()` devuelven `int`.
+  `vida()` redondea hacia arriba (un enemigo vivo nunca da 0); las otras dos,
+  hacia abajo. La simulación sigue usando `double` por dentro.
 
 - `EnemyRef` es un asa opaca (índice + generación). Si el enemigo murió o el
   hueco del pool se reutilizó, la generación no coincide y salta
@@ -280,7 +292,7 @@ public interface TurretApi {           // lo único que ve un script
   (60 enemigos + jefe + margen; 512 balas). Nada de `new` en el tick.
 - **Dinero en punto fijo** (`long` en centésimas): la fórmula da 2,3; 2,645…
   y con `double` acumularíamos errores al repetir oleadas. La UI muestra
-  enteros. ❓ D-11.
+  enteros redondeando hacia abajo (PROVISIONAL D-11).
 - **Datos**: cada JSON se valida al cargar (rangos, referencias cruzadas, que
   la composición de cada oleada sume `min(6 + 2n, 60)`). Un dato inválido da
   un error con fichero y campo, nunca un valor por defecto silencioso.
@@ -338,8 +350,10 @@ se escribe en la fase 7.
 
 ## 10. Reglas del juego tal y como se implementarán
 
-Lo que sale literal del plan va sin marca. Lo que el plan no fija y propongo
-yo va con ❓ y su número de duda.
+Columna «Origen»: **Plan** = literal del plan; **Yeray** = decisión de Yeray
+en la fase 0; **PROVISIONAL** = propuesta mía aceptada para avanzar, por
+revisar; **No viene del plan** = número provisional de D-12, marcado así en
+los JSON y en `docs/BALANCE.md`.
 
 ### 10.1 Torreta
 
@@ -347,20 +361,23 @@ yo va con ❓ y su número de duda.
 |---|---|---|
 | Ciclos por segundo | 2 | Plan |
 | Cargador | 12 balas (+4 por nivel) | Plan |
-| Calor | +20 por disparo NORMAL, +40 PERFORANTE, −30 por ciclo, máx. 100 | Plan |
-| Memoria | 12 líneas (hardware de memoria fuera del MVP) | Plan |
+| Calor | +20 por disparo NORMAL, +40 PERFORANTE, −30 por ciclo, entre 0 y 100 | Plan |
+| Memoria | 12 líneas (sentencias, ver 4.4); hardware de memoria fuera del MVP | Plan + Yeray (D-06) |
 | Daño de bala | 5 (+25 % por nivel) | Plan |
-| `recargar()` | La torreta no hace nada durante 3 ciclos | Plan; detalle ❓ D-03 |
-| Excepción sin capturar | Torreta colgada 3 s, error con línea encima | Plan |
-| Orden en el ciclo | Disipar calor → ejecutar script | ❓ D-04 |
-| `disparar()` con calor ≥ 100 | SobrecalentamientoException; con 90 dispara y queda en 100 | ❓ D-04 |
-| `disparar()` sin enemigos en rango | Bala «al aire»: gasta bala y calor | ❓ D-05 |
-| Objetivo por defecto | Enemigo vivo más cercano a la torreta dentro del rango | Plan («más cercano»); «a la torreta» ❓ D-05 |
-| Objetivo fijado | `apuntar(e)` lo mantiene entre ciclos hasta que muere o sale de rango | ❓ D-20 |
-| Rango | 200 u | ❓ D-12 |
-| Balas | Proyectil guiado a 600 u/s; si el objetivo muere antes, bala perdida | ❓ D-12 (el informe de derrota cuenta «balas en enemigos ya muertos», así que no pueden ser instantáneas) |
-| Perforante | Ignora la reducción del blindaje; un solo objetivo | ❓ D-09 |
-| Script inicial de la 2.ª torreta | `disparar();` | ❓ D-14 |
+| Orden en el ciclo | 1) disipar calor (mínimo 0); 2) ejecutar el script | Yeray (D-04) |
+| Sobrecalentamiento | Salta solo si disparas con el calor ya en 100; si un disparo lo supera, queda en 100 | Yeray (D-04) |
+| `recargar()` | Corta el script en ese punto; la torreta queda ocupada 3 ciclos (el calor sigue disipándose); al volver, cargador lleno. Con el cargador lleno cuesta lo mismo | Plan + Yeray (D-03) |
+| Recarga a mano | Mismo efecto que `recargar()`; no se puede con la torreta colgada | PROVISIONAL (D-03) |
+| Excepción sin capturar | Corta el script, torreta colgada 3 s, error con línea encima | Plan |
+| `disparar()` sin enemigos en rango | Bala «al aire»: gasta bala y calor | PROVISIONAL (D-05) |
+| Objetivo por defecto | Enemigo vivo más cercano **a la torreta** dentro del rango | Plan + PROVISIONAL (D-05) |
+| Objetivo fijado | `apuntar(e)` lo mantiene entre ciclos; `objetivo()` da `null` si no hay, murió o salió de rango | Yeray (D-20) |
+| `usarMunicion(tipo)` | Disponible desde la oleada 6; el tipo elegido se mantiene entre ciclos | Plan |
+| Perforante | Ignora la reducción del blindaje; un solo objetivo | PROVISIONAL (D-09) |
+| Script inicial de cada torreta | `disparar();` | PROVISIONAL (D-14) |
+| Rango | 200 u | No viene del plan (D-12) |
+| Balas | Proyectil guiado a 600 u/s; si el objetivo muere antes, bala perdida y contada en el informe | No viene del plan (D-12) |
+| Presupuesto de pasos | 100.000 nodos por ciclo, además del límite de 1.000 vueltas por `while` | No viene del plan (4.5) |
 
 ### 10.2 Enemigos y oleadas
 
@@ -370,15 +387,15 @@ yo va con ❓ y su número de duda.
 | Dinero por enemigo | `2 · 1,15^(n−1)` | Plan |
 | Nº de enemigos | `min(6 + 2n, 60)` | Plan |
 | Núcleo | 20 vidas por oleada; cada enemigo que llega quita 1 | Plan |
-| Regenerador | Se cura si pasa 1 s sin daño; ritmo 25 % de vida máx./s | 1 s plan; ritmo ❓ D-12 |
-| Blindado | −80 % de daño con NORMAL; velocidad ×0,8 | 80 % plan; velocidad ❓ |
-| Enjambre | Grupos de 10, juntos; vida ×0,3, dinero ×0,3, velocidad ×1,2; cada miembro cuenta como 1 enemigo | 10 plan; resto ❓ D-12 |
-| Jefe 1 | Vida = 20 × vida de la oleada 10; alterna blindaje cada 5 s; si llega al núcleo se pierde la oleada | Plan |
-| Recompensa del jefe | 1.er derribo = 3 × dinero de la oleada 10; los siguientes ❓ | ❓ D-10 |
-| Duración | ~45 s: camino de 1.500 u, velocidad base 60 u/s (25 s), salidas repartidas en 20 s | Objetivo del plan; números ❓ D-12 |
+| Regenerador | Se cura si pasa 1 s sin daño, a 25 % de vida máx./s | 1 s Plan; ritmo No viene del plan |
+| Blindado | −80 % de daño con NORMAL; velocidad ×0,8 | 80 % Plan; velocidad No viene del plan |
+| Enjambre | Grupos de 10, juntos; vida ×0,3, dinero ×0,3, velocidad ×1,2; cada miembro cuenta como 1 enemigo | 10 Plan; resto No viene del plan |
+| Jefe 1 | Vida = 20 × vida de la oleada 10; alterna blindaje cada 5 s; si llega al núcleo se pierde la oleada; velocidad ×0,5 | Plan; velocidad No viene del plan |
+| Recompensa del jefe | 1.er derribo = 3 × dinero de la oleada 10 (549); los siguientes, como 20 enemigos normales de esa oleada | PROVISIONAL (D-10) |
+| Duración | ~45 s: camino de 1.500 u, velocidad base 60 u/s (25 s), salidas repartidas en 20 s | ~45 s Plan; números No viene del plan |
 
-Composición propuesta (❓ D-12). B = Básico, R = Regenerador, Bl = Blindado,
-E = Enjambre:
+Composición (No viene del plan, D-12). B = Básico, R = Regenerador,
+Bl = Blindado, E = Enjambre:
 
 | Oleada | Total | Mezcla |
 |---|---|---|
@@ -400,14 +417,26 @@ E = Enjambre:
 | Sintaxis MVP | if 25 · Variables 60 (req. if) · `&& || !` 100 (req. Variables) · while 200 (req. `&&`) | Plan |
 | Árbol visible | Las 8 piezas con precio desde el inicio; las 4 de fuera del MVP, bloqueadas | Plan |
 | Hardware MVP | Daño 20 ×1,6 · Cargador 15 ×1,5 · Disipador 40 ×1,6 | Plan |
-| Efecto por nivel | Aditivo sobre la base: daño 5 → 6,25 → 7,5 | Plan («cada nivel… da lo mismo»); ❓ D-13 |
-| Ámbito del hardware | Global, para todas las torretas | ❓ D-13 |
+| Efecto por nivel | Aditivo sobre la base: daño 5 → 6,25 → 7,5 | Plan («cada nivel… da lo mismo») + PROVISIONAL (D-13) |
+| Ámbito del hardware | Global, para todas las torretas | PROVISIONAL (D-13) |
 | Segunda torreta | «Torreta extra» a 75; tope 2 en el MVP | Plan |
 | Oleada perfecta | +25 % del pago de la oleada si no se cuela nadie | Plan |
-| Avance automático | Interruptor; apagado repite la oleada. Por defecto encendido | Plan; valor por defecto ❓ D-02 |
+| Avance automático | Interruptor; apagado repite la oleada. Encendido en partida nueva | Plan + PROVISIONAL (D-02) |
 | Velocidad ×3 | Solo en oleadas superadas alguna vez sin fugas | Plan |
 | Derrota | Cobras lo matado, conservas todo, vuelves a la oleada anterior (mín. 1) con avance automático apagado | Plan |
-| Flujo entre oleadas | ❓ D-01 | |
+| Dinero | Exacto en centésimas; la UI muestra enteros hacia abajo | PROVISIONAL (D-11) |
+
+### 10.4 Flujo entre oleadas (D-01, Yeray)
+
+- Una oleada que **nunca has superado** se para en el parte de oleada hasta
+  que pulsas «Desplegar».
+- Con el avance automático **apagado**, las repeticiones se encadenan sin
+  pausa; el informe aparece sin bloquear.
+- Con el avance automático **encendido** y la siguiente oleada ya superada
+  alguna vez (p. ej. tras volver por una derrota), también se encadena sin
+  pausa. PROVISIONAL (D-01b).
+- Editor y tienda se pueden usar mientras corre una oleada; los cambios de
+  código entran en la siguiente pasada (la «edición en caliente» del plan).
 
 ## 11. Simulador (`sim-cli`)
 
@@ -417,87 +446,48 @@ E = Enjambre:
   anterior.
 - **Pasadas por muro**: cuántas veces repite una oleada antes de superar la
   siguiente. Falla si alguna pasa de 5.
-- **Regla del doble** (❓ D-17): para cada pieza de precio P en la oleada en
-  que «llega», se compara (a) el script con la pieza frente a (b) el script
-  sin ella más P gastado en el mejor hardware. Métrica: el mayor factor `k`
-  de vida de enemigos con el que la oleada se supera (búsqueda binaria). Se
-  cumple si `k(a) ≥ 2 · k(b)`.
-- Salida en texto y en `docs/BALANCE.md`. Si contradice el plan, se informa
-  con datos; no se ajusta nada por mi cuenta.
+- **Regla del doble** (PROVISIONAL D-17): para cada pieza de precio P en la
+  oleada en que «llega», se compara (a) el script con la pieza frente a (b) el
+  script sin ella más P gastado en el mejor hardware. Métrica: el mayor factor
+  `k` de vida de enemigos con el que la oleada se supera (búsqueda binaria).
+  Se cumple si `k(a) ≥ 2 · k(b)`.
+- **Caso obligatorio (D-20)**: comprobar que Variables cumple la regla del
+  doble **contra el Regenerador** (oleadas 4–5).
+- Salida en texto y en `docs/BALANCE.md`, con los números que no vienen del
+  plan marcados. Si contradice el plan, se informa con datos; no se ajusta
+  nada por mi cuenta.
 
-## 12. Dudas abiertas
+## 12. Decisiones de la fase 0
 
-Las que bloquean una fase están marcadas. Para cada una doy mi recomendación.
+**CERRADA** = decidida por Yeray. **PROVISIONAL** = propuesta mía aplicada
+para avanzar; se revisa más adelante (lista en `docs/PROGRESS.md`). Ninguna
+provisional contradice el plan.
 
-- **D-01 Flujo entre oleadas** *(bloquea fase 3)*. El bucle del plan tiene
-  «Desplegar» como paso explícito, pero farmear es «dejar que el código repita
-  la oleada mientras escribes». Propuesta: tras el informe, cuenta atrás de 5 s
-  y despliegue automático, con botón «Esperar» y «Desplegar ya». Editor y
-  tienda abiertos en todo momento; lo que cambies entra en la siguiente pasada
-  (es la «edición en caliente» del plan, sale casi gratis).
-- **D-02 Avance automático por defecto**: encendido. Es lo que espera alguien
-  nuevo.
-- **D-03 `recargar()`** *(bloquea fase 3)*. ¿Termina el ciclo en curso? ¿El
-  cargador se llena al empezar o al acabar los 3 ciclos? Propuesta:
-  `recargar()` corta el script en ese punto (sin excepción), la torreta no
-  ejecuta los 3 ciclos siguientes y el cargador se llena al final. Llamarlo con
-  el cargador lleno también cuesta los 3 ciclos.
-- **D-04 Calor** *(bloquea fase 3)*. Propuesta: al empezar cada ciclo se disipa
-  y luego corre el script; la excepción salta si el calor ya es 100 antes de
-  disparar; un disparo con 90 se hace y deja 100. Así un disparo por ciclo es
-  sostenible y una ráfaga en frío da 5 disparos.
-- **D-05 Disparar sin objetivo y «más cercano»**. Propuesta: sin enemigos en
-  rango, la bala sale al aire y gasta bala y calor (es el «disparar al aire»
-  que te quita el `if`). «Más cercano» = a la torreta.
-- **D-06 Qué cuenta como línea** *(bloquea fase 2)*: sentencias, ver 4.4.
-- **D-07 Qué trae cada pieza** *(bloquea fase 2)*: tabla de 4.3. En concreto,
-  ¿la aritmética llega con Variables? Sin ella no hay contadores en el `while`.
-- **D-08 División entre cero** *(bloquea fase 2)*. Si entra `/`, Java lanza
-  `ArithmeticException`, que no está en el plan. Opciones: (a) añadir
-  `ArithmeticException` (real, como NullPointer); (b) dejar `/` y `%` fuera del
-  MVP. Recomiendo (b): nada del MVP necesita dividir.
-- **D-09 Perforante**: ¿solo atraviesa blindaje o también atraviesa enemigos?
-  Propuesta: solo blindaje.
-- **D-10 Recompensa del jefe**. «El primer derribo paga el equivalente a tres
-  oleadas»: ¿tres oleadas 10 (3 × 183 = 549)? ¿Y los derribos siguientes al
-  farmear la 10? Propuesta: 549 la primera vez; después, como 20 enemigos
-  normales de la oleada.
-- **D-11 Decimales del dinero**. Propuesta: se guarda exacto en centésimas y
-  la UI muestra enteros redondeando hacia abajo.
-- **D-12 Números que el plan no fija** *(bloquea fase 3)*: rango, velocidad de
-  bala, longitud del camino, velocidades, ritmo de salida, curación del
-  regenerador, enjambre y la composición de la tabla 10.2. Van a JSON marcados
-  como «propuesta» y el simulador dirá si funcionan.
-- **D-13 Hardware**: aditivo y global. ¿Correcto?
-- **D-14 Segunda torreta**: ¿empieza con `disparar();` o vacía?
-- **D-15 JDK en la sesión cloud** *(bloquea fase 1)*. Para que Gradle
-  descargue Temurin 25 hay que permitir `api.foojay.io`, `api.adoptium.net` y
-  `github.com` (más `objects.githubusercontent.com` y
-  `release-assets.githubusercontent.com`, donde redirige) en el acceso de red
-  del entorno. Alternativa: compilar con el JDK 21 que ya hay y dejar 25 solo
-  en CI y en tu IntelliJ; no lo recomiendo, porque los tests de aquí no
-  probarían la misma versión.
-- **D-16 JUnit**: pediste JUnit 5; la versión actual es JUnit 6 (misma API
-  Jupiter, requiere Java 17+). Propongo 6; si prefieres 5, 5.14.4.
-- **D-17 Métrica de la regla del doble**: ver sección 11. ¿Te vale?
-- **D-18 Nombre interno**: id `java-wave-defense` / `JavaWaveDefense` para la
-  carpeta de guardado y el paquete. El nombre visible va en `names.json` y se
-  cambia cuando decidas el tema.
-- **D-19 Sin hilo aparte para los scripts**: ver el aviso de 4.5 (sin hilo
-  aparte). Necesito tu visto bueno porque cambia lo que dice el plan.
-- **D-20 Cómo «no soltar al objetivo» con variables** *(bloquea fase 2, la más
-  importante)*. El script se ejecuta entero en cada ciclo y, como en Java, sus
-  variables locales se pierden al terminar. Con Variables solo se puede
-  obtener `enemigoMasCercano()`, que es lo mismo que el objetivo por defecto.
-  Así que, tal como está el plan, comprar Variables no cambia nada contra el
-  Regenerador. Opciones:
-  - (a) **Recomendada**: `apuntar(e)` fija el objetivo en la torreta y se
-    mantiene entre ciclos hasta que muere o sale del rango; se añade la lectura
-    `objetivo()` (devuelve `null` si no hay), disponible con Variables. Script
-    típico: `Enemigo o = objetivo(); if (o == null) { o = enemigoMasCercano(); apuntar(o); } disparar();`.
-    Enseña `null` y provoca NullPointerException de forma natural. Es una
-    llamada nueva respecto al plan: necesito tu sí.
-  - (b) Que las variables sobrevivan entre ciclos. No es Java y enseñaría algo
-    falso. No la recomiendo.
-  - (c) Dejarlo como está y que Variables valga por otras razones. Entonces el
-    simulador probablemente diga que no cumple la regla del doble.
+| Id | Tema | Estado | Decisión |
+|---|---|---|---|
+| D-01 | Flujo entre oleadas | CERRADA | Ver 10.4. |
+| D-01b | Avance automático hacia una oleada ya superada | PROVISIONAL | Se encadena sin pausa. |
+| D-02 | Avance automático por defecto | PROVISIONAL | Encendido en partida nueva. |
+| D-03 | `recargar()` | CERRADA | Corta el script; 3 ciclos ocupada; el calor sigue disipándose; vuelve con el cargador lleno; con el cargador lleno cuesta lo mismo. La recarga a mano funciona igual (PROVISIONAL). |
+| D-04 | Calor | CERRADA | Se disipa al inicio del ciclo, antes del script, mínimo 0. Excepción solo si disparas con 100; un disparo que lo supera lo deja en 100. |
+| D-05 | Disparo sin objetivo y «más cercano» | PROVISIONAL | Bala al aire (gasta bala y calor). «Más cercano» = a la torreta. |
+| D-06 | Línea de memoria | CERRADA | Una sentencia = una línea (4.4). Se explica en una frase y el editor muestra el contador en vivo. |
+| D-07 | Qué trae cada pieza | CERRADA | Tabla de 4.3. |
+| D-08 | División entre cero | CERRADA | `ArithmeticException` como en Java; cuelga 3 s y muestra la línea. |
+| D-09 | Perforante | PROVISIONAL | Solo atraviesa blindaje, no enemigos. |
+| D-10 | Recompensa del jefe | PROVISIONAL | 549 la primera vez; luego como 20 enemigos normales de la oleada 10. |
+| D-11 | Decimales del dinero | PROVISIONAL | Centésimas por dentro; enteros hacia abajo en la UI. |
+| D-12 | Números que el plan no fija | CERRADA | Se aceptan los valores de la sección 10, marcados «No viene del plan» en JSON y en `docs/BALANCE.md`. |
+| D-13 | Hardware | PROVISIONAL | Aditivo sobre la base y global. |
+| D-14 | Script inicial de las torretas | PROVISIONAL | `disparar();`. |
+| D-15 | JDK | CERRADA | JDK 21 LTS; versión en un único sitio para subir a 25. |
+| D-16 | JUnit | CERRADA | JUnit 6. |
+| D-17 | Métrica de la regla del doble | PROVISIONAL | Factor de vida `k` (sección 11). |
+| D-18 | Nombre interno | PROVISIONAL | `java-wave-defense` / `JavaWaveDefense`; paquete `io.github.yeray06.wavedefense`. El nombre visible va en `names.json`. |
+| D-19 | Hilo aparte | CERRADA | Sin hilo; presupuesto de pasos. |
+| D-20 | No soltar al objetivo | CERRADA | `apuntar(e)` persiste entre ciclos; nueva lectura `objetivo()`; sin `apuntar`, el más cercano. Comprobación en fase 3 con el simulador. |
+| D-21 | Operadores simétricos | PROVISIONAL | Además de `++` y `+=`: `--`, `-=`, `*=`, `/=`, `%=`. Prefijo y sufijo, como en Java. |
+| D-22 | Lecturas de enemigo sin `double` | PROVISIONAL | `vida()`, `velocidad()` y `distanciaAlNucleo()` devuelven `int` (4.6). |
+
+Decisiones de stack también cerradas: Kotlin DSL sí; LWJGL el de libGDX
+1.14.2 sin sobrescribir.
