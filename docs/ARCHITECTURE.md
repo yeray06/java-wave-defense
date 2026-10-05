@@ -4,7 +4,7 @@ Documento vivo. Cada decisión lleva su motivo en una línea. La fuente de verda
 del diseño es [`plan-diseno.pdf`](plan-diseno.pdf); si algo de aquí lo
 contradice, manda el plan y hay que avisar.
 
-Estado: **fase 2 hecha** (intérprete). Las decisiones están en la sección 12. Las que
+Estado: **fase 3 hecha** (simulación, `sim-cli` y `docs/BALANCE.md`). Las decisiones están en la sección 12. Las que
 llevan **PROVISIONAL** son propuestas mías aceptadas para poder avanzar; se
 listan en `docs/PROGRESS.md` («Decisiones por revisar»). Los números que no
 vienen del plan van marcados en los JSON y en `docs/BALANCE.md`.
@@ -82,15 +82,12 @@ java-wave-defense/
 │       └── diag/                  # ErrorCode, CompileError, FaultType, CycleOutcome
 ├── core-sim/                      # simulación determinista. Java puro (+ Jackson)
 │   └── src/{main,test}/java/io/github/yeray06/wavedefense/sim/
-│       ├── data/                  # carga y validación de JSON (ScriptApiLoader…)
-│       ├── world/                 # Simulation, PathTrack, Enemy, Bullet, pools, Core
-│       ├── turret/                # Turret, Heat, Magazine, TurretApiAdapter
-│       ├── wave/                  # WaveDirector, SpawnSchedule, WaveReport
-│       ├── economy/               # Money (punto fijo), recompensas
-│       ├── shop/                  # Shop, compras de sintaxis y hardware
-│       ├── progress/              # Profile, reglas de avance/derrota/x3
-│       ├── save/                  # SaveData versionado, migraciones, códec JSON
-│       └── rng/                   # SplitMix64 con semilla
+│       ├── data/                  # GameData: records de cada JSON, validados al cargar
+│       ├── economy/               # Formulas (las del plan), Money (centésimas)
+│       ├── world/                 # Battle (una oleada), Turret, Enemy, Bullet, pools, PathTrack, WaveReport
+│       ├── progress/              # Progress, Shop, Progression (pago, avance, derrota, ×3)
+│       ├── save/                  # fase 6: SaveData versionado, migraciones, códec JSON
+│       └── rng/                   # SplitMix64 con semilla (reservado: el MVP no tiene azar)
 ├── platform/                      # servicios del SO / Steam. Java puro
 │   └── src/{main,test}/java/io/github/yeray06/wavedefense/platform/
 │       ├── PlatformServices.java  # logros, nube…
@@ -118,15 +115,16 @@ java-wave-defense/
 │   └── src/main/
 │       ├── java/io/github/yeray06/wavedefense/simcli/
 │       │   ├── SimMain.java
-│       │   ├── ReferencePlayer.java   # política de compra y avance de un jugador tipo
-│       │   ├── WallReport.java        # pasadas por muro
-│       │   └── DoubleRuleReport.java  # regla del doble
-│       └── resources/reference-scripts/*.txt
+│       │   ├── ReferencePlayer.java   # scripts de referencia + recarga a mano
+│       │   ├── ProgressionRun.java    # partida completa con política de compra; muros
+│       │   ├── DoubleRule.java        # regla del doble
+│       │   └── BalanceReport.java     # escribe docs/BALANCE.md
+│       └── resources/reference/       # player.json + scripts/L0…L4-ammo.txt
 └── docs/
     ├── plan-diseno.pdf
     ├── ARCHITECTURE.md
     ├── PROGRESS.md
-    ├── BALANCE.md                 # fase 3
+    ├── BALANCE.md                 # generado por sim-cli; un test exige que esté al día
     └── STEAM.md                   # fase 7
 ```
 
@@ -354,8 +352,9 @@ Así se ve en el propio dato qué es provisional.
   contrato entre JDK). Desde Java 17 el punto flotante es estricto en todas
   las plataformas. Test: misma semilla y mismos scripts → mismo hash de estado
   tras N ticks.
-- **Pools**: enemigos y balas en arrays de capacidad fija preasignados
-  (60 enemigos + jefe + margen; 512 balas). Nada de `new` en el tick.
+- **Pools**: enemigos y balas en arrays de capacidad fija preasignados al
+  empezar la oleada (tantos enemigos como salen en ella; 64 balas por
+  torreta). Nada de `new` en el tick.
 - **Dinero en punto fijo** (`long` en centésimas): la fórmula da 2,3; 2,645…
   y con `double` acumularíamos errores al repetir oleadas. La UI muestra
   enteros redondeando hacia abajo (PROVISIONAL D-11).
@@ -445,7 +444,7 @@ los JSON y en `docs/BALANCE.md`.
 | Orden en el ciclo | 1) disipar calor (mínimo 0); 2) ejecutar el script | Yeray (D-04) |
 | Sobrecalentamiento | Salta solo si disparas con el calor ya en 100; si un disparo lo supera, queda en 100 | Yeray (D-04) |
 | `recargar()` | Corta el script en ese punto; la torreta queda ocupada 3 ciclos (el calor sigue disipándose); al volver, cargador lleno. Con el cargador lleno cuesta lo mismo | Plan + Yeray (D-03) |
-| Recarga a mano | Mismo efecto que `recargar()`; no se puede con la torreta colgada | PROVISIONAL (D-03) |
+| Recarga a mano | Mismo efecto que `recargar()`; **también con la torreta colgada** (la recarga avanza durante el cuelgue); no si ya está recargando | PROVISIONAL (D-03b, cambiada en la fase 3) |
 | Excepción sin capturar | Corta el script, torreta colgada 3 s, error con línea encima | Plan |
 | `disparar()` sin enemigos en rango | Bala «al aire»: gasta bala y calor | PROVISIONAL (D-05) |
 | Objetivo por defecto | Enemigo vivo más cercano **a la torreta** dentro del rango | Plan + PROVISIONAL (D-05) |
@@ -519,22 +518,57 @@ Bl = Blindado, E = Enjambre:
 
 ## 11. Simulador (`sim-cli`)
 
-- Juega las oleadas 1–10 con scripts de referencia (uno por nivel de sintaxis)
-  y un `ReferencePlayer` con una política fija: compra la siguiente sintaxis
-  en cuanto puede; si no, el hardware más barato; si pierde, farmea la
-  anterior.
-- **Pasadas por muro**: cuántas veces repite una oleada antes de superar la
-  siguiente. Falla si alguna pasa de 5.
-- **Regla del doble** (PROVISIONAL D-17): para cada pieza de precio P en la
-  oleada en que «llega», se compara (a) el script con la pieza frente a (b) el
-  script sin ella más P gastado en el mejor hardware. Métrica: el mayor factor
-  `k` de vida de enemigos con el que la oleada se supera (búsqueda binaria).
-  Se cumple si `k(a) ≥ 2 · k(b)`.
-- **Caso obligatorio (D-20)**: comprobar que Variables cumple la regla del
-  doble **contra el Regenerador** (oleadas 4–5).
-- Salida en texto y en `docs/BALANCE.md`, con los números que no vienen del
-  plan marcados. Si contradice el plan, se informa con datos; no se ajusta
-  nada por mi cuenta.
+`./gradlew :sim-cli:run --args="--write docs/BALANCE.md"` juega el MVP entero
+en unos segundos y reescribe el informe. `SimCliTest` falla si el informe
+del repo no coincide con lo que generan los datos actuales: cambiar un JSON
+obliga a regenerarlo y a ver el efecto en el mismo PR.
+
+- **Jugador de referencia**: un script por nivel de sintaxis
+  (`resources/reference/scripts/`, todos caben en 12 líneas; los que llevan
+  `-ammo` usan `usarMunicion`). Recarga a mano 1 s después de vaciarse una
+  torreta (`player.json`, no viene del plan).
+- **Política de compra**: la siguiente sintaxis en cuanto la puede pagar;
+  atascado tras una derrota, lo que pueda tras cada oleada farmeada
+  (sintaxis, si no torreta extra, si no el hardware más barato) y vuelve a
+  intentarlo; con toda la sintaxis, hardware tras cada oleada. Usa ×3 donde
+  se puede. El tiempo de escribir código no cuenta.
+- **Pasadas por muro**: oleadas anteriores repetidas entre la primera
+  derrota en una oleada nueva y su primera victoria. Regla del plan: ≤ 5.
+- **Regla del doble** (PROVISIONAL D-17, métrica cambiada en la fase 3): para
+  cada pieza, desde el estado justo antes de comprarla y en la oleada en que
+  «llega» (`shop.json`), `k` = mayor multiplicador de vida enemiga con el que
+  la oleada sale **sin fugas**. Se compara la pieza con su script frente al
+  mejor hardware del mismo precio. Cumple si la proporción es ≥ 2. La
+  propuesta original («la oleada se supera») no servía: con 20 vidas, las
+  oleadas 1–6 no se pueden perder y `k` se saturaba en el máximo.
+- **Caso D-20**: la fila VARIABLES es la oleada 4, la primera con
+  regeneradores.
+- **Conclusiones**: el informe separa «Contradicciones con el plan» (reglas
+  del plan que no se cumplen) y «Avisos». Nada se ajusta por mi cuenta.
+
+### 11.1 Simulación (`core-sim`) tal como ha quedado
+
+- `Battle` juega una oleada: aparición → ciclos de torreta → balas →
+  enemigos → fin. 60 ticks/s; ciclo de torreta cada 30 ticks.
+- Aparición: los «huecos» de salida se reparten por igual en la ventana de
+  20 s; un grupo de enjambre ocupa un hueco y sus miembros salen seguidos a la
+  distancia de grupo. El jefe es el último hueco.
+- Balas guiadas; si el objetivo muere antes de llegar, cuentan como «balas en
+  enemigos ya muertos». Un enemigo muere con vida ≤ 1e-9 (si no, 5 × 0,2 =
+  0,99999… y el blindado necesitaría una bala más).
+- `hayEnemigos()` y `enemigoMasCercano()` miran solo enemigos en rango.
+- Asas de enemigo: generación en los 32 bits altos, hueco + 1 en los bajos.
+- Fugas: cada una guarda el tipo, la vida que le quedaba y la distancia del
+  camino donde estuvo en rango por última vez («por qué punto se coló»).
+- Cero reservas por tick (`BattleAllocationTest`) y mismo informe con los
+  mismos datos (`BattleTest`).
+- Funciones matemáticas con `StrictMath`, sin reloj ni `Random`:
+  `DeterminismRulesTest` lo vigila en el código fuente. Motivo: `Math.pow` y
+  compañía pueden diferir en el último bit entre máquinas.
+- La lógica de partida (`Progress`, `Shop`, `Progression`) aplica el plan:
+  +25 % por oleada perfecta, ×3 en oleadas superadas sin fugas, derrota =
+  cobras lo matado, vuelves una oleada atrás con el avance automático
+  apagado y conservas todo.
 
 ## 12. Decisiones de la fase 0
 
@@ -548,6 +582,7 @@ provisional contradice el plan.
 | D-01b | Avance automático hacia una oleada ya superada | PROVISIONAL | Se encadena sin pausa. |
 | D-02 | Avance automático por defecto | PROVISIONAL | Encendido en partida nueva. |
 | D-03 | `recargar()` | CERRADA | Corta el script; 3 ciclos ocupada; el calor sigue disipándose; vuelve con el cargador lleno; con el cargador lleno cuesta lo mismo. La recarga a mano funciona igual (PROVISIONAL). |
+| D-03b | Recarga a mano con la torreta colgada | PROVISIONAL (cambiada en la fase 3) | Se permite. Antes estaba prohibida, pero el cuelgue dura justo 6 ciclos: un script que lanza con el cargador vacío se despierta y vuelve a lanzar en el mismo tick, y el jugador nunca podía recargar (la oleada 1 se volvía imposible de jugar, contra el plan). |
 | D-04 | Calor | CERRADA | Se disipa al inicio del ciclo, antes del script, mínimo 0. Excepción solo si disparas con 100; un disparo que lo supera lo deja en 100. |
 | D-05 | Disparo sin objetivo y «más cercano» | PROVISIONAL | Bala al aire (gasta bala y calor). «Más cercano» = a la torreta. |
 | D-06 | Línea de memoria | CERRADA | Una sentencia = una línea (4.4). Se explica en una frase y el editor muestra el contador en vivo. |
@@ -561,7 +596,7 @@ provisional contradice el plan.
 | D-14 | Script inicial de las torretas | PROVISIONAL | `disparar();`. |
 | D-15 | JDK | CERRADA | JDK 21 LTS; versión en un único sitio para subir a 25. |
 | D-16 | JUnit | CERRADA | JUnit 6. |
-| D-17 | Métrica de la regla del doble | PROVISIONAL | Factor de vida `k` (sección 11). |
+| D-17 | Métrica de la regla del doble | PROVISIONAL (cambiada en la fase 3) | Factor de vida `k` con el que la oleada sale **sin fugas** (sección 11). |
 | D-18 | Nombre interno | PROVISIONAL | `java-wave-defense` / `JavaWaveDefense`; paquete `io.github.yeray06.wavedefense`. El nombre visible va en `i18n/messages.properties`. |
 | D-19 | Hilo aparte | CERRADA | Sin hilo; presupuesto de pasos. |
 | D-20 | No soltar al objetivo | CERRADA | `apuntar(e)` persiste entre ciclos; nueva lectura `objetivo()`; sin `apuntar`, el más cercano. Comprobación en fase 3 con el simulador. |
@@ -573,6 +608,11 @@ provisional contradice el plan.
 | D-26 | `apuntar(null)` | PROVISIONAL | Lanza NullPointerException, como cualquier uso de un enemigo inexistente. |
 | D-27 | Código inalcanzable | PROVISIONAL | No se comprueba (javac sí). El bucle infinito salta en ejecución. |
 | D-28 | Un error por pieza y línea | PROVISIONAL | Si una línea usa varias cosas de la misma pieza bloqueada (`if`, `==`, `municion()`), sale un solo «Aún no has desbloqueado if/else». |
+| D-29 | Calor y recarga durante el cuelgue | PROVISIONAL | El calor se sigue disipando y una recarga sigue avanzando mientras la torreta está colgada. |
+| D-30 | El jefe | PROVISIONAL | Empieza sin blindaje y alterna cada 5 s. No cobra por baja (0): solo el pago de D-10. |
+| D-31 | Lecturas de la torreta | PROVISIONAL | `hayEnemigos()` y `enemigoMasCercano()` solo ven enemigos en rango. |
+| D-32 | Orden de aparición | PROVISIONAL | Grupos en el orden de `waves.json`; huecos repartidos por igual en 20 s; el enjambre ocupa un hueco. |
+| D-33 | Jugador de referencia | PROVISIONAL | Política de compra y 1 s de reacción para recargar a mano (sección 11). Solo afecta al informe, no al juego. |
 
 Decisiones de stack también cerradas: Kotlin DSL sí; LWJGL el de libGDX
 1.14.2 sin sobrescribir.

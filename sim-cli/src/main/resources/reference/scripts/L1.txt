@@ -1,0 +1,5 @@
+if (municion() == 0) {
+    recargar();
+} else if (hayEnemigos()) {
+    disparar();
+}

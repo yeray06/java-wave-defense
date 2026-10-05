@@ -6,8 +6,8 @@
 |---|---|---|
 | 0. Propuesta: árbol, decisiones y dudas | ✅ Fusionada | `phase-0-propuesta` |
 | 1. Esqueleto Gradle, lanzador y CI | ✅ Fusionada | `phase-1-esqueleto` |
-| 2. Intérprete con tests | ✅ Hecha, en PR | `phase-2-interprete` |
-| 3. core-sim y sim-cli, `docs/BALANCE.md` | ⏳ Siguiente | — |
+| 2. Intérprete con tests | ✅ Fusionada | `phase-2-interprete` |
+| 3. core-sim y sim-cli, `docs/BALANCE.md` | ✅ Hecha, en PR | `phase-3-simulacion` |
 | 4. Juego: camino, torretas, enemigos, bucle | Solo con Yeray en casa | — |
 | 5. Editor, tienda, parte de oleada, informe | Solo con Yeray en casa | — |
 | 6. Guardado, ajustes, robustez | Solo con Yeray en casa | — |
@@ -69,11 +69,47 @@ sustituye la prueba en Windows con GPU real.
 - Fallos encontrados por los propios tests y corregidos: un nodo nulo en
   scripts con errores y un desbordamiento de pila con `x = x = x = …`.
 
-## Siguiente: fase 3
+## Fase 3 (hecha)
 
-`core-sim` y `sim-cli`, con el informe de balance de las 10 oleadas en
-`docs/BALANCE.md` (incluida la regla del doble de Variables contra el
-Regenerador, D-20).
+- Datos de balance en `assets/data/` (`balance`, `turret`, `enemies`,
+  `waves`, `shop`, `map`), leídos con Jackson en modo estricto (falta un
+  campo, sobra uno o hay un valor fuera de rango → error con fichero y
+  campo) y validados entre sí (cada oleada suma `min(6 + 2n, 60)`, jefe cada
+  10, enjambres en grupos de 10, el script inicial compila…).
+- `core-sim`: fórmulas y dinero en centésimas; `Battle` simula una oleada
+  completa (torretas que ejecutan el script del jugador, calor, cargador,
+  recarga, cuelgues, balas guiadas, blindaje, perforante, regeneración, jefe
+  que alterna blindaje, fugas y derrota) y devuelve el informe de la oleada;
+  `Progress`, `Shop` y `Progression` aplican tienda, pago, oleada perfecta,
+  ×3, avance automático y derrota.
+- `sim-cli` juega el MVP con un jugador de referencia y escribe
+  `docs/BALANCE.md`: economía, partida simulada, muros, tiempo, ritmo de
+  compras, regla del doble, contradicciones y avisos.
+- 291 tests. Nuevos: economía contra la tabla del plan, cada regla de la
+  torreta y de los enemigos, determinismo, cero reservas por tick, progreso y
+  tienda, datos rotos, y que `BALANCE.md` esté al día.
+
+### Resultado del simulador (detalle en `docs/BALANCE.md`)
+
+- El jugador de referencia derrota al Jefe 1 en **22 oleadas jugadas** y
+  **16,4 min** de juego (más el tiempo de escribir código; el plan apunta a
+  20–30 min en total).
+- Muros en las oleadas 9 y 10, con 1 y 5 pasadas: **cumple** la regla de 5.
+- **La regla del doble no se cumple para ninguna pieza** (if 1,07; variables
+  1,00; `&&` 0,40; while 0,75). Cada pieza mejora su propio script, pero el
+  hardware del mismo precio mejora más: +25 % de daño cuesta 20 (menos que
+  `if`) y la torreta extra cuesta 75 (menos que `&&`) y duplica el fuego.
+- **Aviso**: con 20 vidas por oleada, las oleadas 1–6 no se pueden perder
+  aunque no dispare ninguna torreta.
+- **Aviso**: la oleada 1 con `disparar();` y recarga a mano sale perfecta;
+  el plan quiere que «no des abasto».
+- Nada de esto se ha ajustado: son datos para que decidas.
+
+## Siguiente: fase 4
+
+Juego: camino, torretas, enemigos y bucle de oleada. **Necesita que estés en
+casa para probarla**; no empiezo sin que me lo digas. Antes conviene decidir
+qué hacer con la regla del doble.
 
 ## Decisiones por revisar
 
@@ -83,8 +119,9 @@ Propuestas mías aplicadas como PROVISIONAL (detalle en
 - **D-01b**: con avance automático encendido, una oleada ya superada se
   encadena sin pausa.
 - **D-02**: avance automático encendido en partida nueva.
-- **D-03 (recarga a mano)**: igual que `recargar()`; no se puede con la
-  torreta colgada.
+- **D-03b (cambiada en la fase 3)**: la recarga a mano se puede hacer también
+  con la torreta colgada. Prohibirla dejaba la oleada 1 sin salida (el
+  cuelgue dura justo 6 ciclos y la torreta vuelve a colgarse al despertar).
 - **D-05**: `disparar()` sin enemigos en rango gasta bala y calor; «más
   cercano» = a la torreta.
 - **D-09**: perforante solo atraviesa blindaje.
@@ -93,7 +130,8 @@ Propuestas mías aplicadas como PROVISIONAL (detalle en
 - **D-11**: dinero en centésimas; la UI muestra enteros hacia abajo.
 - **D-13**: hardware aditivo y global.
 - **D-14**: cada torreta empieza con `disparar();`.
-- **D-17**: regla del doble medida con el factor de vida `k`.
+- **D-17 (cambiada en la fase 3)**: regla del doble medida con el factor de
+  vida `k` con el que la oleada sale **sin fugas** (con «superada» se saturaba).
 - **D-18**: id interno `java-wave-defense` y paquete
   `io.github.yeray06.wavedefense`.
 - **D-21**: con Variables también `--`, `-=`, `*=`, `/=`, `%=`.
@@ -106,10 +144,15 @@ Propuestas mías aplicadas como PROVISIONAL (detalle en
 - **D-26**: `apuntar(null)` lanza NullPointerException.
 - **D-27**: no se comprueba el código inalcanzable (javac sí).
 - **D-28**: un solo «Aún no has desbloqueado X» por pieza y línea.
+- **D-29**: el calor se disipa y la recarga avanza durante un cuelgue.
+- **D-30**: el jefe empieza sin blindaje y no cobra por baja (solo D-10).
+- **D-31**: `hayEnemigos()` y `enemigoMasCercano()` solo ven enemigos en rango.
+- **D-32**: orden de aparición de `waves.json`, huecos repartidos en 20 s.
+- **D-33**: jugador de referencia del simulador (política de compra, 1 s de
+  reacción). Solo afecta al informe.
 
-Números de balance que no vienen del plan (D-12): ver
-`docs/ARCHITECTURE.md` 10.1 y 10.2; irán marcados en JSON y en
-`docs/BALANCE.md`.
+Números de balance que no vienen del plan (D-12): están en la lista
+`notFromPlan` de cada JSON y en la sección 2 de `docs/BALANCE.md`.
 
 ## Pendiente de probar en local
 
