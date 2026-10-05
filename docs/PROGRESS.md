@@ -5,9 +5,9 @@
 | Fase | Estado | Rama |
 |---|---|---|
 | 0. Propuesta: árbol, decisiones y dudas | ✅ Fusionada | `phase-0-propuesta` |
-| 1. Esqueleto Gradle, lanzador y CI | ✅ Hecha, en PR | `phase-1-esqueleto` |
-| 2. Intérprete con tests | ⏳ Siguiente | — |
-| 3. core-sim y sim-cli, `docs/BALANCE.md` | Pendiente | — |
+| 1. Esqueleto Gradle, lanzador y CI | ✅ Fusionada | `phase-1-esqueleto` |
+| 2. Intérprete con tests | ✅ Hecha, en PR | `phase-2-interprete` |
+| 3. core-sim y sim-cli, `docs/BALANCE.md` | ⏳ Siguiente | — |
 | 4. Juego: camino, torretas, enemigos, bucle | Solo con Yeray en casa | — |
 | 5. Editor, tienda, parte de oleada, informe | Solo con Yeray en casa | — |
 | 6. Guardado, ajustes, robustez | Solo con Yeray en casa | — |
@@ -48,9 +48,32 @@ Comprobado aquí: con Xvfb y GL por software (Mesa), el lanzador abre y pinta
 el área de 1280×720 con el color de fondo durante 20 s sin errores. Eso no
 sustituye la prueba en Windows con GPU real.
 
-## Siguiente: fase 2
+## Fase 2 (hecha)
 
-Intérprete con sus tests (lexer → parser → AST → checker → árbol ejecutable).
+- Intérprete propio en `script` (Java puro, sin dependencias): lexer →
+  parser → AST → checker que emite el árbol ejecutable → `CompiledScript`.
+- Sintaxis del MVP: `if/else` y comparaciones, variables (`int`, `boolean`,
+  `Enemigo`), aritmética, `++`/`+=`…, `&& || !`, `while`, y las 13 llamadas de
+  la torreta. `for`, métodos, `try/catch` y clases se reconocen y dan «Aún no
+  has desbloqueado …» sin interpretarse a medias.
+- Errores de compilación con línea y columna (38 códigos, textos en
+  `i18n/messages.properties`). Excepciones del juego con línea:
+  SinMunicion, Sobrecalentamiento, NullPointer, BucleInfinito y Arithmetic.
+- Memoria por sentencias con recuento por línea para el editor.
+- Vocabulario y límites en `assets/data/script-api.json`, cargado y validado
+  por `ScriptApiLoader` (core-sim, con Jackson 2.22.3).
+- Tests (248 en total, 224 del intérprete): cada construcción, cada código de
+  error, cada excepción, desbloqueos, memoria, entradas aleatorias,
+  anidamiento extremo, 0 bytes reservados por ciclo y comparación con el
+  `javac` real (lo que el juego acepta, javac también).
+- Fallos encontrados por los propios tests y corregidos: un nodo nulo en
+  scripts con errores y un desbordamiento de pila con `x = x = x = …`.
+
+## Siguiente: fase 3
+
+`core-sim` y `sim-cli`, con el informe de balance de las 10 oleadas en
+`docs/BALANCE.md` (incluida la regla del doble de Variables contra el
+Regenerador, D-20).
 
 ## Decisiones por revisar
 
@@ -74,6 +97,15 @@ Propuestas mías aplicadas como PROVISIONAL (detalle en
 - **D-18**: id interno `java-wave-defense` y paquete
   `io.github.yeray06.wavedefense`.
 - **D-21**: con Variables también `--`, `-=`, `*=`, `/=`, `%=`.
+- **D-23**: asignaciones, `++` y `--` solo como instrucción propia
+  (`if ((x = 3) > 2)` y `y = x++` dan error, aunque Java los permita).
+- **D-24**: `break`, `continue`, `switch`, `do`, `throw` no están en el
+  juego; `return` cuenta como «métodos» y los arrays como «for y listas».
+- **D-25**: el límite de 1.000 vueltas es por cada entrada en un `while`; un
+  presupuesto de 100.000 pasos por ciclo cubre los bucles anidados.
+- **D-26**: `apuntar(null)` lanza NullPointerException.
+- **D-27**: no se comprueba el código inalcanzable (javac sí).
+- **D-28**: un solo «Aún no has desbloqueado X» por pieza y línea.
 
 Números de balance que no vienen del plan (D-12): ver
 `docs/ARCHITECTURE.md` 10.1 y 10.2; irán marcados en JSON y en

@@ -1,0 +1,68 @@
+package io.github.yeray06.wavedefense.script.lexer;
+
+/** Token kinds. Unsupported Java keywords and operators get catch-all kinds. */
+public enum TokenKind {
+  IDENTIFIER,
+  INT_LITERAL,
+  /** A literal the lexer already reported (decimal, text, too large…). */
+  ERROR_LITERAL,
+
+  IF,
+  ELSE,
+  WHILE,
+  FOR,
+  DO,
+  TRY,
+  CATCH,
+  FINALLY,
+  CLASS,
+  RETURN,
+  NEW,
+  THIS,
+  VOID,
+  INT,
+  BOOLEAN,
+  TRUE,
+  FALSE,
+  NULL,
+  OTHER_PRIMITIVE,
+  MODIFIER,
+  OTHER_KEYWORD,
+
+  LPAREN,
+  RPAREN,
+  LBRACE,
+  RBRACE,
+  LBRACKET,
+  RBRACKET,
+  SEMICOLON,
+  COMMA,
+  DOT,
+
+  ASSIGN,
+  PLUS_ASSIGN,
+  MINUS_ASSIGN,
+  STAR_ASSIGN,
+  SLASH_ASSIGN,
+  PERCENT_ASSIGN,
+  PLUS_PLUS,
+  MINUS_MINUS,
+  PLUS,
+  MINUS,
+  STAR,
+  SLASH,
+  PERCENT,
+  EQ,
+  NE,
+  LT,
+  GT,
+  LE,
+  GE,
+  AND_AND,
+  OR_OR,
+  BANG,
+  /** A Java operator the game does not offer ({@code ? : & | ^ ~ << >>}…). */
+  UNSUPPORTED_OPERATOR,
+
+  EOF
+}
