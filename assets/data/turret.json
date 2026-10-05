@@ -1,5 +1,5 @@
 {
-  "notFromPlan": ["rangeUnits", "bulletSpeedUnitsPerSecond", "initialScript"],
+  "notFromPlan": ["rangeUnits", "bulletSpeedUnitsPerSecond", "defaultTarget", "initialScript"],
   "cyclesPerSecond": 2,
   "magazine": 12,
   "memoryLines": 12,
@@ -11,5 +11,6 @@
   "hangSeconds": 3,
   "rangeUnits": 330,
   "bulletSpeedUnitsPerSecond": 1000,
+  "defaultTarget": "NEAREST_TO_TURRET",
   "initialScript": "disparar();"
 }

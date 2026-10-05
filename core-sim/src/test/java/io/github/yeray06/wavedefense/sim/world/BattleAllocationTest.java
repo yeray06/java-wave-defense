@@ -54,6 +54,10 @@ class BattleAllocationTest {
     return new Battle(
         TestData.load(),
         new BattleSetup(
-            10, List.of(TestData.script(BURST), TestData.script(BURST)), new Loadout(2, 2, 2), 50));
+            10,
+            List.of(TestData.script(BURST), TestData.script(BURST)),
+            new Loadout(2, 2, 2),
+            50,
+            7L));
   }
 }

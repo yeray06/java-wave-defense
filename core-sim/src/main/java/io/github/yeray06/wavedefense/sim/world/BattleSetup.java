@@ -10,9 +10,10 @@ import java.util.List;
  *
  * @param scripts one per built turret, in slot order; {@code null} leaves that turret idle
  * @param healthScale multiplies every enemy's health: 1 in the game, varied by the balance tools
+ * @param seed seeds the battle's random choices: same setup and seed, same battle
  */
 public record BattleSetup(
-    int wave, List<CompiledScript> scripts, Loadout loadout, double healthScale) {
+    int wave, List<CompiledScript> scripts, Loadout loadout, double healthScale, long seed) {
 
   public BattleSetup {
     if (wave < 1) {

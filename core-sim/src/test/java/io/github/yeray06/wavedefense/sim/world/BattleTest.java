@@ -42,7 +42,7 @@ class BattleTest {
     for (String source : scripts) {
       compiled.add(source == null ? null : TestData.script(source));
     }
-    return new Battle(data, new BattleSetup(wave, compiled, Loadout.NONE, 1));
+    return new Battle(data, new BattleSetup(wave, compiled, Loadout.NONE, 1, 1L));
   }
 
   private static void ticks(Battle battle, int count) {
@@ -149,13 +149,12 @@ class BattleTest {
                 "usarMunicion(PERFORANTE);\nif (municion() == 0) recargar(); else if (hayEnemigos()) disparar();")
             .runToEnd();
     assertEquals(1, piercing.kills());
-    // 10 health: 2 piercing shots of 5, or 10 normal shots of 1.
-    assertEquals(2, piercing.turrets().get(0).shots() - piercing.turrets().get(0).airShots());
-    assertEquals(
-        10,
-        normal.turrets().get(0).shots()
-            - normal.turrets().get(0).airShots()
-            - normal.turrets().get(0).wastedOnDead());
+    // Piercing does the full 5 per shot; normal ammo does 80 % less, so 1 per shot.
+    double health = 10 * data().enemies().type(EnemyKind.ARMORED).healthMultiplier();
+    WaveReport.TurretReport p = piercing.turrets().get(0);
+    WaveReport.TurretReport n = normal.turrets().get(0);
+    assertEquals((int) Math.ceil(health / 5), p.shots() - p.airShots());
+    assertEquals((int) Math.ceil(health / 1), n.shots() - n.airShots() - n.wastedOnDead());
   }
 
   @Test
@@ -196,11 +195,12 @@ class BattleTest {
   }
 
   @Test
-  void twentyLeaksLoseTheWaveAndKeepTheKillsPaid() {
+  void runningOutOfCoreLivesLosesTheWave() {
+    int lives = data().balance().coreLivesPerWave();
     Battle battle = battle(data(), 10, (String) null);
     WaveReport report = battle.runToEnd();
     assertFalse(report.won());
-    assertEquals(20, report.leaks().size());
+    assertEquals(lives, report.leaks().size());
     assertEquals(0, battle.coreLives());
     assertTrue(report.ticks() < 60 * 60);
   }
@@ -216,7 +216,12 @@ class BattleTest {
       distances[i] = battle.enemies().get(i).distance();
     }
     Arrays.sort(distances);
-    assertTrue(distances[9] - distances[0] < 12 * 10, "members within a group's length");
+    var type = data().enemies().type(EnemyKind.SWARM);
+    // Spawn spacing is rounded to whole ticks, so allow one tick of slack per member.
+    double slack = (double) type.speed() / data().balance().ticksPerSecond();
+    assertTrue(
+        distances[9] - distances[0] <= 9 * (type.groupSpacingUnits() + slack),
+        "members within a group's length");
   }
 
   @Test
@@ -232,6 +237,60 @@ class BattleTest {
     // Once the hang ends the script fires again instead of throwing.
     ticks(battle, 3 * 60);
     assertEquals(1, battle.report().turrets().get(0).faultCount());
+  }
+
+  /** The shipped data with another default target (D-31). */
+  private static GameData targeting(io.github.yeray06.wavedefense.sim.data.DefaultTarget mode) {
+    GameData d = data();
+    var t = d.turret();
+    var turret =
+        new io.github.yeray06.wavedefense.sim.data.TurretConfig(
+            t.notFromPlan(),
+            t.cyclesPerSecond(),
+            t.magazine(),
+            t.memoryLines(),
+            t.bulletDamage(),
+            t.heatPerShot(),
+            t.heatDissipationPerCycle(),
+            t.maxHeat(),
+            t.reloadCycles(),
+            t.hangSeconds(),
+            t.rangeUnits(),
+            t.bulletSpeedUnitsPerSecond(),
+            mode,
+            t.initialScript());
+    return new GameData(
+        d.balance(), turret, d.enemies(), d.waves(), d.shop(), d.map(), d.scriptApi());
+  }
+
+  @Test
+  void everyDefaultTargetModeIsDeterministicForTheSameSeed() {
+    for (var mode : io.github.yeray06.wavedefense.sim.data.DefaultTarget.values()) {
+      GameData d = targeting(mode);
+      WaveReport first =
+          new Battle(
+                  d, new BattleSetup(4, List.of(TestData.script(IF_SCRIPT)), Loadout.NONE, 1, 9L))
+              .runToEnd();
+      WaveReport second =
+          new Battle(
+                  d, new BattleSetup(4, List.of(TestData.script(IF_SCRIPT)), Loadout.NONE, 1, 9L))
+              .runToEnd();
+      assertEquals(first, second, mode.name());
+    }
+  }
+
+  @Test
+  void randomTargetingDependsOnTheSeed() {
+    GameData d = targeting(io.github.yeray06.wavedefense.sim.data.DefaultTarget.RANDOM_IN_RANGE);
+    java.util.Set<WaveReport> reports = new java.util.HashSet<>();
+    for (long seed = 1; seed <= 5; seed++) {
+      reports.add(
+          new Battle(
+                  d,
+                  new BattleSetup(10, List.of(TestData.script(IF_SCRIPT)), Loadout.NONE, 1, seed))
+              .runToEnd());
+    }
+    assertTrue(reports.size() > 1, "different seeds should change some battle");
   }
 
   @Test

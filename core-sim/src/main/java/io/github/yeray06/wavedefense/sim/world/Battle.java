@@ -6,6 +6,7 @@ import io.github.yeray06.wavedefense.script.api.FireResult;
 import io.github.yeray06.wavedefense.script.api.TurretApi;
 import io.github.yeray06.wavedefense.script.diag.CycleOutcome;
 import io.github.yeray06.wavedefense.script.runtime.CompiledScript;
+import io.github.yeray06.wavedefense.sim.data.DefaultTarget;
 import io.github.yeray06.wavedefense.sim.data.EnemyCatalog;
 import io.github.yeray06.wavedefense.sim.data.EnemyKind;
 import io.github.yeray06.wavedefense.sim.data.GameData;
@@ -14,6 +15,7 @@ import io.github.yeray06.wavedefense.sim.data.MapConfig;
 import io.github.yeray06.wavedefense.sim.data.TurretConfig;
 import io.github.yeray06.wavedefense.sim.data.WaveTable;
 import io.github.yeray06.wavedefense.sim.economy.Formulas;
+import io.github.yeray06.wavedefense.sim.rng.SplitMix64;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,6 +42,8 @@ public final class Battle {
   private final BulletPool bullets;
   private final Turret[] turrets;
   private final TurretApi[] apis;
+  private final DefaultTarget defaultTarget;
+  private final SplitMix64 random;
 
   // Spawn schedule, computed once.
   private final int[] spawnTicks;
@@ -113,6 +117,8 @@ public final class Battle {
     baseRewardCents = formulas.rewardPerEnemyCents(wave);
     healthScale = setup.healthScale();
     coreLives = data.balance().coreLivesPerWave();
+    defaultTarget = turret.defaultTarget();
+    random = new SplitMix64(setup.seed());
 
     path = new PathTrack(map.path());
     turrets = new Turret[setup.scripts().size()];
@@ -462,7 +468,7 @@ public final class Battle {
       turret.shots++;
       long handle = target();
       if (handle == EnemyHandle.NONE) {
-        handle = nearestEnemy();
+        handle = defaultTarget();
       }
       Enemy enemy = enemies.resolve(handle);
       if (enemy == null) {
@@ -509,6 +515,41 @@ public final class Battle {
         }
       }
       return false;
+    }
+
+    /** Whom an unaimed shot hits (D-31), among enemies in range. */
+    private long defaultTarget() {
+      return switch (defaultTarget) {
+        case NEAREST_TO_TURRET -> nearestEnemy();
+        case NEAREST_TO_CORE -> closestToCore();
+        case RANDOM_IN_RANGE -> randomInRange();
+      };
+    }
+
+    private long closestToCore() {
+      Enemy best = null;
+      for (int i = 0; i < enemies.capacity(); i++) {
+        Enemy enemy = enemies.get(i);
+        if (enemy.active
+            && inRange(turret, enemy)
+            && (best == null || enemy.distance > best.distance)) {
+          best = enemy;
+        }
+      }
+      return best == null ? EnemyHandle.NONE : best.handle();
+    }
+
+    /** Reservoir sampling: uniform over enemies in range, one pass, no allocation. */
+    private long randomInRange() {
+      Enemy chosen = null;
+      int seen = 0;
+      for (int i = 0; i < enemies.capacity(); i++) {
+        Enemy enemy = enemies.get(i);
+        if (enemy.active && inRange(turret, enemy) && random.nextInt(++seen) == 0) {
+          chosen = enemy;
+        }
+      }
+      return chosen == null ? EnemyHandle.NONE : chosen.handle();
     }
 
     @Override
