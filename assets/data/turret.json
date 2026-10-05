@@ -1,0 +1,15 @@
+{
+  "notFromPlan": ["rangeUnits", "bulletSpeedUnitsPerSecond", "initialScript"],
+  "cyclesPerSecond": 2,
+  "magazine": 12,
+  "memoryLines": 12,
+  "bulletDamage": 5,
+  "heatPerShot": { "NORMAL": 20, "PIERCING": 40 },
+  "heatDissipationPerCycle": 30,
+  "maxHeat": 100,
+  "reloadCycles": 3,
+  "hangSeconds": 3,
+  "rangeUnits": 330,
+  "bulletSpeedUnitsPerSecond": 1000,
+  "initialScript": "disparar();"
+}
