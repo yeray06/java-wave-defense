@@ -4,7 +4,7 @@ Documento vivo. Cada decisión lleva su motivo en una línea. La fuente de verda
 del diseño es [`plan-diseno.pdf`](plan-diseno.pdf); si algo de aquí lo
 contradice, manda el plan y hay que avisar.
 
-Estado: **fase 3 hecha** (simulación, `sim-cli` y `docs/BALANCE.md`). Las decisiones están en la sección 12. Las que
+Estado: **fase 3 hecha** (simulación, `sim-cli` y `docs/BALANCE.md`) y **revisión de balance hecha** (decisiones A y B de Yeray: D-34 … D-37). Las decisiones están en la sección 12. Las que
 llevan **PROVISIONAL** son propuestas mías aceptadas para poder avanzar; se
 listan en `docs/PROGRESS.md` («Decisiones por revisar»). Los números que no
 vienen del plan van marcados en los JSON y en `docs/BALANCE.md`.
@@ -119,7 +119,7 @@ java-wave-defense/
 │       │   ├── ProgressionRun.java    # partida completa con política de compra; muros
 │       │   ├── DoubleRule.java        # regla del doble
 │       │   └── BalanceReport.java     # escribe docs/BALANCE.md
-│       └── resources/reference/       # player.json + scripts/L0…L4-ammo.txt
+│       └── resources/reference/       # player.json + scripts/L0…L4-ammo(-b, -c).txt
 └── docs/
     ├── plan-diseno.pdf
     ├── ARCHITECTURE.md
@@ -447,7 +447,7 @@ los JSON y en `docs/BALANCE.md`.
 | Recarga a mano | Mismo efecto que `recargar()`; **también con la torreta colgada** (la recarga avanza durante el cuelgue); no si ya está recargando | PROVISIONAL (D-03b, cambiada en la fase 3) |
 | Excepción sin capturar | Corta el script, torreta colgada 3 s, error con línea encima | Plan |
 | `disparar()` sin enemigos en rango | Bala «al aire»: gasta bala y calor | PROVISIONAL (D-05) |
-| Objetivo por defecto | Enemigo vivo más cercano **a la torreta** dentro del rango | Plan + PROVISIONAL (D-05) |
+| Objetivo por defecto | Enemigo vivo más cercano **a la torreta** dentro del rango. Configurable en `turret.json` (`defaultTarget`: más cercano a la torreta, más cercano al núcleo o uno al azar en rango, con la semilla de la oleada) para medir; `enemigoMasCercano()` siempre es «a la torreta» | Plan + PROVISIONAL (D-05, D-36) |
 | Objetivo fijado | `apuntar(e)` lo mantiene entre ciclos; `objetivo()` da `null` si no hay, murió o salió de rango | Yeray (D-20) |
 | `usarMunicion(tipo)` | Disponible desde la oleada 6; el tipo elegido se mantiene entre ciclos | Plan |
 | Perforante | Ignora la reducción del blindaje; un solo objetivo | PROVISIONAL (D-09) |
@@ -463,10 +463,10 @@ los JSON y en `docs/BALANCE.md`.
 | Vida | `10 · 1,18^(n−1)` | Plan |
 | Dinero por enemigo | `2 · 1,15^(n−1)` | Plan |
 | Nº de enemigos | `min(6 + 2n, 60)` | Plan |
-| Núcleo | 20 vidas por oleada; cada enemigo que llega quita 1 | Plan |
-| Regenerador | Se cura si pasa 1 s sin daño, a 25 % de vida máx./s; 100 u/s | 1 s Plan; ritmo No viene del plan |
-| Blindado | −80 % de daño con NORMAL; 80 u/s | 80 % Plan; velocidad No viene del plan |
-| Enjambre | Grupos de 10, juntos; vida ×0,3, dinero ×0,3, 120 u/s; cada miembro cuenta como 1 enemigo | 10 Plan; resto No viene del plan |
+| Núcleo | **10** vidas por oleada; cada enemigo que llega quita 1 | Yeray (D-35; el plan decía 20) |
+| Regenerador | Vida ×2; se cura si pasa 1 s sin daño, a 50 % de vida máx./s; 100 u/s | 1 s Plan; resto No viene del plan (D-37) |
+| Blindado | Vida ×2; −80 % de daño con NORMAL; 80 u/s | 80 % Plan; resto No viene del plan (D-37) |
+| Enjambre | Grupos de 10, juntos; vida ×0,3, dinero ×0,3, 200 u/s; cada miembro cuenta como 1 enemigo | 10 Plan; resto No viene del plan |
 | Jefe 1 | Vida = 20 × vida de la oleada 10; alterna blindaje cada 5 s; si llega al núcleo se pierde la oleada; 50 u/s | Plan; velocidad No viene del plan |
 | Recompensa del jefe | 1.er derribo = 3 × dinero de la oleada 10 (549); los siguientes, como 20 enemigos normales de esa oleada | PROVISIONAL (D-10) |
 | Básico | 100 u/s | No viene del plan (D-12, D-22) |
@@ -498,6 +498,7 @@ Bl = Blindado, E = Enjambre:
 | Efecto por nivel | Aditivo sobre la base: daño 5 → 6,25 → 7,5 | Plan («cada nivel… da lo mismo») + PROVISIONAL (D-13) |
 | Ámbito del hardware | Global, para todas las torretas | PROVISIONAL (D-13) |
 | Segunda torreta | «Torreta extra» a 75; tope 2 en el MVP | Plan |
+| Topes de hardware | Un nivel de hardware no se compra hasta tener cierta sintaxis (`shop.json`, `caps`): daño y cargador, nivel 1 con if, 2 con Variables, 4 con while; disipador y torreta extra, con `&&`. La tienda dice «Necesitas variables para seguir mejorando el daño» | Yeray (red de seguridad, D-34); topes concretos PROVISIONAL |
 | Oleada perfecta | +25 % del pago de la oleada si no se cuela nadie | Plan |
 | Avance automático | Interruptor; apagado repite la oleada. Encendido en partida nueva | Plan + PROVISIONAL (D-02) |
 | Velocidad ×3 | Solo en oleadas superadas alguna vez sin fugas | Plan |
@@ -538,7 +539,10 @@ obliga a regenerarlo y a ver el efecto en el mismo PR.
   cada pieza, desde el estado justo antes de comprarla y en la oleada en que
   «llega» (`shop.json`), `k` = mayor multiplicador de vida enemiga con el que
   la oleada sale **sin fugas**. Se compara la pieza con su script frente al
-  mejor hardware del mismo precio. Cumple si la proporción es ≥ 2. La
+  mejor hardware del mismo precio **dentro de los topes** (D-34); el informe
+  da también la proporción sin topes como referencia. En cada lado se prueban
+  todas las variantes del script que caben en memoria (`L3-ammo`,
+  `L3-ammo-b`…) y se toma la mejor. Cumple si la proporción es ≥ 2. La
   propuesta original («la oleada se supera») no servía: con 20 vidas, las
   oleadas 1–6 no se pueden perder y `k` se saturaba en el máximo.
 - **Caso D-20**: la fila VARIABLES es la oleada 4, la primera con
@@ -557,6 +561,8 @@ obliga a regenerarlo y a ver el efecto en el mismo PR.
   enemigos ya muertos». Un enemigo muere con vida ≤ 1e-9 (si no, 5 × 0,2 =
   0,99999… y el blindado necesitaría una bala más).
 - `hayEnemigos()` y `enemigoMasCercano()` miran solo enemigos en rango.
+- Cada oleada lleva semilla (`BattleSetup.seed`; el simulador usa el número
+  de oleada). Solo la usa el objetivo «uno al azar» (`SplitMix64`).
 - Asas de enemigo: generación en los 32 bits altos, hueco + 1 en los bajos.
 - Fugas: cada una guarda el tipo, la vida que le quedaba y la distancia del
   camino donde estuvo en rango por última vez («por qué punto se coló»).
@@ -570,7 +576,7 @@ obliga a regenerarlo y a ver el efecto en el mismo PR.
   cobras lo matado, vuelves una oleada atrás con el avance automático
   apagado y conservas todo.
 
-## 12. Decisiones de la fase 0
+## 12. Decisiones
 
 **CERRADA** = decidida por Yeray. **PROVISIONAL** = propuesta mía aplicada
 para avanzar; se revisa más adelante (lista en `docs/PROGRESS.md`). Ninguna
@@ -613,6 +619,10 @@ provisional contradice el plan.
 | D-31 | Lecturas de la torreta | PROVISIONAL | `hayEnemigos()` y `enemigoMasCercano()` solo ven enemigos en rango. |
 | D-32 | Orden de aparición | PROVISIONAL | Grupos en el orden de `waves.json`; huecos repartidos por igual en 20 s; el enjambre ocupa un hueco. |
 | D-33 | Jugador de referencia | PROVISIONAL | Política de compra y 1 s de reacción para recargar a mano (sección 11). Solo afecta al informe, no al juego. |
+| D-34 | Topes de hardware según la sintaxis | CERRADA la idea (Yeray); topes PROVISIONAL | Red de seguridad de la regla del doble. Topes en 10.3, configurables en `shop.json`; solo pueden esperar a piezas del MVP (se valida al cargar). |
+| D-35 | Vidas del núcleo | CERRADA (Yeray, cambia el plan) | 10 por oleada en vez de 20. |
+| D-36 | Objetivo por defecto configurable | PROVISIONAL | Medido en la revisión de balance: ni «más cercano al núcleo» ni «al azar» hacen que el Regenerador castigue al que no tiene Variables con la vida original. Con vida ×2 y cura 50 %/s, solo «al azar» lleva Variables a ×2 (2,03), pero contradice el plan («por defecto, el más cercano»): se queda «a la torreta» y «al azar» queda como opción para Yeray. |
+| D-37 | Números de enemigos de la revisión | PROVISIONAL | Regenerador vida ×2 y cura 50 %/s; Blindado vida ×2; Enjambre 200 u/s (menos tiempo en rango). Ninguno es del plan. |
 
 Decisiones de stack también cerradas: Kotlin DSL sí; LWJGL el de libGDX
 1.14.2 sin sobrescribir.

@@ -7,7 +7,8 @@
 | 0. Propuesta: árbol, decisiones y dudas | ✅ Fusionada | `phase-0-propuesta` |
 | 1. Esqueleto Gradle, lanzador y CI | ✅ Fusionada | `phase-1-esqueleto` |
 | 2. Intérprete con tests | ✅ Fusionada | `phase-2-interprete` |
-| 3. core-sim y sim-cli, `docs/BALANCE.md` | ✅ Hecha, en PR | `phase-3-simulacion` |
+| 3. core-sim y sim-cli, `docs/BALANCE.md` | ✅ Fusionada | `phase-3-simulacion` |
+| 3b. Revisión de balance (decisiones A y B) | ✅ Hecha, en PR | `phase-3b-rebalance` |
 | 4. Juego: camino, torretas, enemigos, bucle | Solo con Yeray en casa | — |
 | 5. Editor, tienda, parte de oleada, informe | Solo con Yeray en casa | — |
 | 6. Guardado, ajustes, robustez | Solo con Yeray en casa | — |
@@ -105,11 +106,49 @@ sustituye la prueba en Windows con GPU real.
   el plan quiere que «no des abasto».
 - Nada de esto se ha ajustado: son datos para que decidas.
 
+## Revisión de balance (hecha)
+
+Encargo de Yeray: A) intentar la regla del doble cambiando solo números y
+reglas provisionales, con como mucho dos tandas de ajuste y con topes de
+hardware como red de seguridad; B) 10 vidas en el núcleo.
+
+- **Objetivo por defecto** configurable en datos (`defaultTarget`). Medido:
+  «más cercano al núcleo» y «al azar» no hacen que el Regenerador castigue a
+  quien no tiene Variables con la vida original; lo que limita es la cadencia,
+  no la cura. Se queda «a la torreta» (el plan). Ver D-36.
+- **`&&`**: el script de referencia sin `&&` ya usaba `if` anidados, que
+  toman la misma decisión. Scripts nuevos que necesitan `||` de verdad dentro
+  de 12 líneas (`L3-ammo-b`: recarga si está vacía **o** no hay enemigos) y
+  variantes `-b`/`-c` en todos los niveles; la regla del doble prueba todas.
+- **Enemigos**: Regenerador vida ×2 y cura 50 %/s, Blindado vida ×2,
+  Enjambre 200 u/s (D-37).
+- **Topes de hardware** según la sintaxis (D-34), en `shop.json`, con el
+  mensaje de la tienda («Necesitas variables para seguir mejorando el daño»).
+- **10 vidas** en el núcleo (D-35).
+- 298 tests en verde.
+
+### Resultado (detalle en `docs/BALANCE.md`)
+
+Regla del doble, proporción pieza / mismo dinero en hardware (≥ 2 cumple):
+
+| Pieza | Antes (fase 3) | Ahora, con topes | Ahora, sin topes |
+|---|---|---|---|
+| if | 1,07 | 1,33 | 1,07 |
+| Variables | 1,00 | 1,07 | 0,80 |
+| `&& \|\| !` | 0,40 | 0,83 | 0,75 |
+| while | 0,75 | 1,67 | 1,46 |
+
+- **Ninguna pieza llega a ×2**; los topes se quedan activos, como pidió
+  Yeray. No se ha seguido iterando.
+- Con 10 vidas: Jefe 1 derrotado en **25 oleadas jugadas** y **16,1 min**.
+  Muros en las oleadas 6 (3 pasadas), 7 (1) y 9 (4): cumple la regla de 5.
+
 ## Siguiente: fase 4
 
 Juego: camino, torretas, enemigos y bucle de oleada. **Necesita que estés en
-casa para probarla**; no empiezo sin que me lo digas. Antes conviene decidir
-qué hacer con la regla del doble.
+casa para probarla**; no empiezo sin que me lo digas. En la fase 4 hay que
+registrar cuánto tarda el jugador en recargar a mano durante la oleada 1
+(decisión C de Yeray; el simulador supone 1 s).
 
 ## Decisiones por revisar
 
@@ -150,6 +189,13 @@ Propuestas mías aplicadas como PROVISIONAL (detalle en
 - **D-32**: orden de aparición de `waves.json`, huecos repartidos en 20 s.
 - **D-33**: jugador de referencia del simulador (política de compra, 1 s de
   reacción). Solo afecta al informe.
+- **D-34**: los topes concretos de hardware (la idea la aprobó Yeray).
+- **D-36**: objetivo por defecto «más cercano a la torreta». **Para decidir**:
+  «uno al azar en rango» es la única opción medida que lleva Variables a ×2
+  (2,03 frente a no tenerla, sin hardware), pero contradice el plan («por defecto, el
+  enemigo más cercano»), así que no está aplicada.
+- **D-37**: Regenerador vida ×2 y cura 50 %/s; Blindado vida ×2; Enjambre
+  200 u/s.
 
 Números de balance que no vienen del plan (D-12): están en la lista
 `notFromPlan` de cada JSON y en la sección 2 de `docs/BALANCE.md`.

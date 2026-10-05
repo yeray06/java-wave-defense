@@ -17,6 +17,8 @@ cada decisión técnica en una línea. Di sin rodeos cuándo algo es mala idea.
 - Excepciones: SinMunicion, Sobrecalentamiento, NullPointer, BucleInfinito.
 - Parte de oleada, informe, avance automático, oleada perfecta, x3, derrota
   sin perder progreso. Editor con errores por línea. Guardado y ajustes.
+- Cambios al plan aprobados por Yeray: 10 vidas del núcleo por oleada (D-35)
+  y topes de hardware según la sintaxis comprada (D-34, en `shop.json`).
 - FUERA: for, métodos, try/catch, clases, contratos, modificadores, Nueva
   versión. No implementarlos, pero la arquitectura debe admitirlos.
 
