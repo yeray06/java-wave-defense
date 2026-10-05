@@ -83,16 +83,16 @@ final class DoubleRule {
       with.addAll(base.features());
       with.add(item.feature());
       Unlocks unlocksWith = new Unlocks(with, reached);
-      double kWith = bestK(wave, unlocksWith, base);
+      Best withPiece = bestK(wave, unlocksWith, base);
 
       Unlocks unlocksWithout = new Unlocks(base.features(), reached);
-      double kNeither = bestK(wave, unlocksWithout, base);
-      double kWithout = -1;
+      Best neither = bestK(wave, unlocksWithout, base);
+      Best withoutPiece = null;
       String bestHardware = "";
       for (Progress option : hardwareOptions(base.copyWithMoney(price))) {
-        double k = bestK(wave, unlocksWithout, option);
-        if (k > kWithout) {
-          kWithout = k;
+        Best best = bestK(wave, unlocksWithout, option);
+        if (withoutPiece == null || best.k() > withoutPiece.k()) {
+          withoutPiece = best;
           bestHardware = describeHardware(base, option);
         }
       }
@@ -101,12 +101,12 @@ final class DoubleRule {
               item.feature(),
               wave,
               price,
-              player.script(unlocksWith).name(),
-              kWith,
-              player.script(unlocksWithout).name(),
+              withPiece.script(),
+              withPiece.k(),
+              withoutPiece.script(),
               bestHardware,
-              kWithout,
-              kNeither,
+              withoutPiece.k(),
+              neither.k(),
               true));
     }
     return entries;
@@ -141,19 +141,33 @@ final class DoubleRule {
     return parts.isEmpty() ? "nada" : String.join(", ", parts);
   }
 
+  /** The best k among the script variants these unlocks allow, and which variant gave it. */
+  private record Best(double k, String script) {}
+
+  private Best bestK(int wave, Unlocks unlocks, Progress state) {
+    Best best = null;
+    for (ReferencePlayer.ChosenScript script : player.variants(unlocks)) {
+      double k = bestK(wave, script, state);
+      if (best == null || k > best.k()) {
+        best = new Best(k, script.name());
+      }
+    }
+    return best;
+  }
+
   /** Largest health multiplier that still gives a perfect wave, by bisection in log space. */
-  private double bestK(int wave, Unlocks unlocks, Progress state) {
-    if (!wins(wave, unlocks, state, search.min())) {
+  private double bestK(int wave, ReferencePlayer.ChosenScript script, Progress state) {
+    if (!wins(wave, script, state, search.min())) {
       return 0;
     }
-    if (wins(wave, unlocks, state, search.max())) {
+    if (wins(wave, script, state, search.max())) {
       return search.max();
     }
     double lo = StrictMath.log(search.min());
     double hi = StrictMath.log(search.max());
     for (int i = 0; i < search.iterations(); i++) {
       double mid = (lo + hi) / 2;
-      if (wins(wave, unlocks, state, StrictMath.exp(mid))) {
+      if (wins(wave, script, state, StrictMath.exp(mid))) {
         lo = mid;
       } else {
         hi = mid;
@@ -162,7 +176,7 @@ final class DoubleRule {
     return StrictMath.exp(lo);
   }
 
-  private boolean wins(int wave, Unlocks unlocks, Progress state, double k) {
-    return player.play(wave, unlocks, state.turretCount(), state.loadout(), k).perfect();
+  private boolean wins(int wave, ReferencePlayer.ChosenScript script, Progress state, double k) {
+    return player.play(wave, script, state.turretCount(), state.loadout(), k).perfect();
   }
 }

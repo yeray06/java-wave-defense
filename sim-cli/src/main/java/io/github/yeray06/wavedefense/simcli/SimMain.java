@@ -47,7 +47,9 @@ public final class SimMain {
     List<DoubleRule.Entry> doubleRule =
         new DoubleRule(data, player, config).evaluate(run.beforeBuying());
     BalanceReport report = new BalanceReport(data, assets, config, player);
-    String markdown = report.render(run, doubleRule);
+    List<DoubleRule.Entry> doubleRuleWithoutCaps =
+        new DoubleRule(data.withoutHardwareCaps(), player, config).evaluate(run.beforeBuying());
+    String markdown = report.render(run, doubleRule, doubleRuleWithoutCaps);
 
     out.printf(
         "Waves played: %d, boss defeated: %s, play time: %.1f min, money left: %d%n",
@@ -61,9 +63,25 @@ public final class SimMain {
           wall.wave(), wall.attempts(), wall.farmedWaves());
     }
     for (DoubleRule.Entry e : doubleRule) {
+      DoubleRule.Entry free =
+          doubleRuleWithoutCaps.stream()
+              .filter(u -> u.feature() == e.feature())
+              .findFirst()
+              .orElse(e);
       out.printf(
-          "Double rule %s (wave %d): k with %.2f, k without %.2f (%s), ratio %.2f%n",
-          e.feature(), e.wave(), e.kWith(), e.kWithout(), e.bestHardware(), e.ratio());
+          "Double rule %s (wave %d): with %.2f [%s], alone %.2f, capped hw %.2f (%s) ratio %.2f;"
+              + " free hw %.2f (%s) ratio %.2f%n",
+          e.feature(),
+          e.wave(),
+          e.kWith(),
+          e.scriptWith(),
+          e.kNeither(),
+          e.kWithout(),
+          e.bestHardware(),
+          e.ratio(),
+          free.kWithout(),
+          free.bestHardware(),
+          free.ratio());
     }
     out.println("Contradictions with the plan: " + report.contradictions().size());
     for (String c : report.contradictions()) {

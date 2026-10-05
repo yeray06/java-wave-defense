@@ -35,8 +35,19 @@ final class ReferencePlayer {
     this.compiler = data.compiler();
   }
 
-  /** The script a player with these unlocks runs: the best candidate that compiles. */
+  /**
+   * The script a player with these unlocks runs in the campaign: the first of {@link #variants}.
+   */
   ChosenScript script(Unlocks unlocks) {
+    return variants(unlocks).get(0);
+  }
+
+  /**
+   * Every variant of the best script level these unlocks allow ({@code name}, {@code name-b},
+   * {@code name-c}…). With 12 memory lines a player sometimes has to choose what to leave out; the
+   * double rule tries each choice so the comparison is fair.
+   */
+  List<ChosenScript> variants(Unlocks unlocks) {
     int level = level(unlocks);
     List<String> candidates = new ArrayList<>();
     for (int l = level; l >= 0; l--) {
@@ -45,14 +56,21 @@ final class ReferencePlayer {
     for (int l = level; l >= 0; l--) {
       candidates.add("L" + l);
     }
-    for (String name : candidates) {
-      String source = resource(name);
-      if (source == null) {
-        continue;
+    for (String base : candidates) {
+      List<ChosenScript> found = new ArrayList<>();
+      for (String suffix : new String[] {"", "-b", "-c"}) {
+        String name = base + suffix;
+        String source = resource(name);
+        if (source == null) {
+          continue;
+        }
+        CompileResult result = compiler.compile(source, unlocks, data.turret().memoryLines());
+        if (result.succeeded()) {
+          found.add(new ChosenScript(name, source, result.memoryUsed(), unlocks));
+        }
       }
-      CompileResult result = compiler.compile(source, unlocks, data.turret().memoryLines());
-      if (result.succeeded()) {
-        return new ChosenScript(name, source, result.memoryUsed(), result.script().orElseThrow());
+      if (!found.isEmpty()) {
+        return List.copyOf(found);
       }
     }
     throw new IllegalStateException("no reference script compiles with " + unlocks);
@@ -72,12 +90,21 @@ final class ReferencePlayer {
 
   /** Plays one wave, clicking reload on empty turrets after the reaction time. */
   WaveReport play(int wave, Unlocks unlocks, int turrets, Loadout loadout, double healthScale) {
+    return play(wave, script(unlocks), turrets, loadout, healthScale);
+  }
+
+  /** Plays one wave with a given script on every turret. */
+  WaveReport play(int wave, ChosenScript script, int turrets, Loadout loadout, double healthScale) {
     List<CompiledScript> scripts = new ArrayList<>();
     for (int i = 0; i < turrets; i++) {
       // One compiled instance per turret: a CompiledScript is not shared between turrets.
-      scripts.add(script(unlocks).compiled());
+      scripts.add(
+          compiler
+              .compile(script.source(), script.unlocks(), data.turret().memoryLines())
+              .script()
+              .orElseThrow());
     }
-    Battle battle = new Battle(data, new BattleSetup(wave, scripts, loadout, healthScale));
+    Battle battle = new Battle(data, new BattleSetup(wave, scripts, loadout, healthScale, wave));
     int reactionTicks =
         (int) Math.round(config.manualReloadReactionSeconds() * battle.ticksPerSecond());
     int[] emptyFor = new int[turrets];
@@ -112,5 +139,5 @@ final class ReferencePlayer {
         .toList();
   }
 
-  record ChosenScript(String name, String source, int memoryUsed, CompiledScript compiled) {}
+  record ChosenScript(String name, String source, int memoryUsed, Unlocks unlocks) {}
 }
