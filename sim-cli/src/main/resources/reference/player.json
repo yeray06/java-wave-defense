@@ -1,0 +1,6 @@
+{
+  "notFromPlan": ["manualReloadReactionSeconds", "maxWavesPlayed", "healthScaleSearch"],
+  "manualReloadReactionSeconds": 1.0,
+  "maxWavesPlayed": 400,
+  "healthScaleSearch": { "min": 0.05, "max": 64, "iterations": 16 }
+}

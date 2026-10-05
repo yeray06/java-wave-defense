@@ -1,0 +1,14 @@
+if (municion() == 0) {
+    recargar();
+} else {
+    Enemigo o = objetivo();
+    if (o == null) {
+        o = enemigoMasCercano();
+        if (o != null) {
+            apuntar(o);
+        }
+    }
+    if (o != null) {
+        disparar();
+    }
+}

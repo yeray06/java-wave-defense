@@ -1,0 +1,116 @@
+package io.github.yeray06.wavedefense.simcli;
+
+import io.github.yeray06.wavedefense.script.CompileResult;
+import io.github.yeray06.wavedefense.script.ScriptCompiler;
+import io.github.yeray06.wavedefense.script.api.Feature;
+import io.github.yeray06.wavedefense.script.api.Unlocks;
+import io.github.yeray06.wavedefense.script.runtime.CompiledScript;
+import io.github.yeray06.wavedefense.sim.data.GameData;
+import io.github.yeray06.wavedefense.sim.data.ShopConfig;
+import io.github.yeray06.wavedefense.sim.world.Battle;
+import io.github.yeray06.wavedefense.sim.world.BattleSetup;
+import io.github.yeray06.wavedefense.sim.world.Loadout;
+import io.github.yeray06.wavedefense.sim.world.Turret;
+import io.github.yeray06.wavedefense.sim.world.WaveReport;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * A player who writes the best reference script their syntax allows and clicks reload by hand when
+ * a turret runs dry. Scripts live in {@code reference/scripts/L<n>[-ammo].txt}, where {@code n} is
+ * how many shop pieces are owned and {@code -ammo} uses the wave-6 ammo switch.
+ */
+final class ReferencePlayer {
+  private final GameData data;
+  private final PlayerConfig config;
+  private final ScriptCompiler compiler;
+
+  ReferencePlayer(GameData data, PlayerConfig config) {
+    this.data = data;
+    this.config = config;
+    this.compiler = data.compiler();
+  }
+
+  /** The script a player with these unlocks runs: the best candidate that compiles. */
+  ChosenScript script(Unlocks unlocks) {
+    int level = level(unlocks);
+    List<String> candidates = new ArrayList<>();
+    for (int l = level; l >= 0; l--) {
+      candidates.add("L" + l + "-ammo");
+    }
+    for (int l = level; l >= 0; l--) {
+      candidates.add("L" + l);
+    }
+    for (String name : candidates) {
+      String source = resource(name);
+      if (source == null) {
+        continue;
+      }
+      CompileResult result = compiler.compile(source, unlocks, data.turret().memoryLines());
+      if (result.succeeded()) {
+        return new ChosenScript(name, source, result.memoryUsed(), result.script().orElseThrow());
+      }
+    }
+    throw new IllegalStateException("no reference script compiles with " + unlocks);
+  }
+
+  /** How many shop pieces, in the plan's order, are owned without gaps. */
+  int level(Unlocks unlocks) {
+    int level = 0;
+    for (ShopConfig.SyntaxItem item : data.shop().syntax()) {
+      if (!item.inMvp() || !unlocks.has(item.feature())) {
+        break;
+      }
+      level++;
+    }
+    return level;
+  }
+
+  /** Plays one wave, clicking reload on empty turrets after the reaction time. */
+  WaveReport play(int wave, Unlocks unlocks, int turrets, Loadout loadout, double healthScale) {
+    List<CompiledScript> scripts = new ArrayList<>();
+    for (int i = 0; i < turrets; i++) {
+      // One compiled instance per turret: a CompiledScript is not shared between turrets.
+      scripts.add(script(unlocks).compiled());
+    }
+    Battle battle = new Battle(data, new BattleSetup(wave, scripts, loadout, healthScale));
+    int reactionTicks =
+        (int) Math.round(config.manualReloadReactionSeconds() * battle.ticksPerSecond());
+    int[] emptyFor = new int[turrets];
+    while (!battle.finished()) {
+      battle.tick();
+      for (int i = 0; i < turrets; i++) {
+        Turret turret = battle.turret(i);
+        boolean waiting = turret.ammo() == 0 && !turret.reloading();
+        emptyFor[i] = waiting ? emptyFor[i] + 1 : 0;
+        if (emptyFor[i] >= reactionTicks && battle.manualReload(i)) {
+          emptyFor[i] = 0;
+        }
+      }
+    }
+    return battle.report();
+  }
+
+  static String resource(String name) {
+    try (InputStream in =
+        ReferencePlayer.class.getResourceAsStream("/reference/scripts/" + name + ".txt")) {
+      return in == null ? null : new String(in.readAllBytes(), StandardCharsets.UTF_8);
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+  }
+
+  /** Features of the MVP in shop order. */
+  List<Feature> mvpFeatures() {
+    return data.shop().syntax().stream()
+        .filter(ShopConfig.SyntaxItem::inMvp)
+        .map(ShopConfig.SyntaxItem::feature)
+        .toList();
+  }
+
+  record ChosenScript(String name, String source, int memoryUsed, CompiledScript compiled) {}
+}
