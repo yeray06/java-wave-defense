@@ -58,6 +58,10 @@ cada decisión técnica en una línea. Di sin rodeos cuándo algo es mala idea.
   commit: los minutos son limitados). Antes de push: `./gradlew build`.
 - Nada de código a medias ni "TODO: implementar".
 - Si el simulador contradice el plan, informar con datos; no ajustar.
+- `docs/BALANCE.md` lo genera `sim-cli` y un test exige que esté al día: si
+  cambia un JSON, regenerarlo (`./gradlew :sim-cli:run --args="--write
+  docs/BALANCE.md"`) en el mismo PR.
+- Simulación con `StrictMath`, sin reloj ni `Random` (`DeterminismRulesTest`).
 
 ## Forma de trabajar
 - Una fase por sesión; al terminarla, parar. Las fases 4–7 solo cuando Yeray
