@@ -120,9 +120,16 @@ class ProgressionTest {
     assertEquals(PurchaseCheck.NOT_IN_MVP, shop.buy(progress, Feature.FOR));
   }
 
+  private static Progress withAllSyntax(int wave) {
+    Progress progress = atWave(wave);
+    progress.features.addAll(
+        List.of(Feature.IF_ELSE, Feature.VARIABLES, Feature.LOGIC_OPS, Feature.WHILE));
+    return progress;
+  }
+
   @Test
   void hardwareCostsGrowAndMoneyIsChecked() {
-    Progress progress = atWave(1);
+    Progress progress = withAllSyntax(1);
     progress.moneyCents = 5_000;
     assertEquals(PurchaseCheck.OK, shop.buy(progress, HardwareKind.DAMAGE));
     assertEquals(3_000, progress.moneyCents());
@@ -133,11 +140,55 @@ class ProgressionTest {
 
   @Test
   void theMvpHasTwoTurrets() {
-    Progress progress = atWave(1);
+    Progress progress = withAllSyntax(1);
     progress.moneyCents = 1_000_000;
     assertEquals(PurchaseCheck.OK, shop.buy(progress, HardwareKind.EXTRA_TURRET));
     assertEquals(2, progress.turretCount());
     assertEquals(PurchaseCheck.MAX_LEVEL, shop.buy(progress, HardwareKind.EXTRA_TURRET));
+  }
+
+  @Test
+  void hardwareCapsWaitForTheSyntaxThatLiftsThem() {
+    Progress progress = atWave(1);
+    progress.moneyCents = 1_000_000;
+    // shop.json: damage needs if/else for level 1 and variables for level 2.
+    assertEquals(PurchaseCheck.NEEDS_SYNTAX, shop.check(progress, HardwareKind.DAMAGE));
+    assertEquals(
+        Feature.IF_ELSE, shop.unlockingFeature(progress, HardwareKind.DAMAGE).orElseThrow());
+    progress.features.add(Feature.IF_ELSE);
+    assertEquals(PurchaseCheck.OK, shop.buy(progress, HardwareKind.DAMAGE));
+    assertEquals(PurchaseCheck.NEEDS_SYNTAX, shop.check(progress, HardwareKind.DAMAGE));
+    assertEquals(
+        Feature.VARIABLES, shop.unlockingFeature(progress, HardwareKind.DAMAGE).orElseThrow());
+    progress.features.add(Feature.VARIABLES);
+    assertEquals(PurchaseCheck.OK, shop.buy(progress, HardwareKind.DAMAGE));
+    assertTrue(shop.unlockingFeature(progress, HardwareKind.DAMAGE).isEmpty());
+  }
+
+  @Test
+  void theSecondTurretWaitsForLogicOperators() {
+    Progress progress = atWave(1);
+    progress.moneyCents = 1_000_000;
+    progress.features.addAll(List.of(Feature.IF_ELSE, Feature.VARIABLES));
+    assertEquals(PurchaseCheck.NEEDS_SYNTAX, shop.check(progress, HardwareKind.EXTRA_TURRET));
+    progress.features.add(Feature.LOGIC_OPS);
+    assertEquals(PurchaseCheck.OK, shop.check(progress, HardwareKind.EXTRA_TURRET));
+  }
+
+  @Test
+  void withoutCapsEverythingIsBuyable() {
+    Shop free = new Shop(TestData.load().withoutHardwareCaps());
+    Progress progress = atWave(1);
+    progress.moneyCents = 1_000_000;
+    for (HardwareKind kind :
+        new HardwareKind[] {
+          HardwareKind.DAMAGE,
+          HardwareKind.MAGAZINE,
+          HardwareKind.HEAT_SINK,
+          HardwareKind.EXTRA_TURRET
+        }) {
+      assertEquals(PurchaseCheck.OK, free.check(progress, kind), kind.name());
+    }
   }
 
   @Test

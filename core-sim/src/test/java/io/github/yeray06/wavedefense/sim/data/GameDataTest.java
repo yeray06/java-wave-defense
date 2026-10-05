@@ -71,11 +71,12 @@ class GameDataTest {
         "initialScript");
     assertRejected(GameData.BALANCE, "\"lastWave\": 10", "\"lastWave\": 9", "lastWave");
     assertRejected(GameData.BALANCE, "\"startingTurrets\": 1", "\"startingTurrets\": 3", "slots");
+    assertRejected(GameData.SHOP, "\"kind\": \"DAMAGE\"", "\"kind\": \"MEMORY\"", "exactly once");
     assertRejected(
         GameData.SHOP,
-        "{ \"kind\": \"DAMAGE\", \"firstCost\": 20, \"costGrowth\": 1.6, \"effectPerLevel\": 0.25, \"inMvp\": true },",
-        "",
-        "DAMAGE");
+        "\"untilFeature\": \"WHILE\"",
+        "\"untilFeature\": \"FOR\"",
+        "outside the MVP");
     assertRejected(
         GameData.MAP, "{ \"x\": 1000, \"y\": 560 },", "{ \"x\": 0, \"y\": 560 },", "zero-length");
   }

@@ -7,5 +7,7 @@ public enum PurchaseCheck {
   ALREADY_OWNED,
   MISSING_REQUIREMENT,
   MAX_LEVEL,
+  /** A syntax cap applies: {@link Shop#unlockingFeature} names the piece that lifts it. */
+  NEEDS_SYNTAX,
   NOT_ENOUGH_MONEY
 }

@@ -6,6 +6,7 @@ import io.github.yeray06.wavedefense.sim.data.HardwareKind;
 import io.github.yeray06.wavedefense.sim.data.ShopConfig;
 import io.github.yeray06.wavedefense.sim.economy.Formulas;
 import io.github.yeray06.wavedefense.sim.economy.Money;
+import java.util.Optional;
 
 /** Syntax and hardware purchases with the plan's prices and rules ("Árbol de sintaxis"). */
 public final class Shop {
@@ -55,7 +56,30 @@ public final class Shop {
         && progress.turretCount() >= data.map().turretSlots().size()) {
       return PurchaseCheck.MAX_LEVEL;
     }
+    if (unlockingFeature(progress, kind).isPresent()) {
+      return PurchaseCheck.NEEDS_SYNTAX;
+    }
     return affordable(progress, priceCents(progress, kind));
+  }
+
+  /**
+   * The syntax piece the player must buy before the next level of {@code kind}, if a cap applies:
+   * the one whose cap is reached first among the pieces not owned yet. Drives the shop message
+   * "Necesitas variables para seguir mejorando el daño".
+   */
+  public Optional<Feature> unlockingFeature(Progress progress, HardwareKind kind) {
+    int level = progress.level(kind);
+    Feature blocking = null;
+    int lowest = Integer.MAX_VALUE;
+    for (ShopConfig.LevelCap cap : data.shop().hardware(kind).caps()) {
+      if (!progress.owns(cap.untilFeature())
+          && level >= cap.maxLevel()
+          && cap.maxLevel() < lowest) {
+        blocking = cap.untilFeature();
+        lowest = cap.maxLevel();
+      }
+    }
+    return Optional.ofNullable(blocking);
   }
 
   public PurchaseCheck buy(Progress progress, HardwareKind kind) {
