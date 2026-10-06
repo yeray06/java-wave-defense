@@ -47,8 +47,11 @@
   de libGDX 1.14.2 ya no trae GL simulado (el test instala uno vacío).
 
 Comprobado aquí: con Xvfb y GL por software (Mesa), el lanzador abre y pinta
-el área de 1280×720 con el color de fondo durante 20 s sin errores. Eso no
-sustituye la prueba en Windows con GPU real.
+el área de 1280×720 con el color de fondo durante 20 s sin errores.
+
+Probado en local por Yeray (Windows 11, GPU real): `gradlew.bat :lwjgl3:run`
+abre la ventana con el título «Defensa por oleadas» y el fondo, se cierra con
+la X sin errores y arranca desde IntelliJ IDEA.
 
 ## Fase 2 (hecha)
 
@@ -240,10 +243,5 @@ deciden con ese dato, no antes.
 
 ## Pendiente de probar en local
 
-- [ ] `gradlew.bat :lwjgl3:run` en Windows abre una ventana de 1280×720 con
-  fondo gris muy oscuro y título «Defensa por oleadas».
-- [ ] La ventana se cierra con la X sin errores en consola.
-- [ ] Importar el repo en IntelliJ IDEA como proyecto Gradle y ejecutar
-  `Lwjgl3Launcher` con *Working directory* = `assets/`.
 - [ ] (Si hay un Mac a mano) el `StartupHelper` relanza con
   `-XstartOnFirstThread` y la ventana abre.

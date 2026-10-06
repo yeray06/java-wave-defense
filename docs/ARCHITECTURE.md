@@ -372,8 +372,11 @@ Así se ve en el propio dato qué es provisional.
   todo lo que pinta el mundo (camino, núcleo, torretas, enemigos, balas)
   pasa por ella y solo lee el estado de la simulación. En el MVP la
   implementación es 2D; una futura 3D la sustituye sin tocar pantallas, UI
-  ni `core-sim`. La UI (editor, tienda, parte, informe) sigue en scene2d y
-  no pasa por ella.
+  ni `core-sim`. También tiene la cámara, dice qué hay bajo el puntero y
+  proyecta un punto del mundo a pantalla, para que las pantallas y la UI
+  pegada al mundo (error encima de la torreta, barras, botón de recarga) no
+  dependan de si el mundo es 2D o 3D. La UI (editor, tienda, parte, informe)
+  sigue en scene2d y no pasa por ella.
 - **Editor**: widget scene2d propio (el `TextArea` de libGDX no sirve para
   código: sin números de línea ni marcas). Números de línea, resaltado, marca
   roja en la línea con error y tooltip con el mensaje, contador de memoria.
@@ -635,7 +638,7 @@ provisional contradice el plan.
 | D-35 | Vidas del núcleo | CERRADA (Yeray, cambia el plan) | 10 por oleada en vez de 20. |
 | D-36 | Objetivo por defecto | CERRADA (Yeray) | El más cercano a la torreta, como dice el plan. Sigue siendo configurable en `turret.json` para medir. «Al azar» llevaba Variables a ×2 frente a no tenerla (2,03), pero contradice el plan. |
 | D-38 | Separación al salir por tipo | CERRADA (Yeray) | `spawnGapFactor` por tipo, **1 en todos** (sin efecto). Hacía falta para barrer la separación del Regenerador sin tocar las oleadas 1–3. Barrido en `docs/BARRIDO-REGENERADOR.md`: ninguna combinación de los cuatro números lleva Variables a ×2 (máximo 1,20, con vida ×1); no se aplica porque gana poco ratio a cambio de acortar el camino al Jefe 1 y de bajar la ganancia de Variables. No se hacen más barridos sobre esto. |
-| D-40 | Camino a un render 3D | CERRADA (Yeray) | A largo plazo el juego se verá en 3D; el MVP (fase 4) sigue en 2D. Para no cerrar la puerta: la simulación sigue en un plano 2D y no sabe nada del render; todo el dibujo del mundo pasa por una única interfaz (`WorldRenderer`, en `game`) que solo lee el estado de la simulación, para cambiar la implementación 2D por una 3D sin tocar pantallas, UI ni `core-sim`; la UI sigue en scene2d. No se añade ninguna otra abstracción por esto. |
+| D-40 | Camino a un render 3D | CERRADA (Yeray) | A largo plazo el juego se verá en 3D; el MVP (fase 4) sigue en 2D. Para no cerrar la puerta: la simulación sigue en un plano 2D y no sabe nada del render; todo el dibujo del mundo pasa por una única interfaz (`WorldRenderer`, en `game`) que solo lee el estado de la simulación, para cambiar la implementación 2D por una 3D sin tocar pantallas, UI ni `core-sim`; la UI sigue en scene2d. No se añade ninguna otra abstracción por esto. Además: (1) `WorldRenderer` contiene la cámara y dice qué hay bajo el puntero (de pantalla a mundo); (2) proyecta un punto del mundo a pantalla, para colocar la UI de scene2d pegada al mundo; (3) la simulación guarda los sucesos de un instante (disparo, impacto, muerte, excepción…) en un búfer reutilizable sin reservas; acumula todo lo ocurrido desde la última lectura del render (a ×3 hay varios ticks por frame); el informe de oleada no depende de él (sus datos los acumula la simulación aparte), y el búfer no influye en la simulación ni en su determinismo (solo se escribe; la lectura del render lo vacía y nada de la simulación lo lee); (4) la simulación conserva la posición anterior de cada entidad para que el render interpole entre ticks. |
 | D-39 | Variables y la regla del doble | CERRADA (Yeray) | **Excepción documentada** a la regla del doble: Variables rinde 1,07 veces lo mismo en hardware. Motivo: es compra obligatoria para llegar a `&&`, así que no compite con el hardware. `docs/BALANCE.md` la sigue listando entre las contradicciones porque el informe da datos, no decisiones. Se revisa con el playtest (`docs/PROGRESS.md`, «A observar en el playtest»). |
 | D-37 | Números de enemigos de la revisión | PROVISIONAL | Regenerador vida ×2 y cura 50 %/s; Blindado vida ×2; Enjambre 200 u/s (menos tiempo en rango). Ninguno es del plan. |
 
