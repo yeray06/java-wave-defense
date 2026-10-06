@@ -7,6 +7,11 @@ public final class Bullet {
   boolean active;
   double x;
   double y;
+
+  /** Position one tick earlier, for the render's interpolation (D-40). */
+  double prevX;
+
+  double prevY;
   int targetIndex;
   int targetGeneration;
   double damage;
@@ -23,6 +28,14 @@ public final class Bullet {
 
   public double y() {
     return y;
+  }
+
+  public double prevX() {
+    return prevX;
+  }
+
+  public double prevY() {
+    return prevY;
   }
 
   public AmmoType ammo() {

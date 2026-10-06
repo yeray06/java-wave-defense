@@ -35,6 +35,12 @@ public final class Battle {
    */
   private static final double DEAD = 1e-9;
 
+  /**
+   * Instant events kept for the render (D-40). The busiest wave makes a few hundred per second, so
+   * this holds several seconds; a loss only drops visual effects.
+   */
+  private static final int EVENT_CAPACITY = 4096;
+
   private final GameData data;
   private final int wave;
   private final PathTrack path;
@@ -44,6 +50,7 @@ public final class Battle {
   private final TurretApi[] apis;
   private final DefaultTarget defaultTarget;
   private final SplitMix64 random;
+  private final BattleEvents events = new BattleEvents(EVENT_CAPACITY);
 
   // Spawn schedule, computed once.
   private final int[] spawnTicks;
@@ -219,6 +226,8 @@ public final class Battle {
       enemy.lastInRangeDistance = -1;
       enemy.x = path.x(0);
       enemy.y = path.y(0);
+      enemy.prevX = enemy.x;
+      enemy.prevY = enemy.y;
     }
   }
 
@@ -248,16 +257,24 @@ public final class Battle {
     }
     CycleOutcome outcome = turret.script.run(apis[turret.index]);
     if (outcome == CycleOutcome.RELOADING) {
-      startReload(turret);
+      startReload(turret, false);
     } else if (outcome == CycleOutcome.FAULT) {
       turret.faults.record(turret.script.faultType(), turret.script.faultLine());
       turret.lastFault = turret.script.faultType();
       turret.lastFaultLine = turret.script.faultLine();
       turret.hungTicksLeft = hangTicks;
+      events.add(
+          BattleEventType.FAULT,
+          tick,
+          turret.index,
+          turret.lastFault.ordinal(),
+          turret.x,
+          turret.y);
     }
   }
 
-  private void startReload(Turret turret) {
+  private void startReload(Turret turret, boolean manual) {
+    events.add(BattleEventType.RELOAD, tick, turret.index, manual ? 1 : 0, turret.x, turret.y);
     turret.reloads++;
     turret.reloadCyclesLeft = data.turret().reloadCycles();
     if (turret.reloadCyclesLeft == 0) {
@@ -277,6 +294,8 @@ public final class Battle {
         turrets[bullet.turret].wastedOnDead++;
         continue;
       }
+      bullet.prevX = bullet.x;
+      bullet.prevY = bullet.y;
       double dx = target.x - bullet.x;
       double dy = target.y - bullet.y;
       double remaining = StrictMath.hypot(dx, dy);
@@ -292,12 +311,15 @@ public final class Battle {
 
   private void hit(Enemy enemy, Bullet bullet) {
     double damage = bullet.damage;
-    if (enemy.armored && bullet.ammo == AmmoType.NORMAL) {
+    boolean blocked = enemy.armored && bullet.ammo == AmmoType.NORMAL;
+    if (blocked) {
       damage *= 1 - data.enemies().armorDamageReduction();
     }
     enemy.health -= damage;
     enemy.lastDamageTick = tick;
+    events.add(BattleEventType.HIT, tick, enemy.kind.ordinal(), blocked ? 1 : 0, enemy.x, enemy.y);
     if (enemy.health <= DEAD) {
+      events.add(BattleEventType.KILL, tick, enemy.kind.ordinal(), 0, enemy.x, enemy.y);
       kills++;
       earnedCents += enemy.rewardCents;
       if (enemy.kind == EnemyKind.BOSS) {
@@ -327,6 +349,8 @@ public final class Battle {
             (int) ((tick - enemy.spawnTick) / (type.armorToggleSeconds() * ticksPerSecond));
         enemy.armored = type.startsArmored() ^ (toggles % 2 == 1);
       }
+      enemy.prevX = enemy.x;
+      enemy.prevY = enemy.y;
       enemy.distance += (double) type.speed() / ticksPerSecond;
       if (enemy.distance >= length) {
         leak(enemy);
@@ -344,6 +368,7 @@ public final class Battle {
   }
 
   private void leak(Enemy enemy) {
+    events.add(BattleEventType.LEAK, tick, enemy.kind.ordinal(), 0, enemy.x, enemy.y);
     leaks[leakCount++] =
         new WaveReport.Leak(enemy.kind, enemy.health / enemy.maxHealth, enemy.lastInRangeDistance);
     enemies.free(enemy);
@@ -378,7 +403,7 @@ public final class Battle {
     if (finished || turret.reloadCyclesLeft > 0) {
       return false;
     }
-    startReload(turret);
+    startReload(turret, true);
     return true;
   }
 
@@ -414,6 +439,16 @@ public final class Battle {
 
   public BulletPool bullets() {
     return bullets;
+  }
+
+  /** Instant events for the render (D-40); the battle never reads them. */
+  public BattleEvents events() {
+    return events;
+  }
+
+  /** Magazine size with the loadout's hardware. */
+  public int magazine() {
+    return magazine;
   }
 
   public int turretCount() {
@@ -468,6 +503,9 @@ public final class Battle {
       turret.ammo--;
       turret.heat = Math.min(maxHeat, turret.heat + heatPerShot[turret.ammoType.ordinal()]);
       turret.shots++;
+      if (turret.ammo == 0) {
+        events.add(BattleEventType.EMPTY, tick, turret.index, 0, turret.x, turret.y);
+      }
       long handle = target();
       if (handle == EnemyHandle.NONE) {
         handle = defaultTarget();
@@ -476,8 +514,11 @@ public final class Battle {
       if (enemy == null) {
         // D-05: nothing in range, the shot goes into the air.
         turret.airShots++;
+        events.add(BattleEventType.AIR_SHOT, tick, turret.index, 0, turret.x, turret.y);
         return FireResult.FIRED;
       }
+      events.add(
+          BattleEventType.SHOT, tick, turret.index, turret.ammoType.ordinal(), turret.x, turret.y);
       Bullet bullet = bullets.obtain();
       if (bullet == null) {
         // Heat caps a burst far below the pool size; reaching this is a bug, reported as such.
@@ -485,6 +526,8 @@ public final class Battle {
       }
       bullet.x = turret.x;
       bullet.y = turret.y;
+      bullet.prevX = bullet.x;
+      bullet.prevY = bullet.y;
       bullet.targetIndex = enemy.index;
       bullet.targetGeneration = enemy.generation;
       bullet.damage = bulletDamage;

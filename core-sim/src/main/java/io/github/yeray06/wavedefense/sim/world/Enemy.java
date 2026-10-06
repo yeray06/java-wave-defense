@@ -23,6 +23,11 @@ public final class Enemy {
   double x;
   double y;
 
+  /** Position one tick earlier, for the render's interpolation (D-40). */
+  double prevX;
+
+  double prevY;
+
   /** Path distance where it was last inside some turret's range, or -1. */
   double lastInRangeDistance;
 
@@ -65,5 +70,17 @@ public final class Enemy {
 
   public double y() {
     return y;
+  }
+
+  public double prevX() {
+    return prevX;
+  }
+
+  public double prevY() {
+    return prevY;
+  }
+
+  public int generation() {
+    return generation;
   }
 }
