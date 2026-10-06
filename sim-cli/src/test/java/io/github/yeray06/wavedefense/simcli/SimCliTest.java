@@ -89,4 +89,27 @@ class SimCliTest {
         markdown,
         "docs/BALANCE.md is stale: run ./gradlew :sim-cli:run --args=\"--write docs/BALANCE.md\"");
   }
+
+  @Test
+  void theRegeneratorSweepMeasuresTheCurrentDataLikeTheReportAndLeavesWavesOneToThreeAlone() {
+    RegeneratorSweep sweep = new RegeneratorSweep(ASSETS, config);
+    RegeneratorSweep.Setting current = sweep.current();
+    RegeneratorSweep.Result now = sweep.measure(current);
+    ProgressionRun.Result run = new ProgressionRun(data, player, config).run();
+    DoubleRule.Entry variables =
+        new DoubleRule(data, player, config)
+            .evaluate(run.beforeBuying()).stream()
+                .filter(e -> e.feature() == Feature.VARIABLES)
+                .findFirst()
+                .orElseThrow();
+    assertEquals(variables.ratio(), now.ratio());
+    assertTrue(now.earlyWavesUnchanged());
+
+    RegeneratorSweep.Result changed =
+        sweep.measure(
+            new RegeneratorSweep.Setting(
+                current.delay() / 2, current.rate() * 2, current.health() + 1, current.gap() / 2));
+    assertTrue(changed.earlyWavesUnchanged(), "waves 1-3 have no regenerators");
+    assertTrue(sweep.render(List.of(now, changed)).contains("| actual: "));
+  }
 }

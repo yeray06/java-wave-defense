@@ -45,6 +45,11 @@ Valores provisionales (D-12 y siguientes) que el plan no fija. Salen de la lista
 | `data/enemies.json` | `types.BOSS.startsArmored` | false |
 | `data/enemies.json` | `types.REGENERATOR.healthMultiplier` | 2 |
 | `data/enemies.json` | `types.ARMORED.healthMultiplier` | 2 |
+| `data/enemies.json` | `types.BASIC.spawnGapFactor` | 1 |
+| `data/enemies.json` | `types.REGENERATOR.spawnGapFactor` | 1 |
+| `data/enemies.json` | `types.ARMORED.spawnGapFactor` | 1 |
+| `data/enemies.json` | `types.SWARM.spawnGapFactor` | 1 |
+| `data/enemies.json` | `types.BOSS.spawnGapFactor` | 1 |
 | `data/waves.json` | `spawnWindowSeconds` | 20 |
 | `data/waves.json` | `waves` | [{"wave":1,"groups":[{"type":"BASIC","count":8}]},{"wave":2,"groups":[{"type":"BASIC","count":10}]},{"wave":3,"groups… |
 | `data/map.json` | `path` | [{"x":0,"y":560},{"x":1000,"y":560},{"x":1000,"y":300},{"x":240,"y":300},{"x":240,"y":80},{"x":500,"y":80}] |

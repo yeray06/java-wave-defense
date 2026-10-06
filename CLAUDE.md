@@ -19,6 +19,8 @@ cada decisión técnica en una línea. Di sin rodeos cuándo algo es mala idea.
   sin perder progreso. Editor con errores por línea. Guardado y ajustes.
 - Cambios al plan aprobados por Yeray: 10 vidas del núcleo por oleada (D-35)
   y topes de hardware según la sintaxis comprada (D-34, en `shop.json`).
+- Excepción aceptada a la regla del doble: Variables (D-39). Se revisa con el
+  playtest («A observar en el playtest», `docs/PROGRESS.md`).
 - FUERA: for, métodos, try/catch, clases, contratos, modificadores, Nueva
   versión. No implementarlos, pero la arquitectura debe admitirlos.
 

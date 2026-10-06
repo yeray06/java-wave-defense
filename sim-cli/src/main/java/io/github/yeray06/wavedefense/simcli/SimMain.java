@@ -16,6 +16,7 @@ import java.util.List;
  * ./gradlew :sim-cli:run                                   # summary only
  * ./gradlew :sim-cli:run --args="--write docs/BALANCE.md"  # also writes the report
  * ./gradlew :sim-cli:run --args="--assets other/assets"    # another data set
+ * ./gradlew :sim-cli:run --args="--sweep-regenerator FILE" # Regenerator sweep (RegeneratorSweep)
  * </pre>
  *
  * <p>Exits with 0 even when the plan's rules are not met: those are findings, not failures.
@@ -26,18 +27,26 @@ public final class SimMain {
   public static void main(String[] args) throws IOException {
     Path assets = Path.of("assets");
     Path write = null;
+    Path sweep = null;
     for (int i = 0; i < args.length; i++) {
       switch (args[i]) {
         case "--assets" -> assets = Path.of(args[++i]);
         case "--write" -> write = Path.of(args[++i]);
+        case "--sweep-regenerator" -> sweep = Path.of(args[++i]);
         default -> {
           System.err.println("Unknown argument: " + args[i]);
-          System.err.println("Usage: [--assets DIR] [--write FILE]");
+          System.err.println("Usage: [--assets DIR] [--write FILE] [--sweep-regenerator FILE]");
           System.exit(2);
         }
       }
     }
     PrintStream out = new PrintStream(System.out, true, StandardCharsets.UTF_8);
+    if (sweep != null) {
+      RegeneratorSweep regenerator = new RegeneratorSweep(assets, PlayerConfig.load());
+      Files.writeString(sweep, regenerator.render(regenerator.sweep()), StandardCharsets.UTF_8);
+      out.println("Wrote " + sweep);
+      return;
+    }
     Path root = assets;
     GameData data = GameData.load(file -> Files.readString(root.resolve(file)));
     PlayerConfig config = PlayerConfig.load();
