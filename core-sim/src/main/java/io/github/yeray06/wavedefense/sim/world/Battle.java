@@ -145,26 +145,28 @@ public final class Battle {
   }
 
   /**
-   * Spreads spawn slots evenly over the spawn window. A swarm group is one slot whose members
+   * Spreads spawn slots over the spawn window. Each slot is followed by a gap weighted by its
+   * type's {@code spawnGapFactor} (all 1: an even split). A swarm group is one slot whose members
    * follow each other at the group spacing.
    */
   private void buildSchedule(WaveTable.WaveSpec spec, List<int[]> ticks, List<EnemyKind> kinds) {
-    int slots = 0;
+    double totalWeight = 0;
     for (WaveTable.Group group : spec.groups()) {
-      slots += group.count() / data.enemies().type(group.type()).groupSize();
+      EnemyCatalog.EnemyType type = data.enemies().type(group.type());
+      totalWeight += group.count() / type.groupSize() * type.spawnGapFactor();
     }
     double window = data.waves().spawnWindowSeconds() * ticksPerSecond;
-    int slot = 0;
+    double weightBefore = 0;
     for (WaveTable.Group group : spec.groups()) {
       EnemyCatalog.EnemyType type = data.enemies().type(group.type());
       int groupTicks = (int) Math.round(type.groupSpacingUnits() / type.speed() * ticksPerSecond);
       for (int g = 0; g < group.count() / type.groupSize(); g++) {
-        int start = (int) Math.round(slot * window / slots);
+        int start = (int) Math.round(weightBefore * window / totalWeight);
         for (int member = 0; member < type.groupSize(); member++) {
           ticks.add(new int[] {start + member * groupTicks});
           kinds.add(group.type());
         }
-        slot++;
+        weightBefore += type.spawnGapFactor();
       }
     }
   }

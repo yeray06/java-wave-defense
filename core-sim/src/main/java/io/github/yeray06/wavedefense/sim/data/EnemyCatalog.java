@@ -16,6 +16,8 @@ public record EnemyCatalog(
    * @param regenFractionPerSecond share of max health healed per second
    * @param groupSize enemies spawned together (the swarm); counts must be a multiple of it
    * @param groupSpacingUnits distance between members of a group
+   * @param spawnGapFactor the spawn gap after an enemy (or group) of this type, relative to the
+   *     even split of the spawn window; 1 everywhere spreads every wave evenly
    * @param armorToggleSeconds the boss alternates armor this often (0 = never)
    */
   public record EnemyType(
@@ -27,6 +29,7 @@ public record EnemyCatalog(
       double regenFractionPerSecond,
       int groupSize,
       double groupSpacingUnits,
+      double spawnGapFactor,
       double armorToggleSeconds,
       boolean startsArmored) {
 
@@ -38,6 +41,7 @@ public record EnemyCatalog(
       Check.atLeastZero("regenFractionPerSecond", regenFractionPerSecond);
       Check.positive("groupSize", groupSize);
       Check.atLeastZero("groupSpacingUnits", groupSpacingUnits);
+      Check.positive("spawnGapFactor", spawnGapFactor);
       Check.atLeastZero("armorToggleSeconds", armorToggleSeconds);
       if (regenFractionPerSecond > 0 && regenDelaySeconds <= 0) {
         throw new IllegalArgumentException("a regenerating type needs regenDelaySeconds");
