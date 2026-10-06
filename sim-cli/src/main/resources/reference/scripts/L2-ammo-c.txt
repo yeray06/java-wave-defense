@@ -1,0 +1,15 @@
+if (municion() == 0) {
+    recargar();
+} else if (hayEnemigos() == false) {
+    recargar();
+} else {
+    Enemigo o = enemigoMasCercano();
+    if (o != null) {
+        if (o.blindado()) {
+            usarMunicion(PERFORANTE);
+        } else {
+            usarMunicion(NORMAL);
+        }
+        disparar();
+    }
+}

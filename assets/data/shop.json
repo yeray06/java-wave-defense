@@ -1,21 +1,147 @@
 {
   "notFromPlan": [],
   "syntax": [
-    { "feature": "IF_ELSE", "price": 25, "requires": null, "arrivesAroundWave": 2, "inMvp": true },
-    { "feature": "VARIABLES", "price": 60, "requires": "IF_ELSE", "arrivesAroundWave": 4, "inMvp": true },
-    { "feature": "LOGIC_OPS", "price": 100, "requires": "VARIABLES", "arrivesAroundWave": 6, "inMvp": true },
-    { "feature": "WHILE", "price": 200, "requires": "LOGIC_OPS", "arrivesAroundWave": 8, "inMvp": true },
-    { "feature": "FOR", "price": 450, "requires": "WHILE", "arrivesAroundWave": 11, "inMvp": false },
-    { "feature": "METHODS", "price": 900, "requires": "FOR", "arrivesAroundWave": 15, "inMvp": false },
-    { "feature": "TRY_CATCH", "price": 1800, "requires": "METHODS", "arrivesAroundWave": 18, "inMvp": false },
-    { "feature": "CLASSES", "price": 4000, "requires": "TRY_CATCH", "arrivesAroundWave": 23, "inMvp": false }
+    {
+      "feature": "IF_ELSE",
+      "price": 25,
+      "requires": null,
+      "arrivesAroundWave": 2,
+      "inMvp": true
+    },
+    {
+      "feature": "VARIABLES",
+      "price": 60,
+      "requires": "IF_ELSE",
+      "arrivesAroundWave": 4,
+      "inMvp": true
+    },
+    {
+      "feature": "LOGIC_OPS",
+      "price": 100,
+      "requires": "VARIABLES",
+      "arrivesAroundWave": 6,
+      "inMvp": true
+    },
+    {
+      "feature": "WHILE",
+      "price": 200,
+      "requires": "LOGIC_OPS",
+      "arrivesAroundWave": 8,
+      "inMvp": true
+    },
+    {
+      "feature": "FOR",
+      "price": 450,
+      "requires": "WHILE",
+      "arrivesAroundWave": 11,
+      "inMvp": false
+    },
+    {
+      "feature": "METHODS",
+      "price": 900,
+      "requires": "FOR",
+      "arrivesAroundWave": 15,
+      "inMvp": false
+    },
+    {
+      "feature": "TRY_CATCH",
+      "price": 1800,
+      "requires": "METHODS",
+      "arrivesAroundWave": 18,
+      "inMvp": false
+    },
+    {
+      "feature": "CLASSES",
+      "price": 4000,
+      "requires": "TRY_CATCH",
+      "arrivesAroundWave": 23,
+      "inMvp": false
+    }
   ],
   "hardware": [
-    { "kind": "DAMAGE", "firstCost": 20, "costGrowth": 1.6, "effectPerLevel": 0.25, "inMvp": true },
-    { "kind": "MAGAZINE", "firstCost": 15, "costGrowth": 1.5, "effectPerLevel": 4, "inMvp": true },
-    { "kind": "MEMORY", "firstCost": 30, "costGrowth": 1.8, "effectPerLevel": 4, "inMvp": false },
-    { "kind": "HEAT_SINK", "firstCost": 40, "costGrowth": 1.6, "effectPerLevel": 5, "inMvp": true },
-    { "kind": "PROCESSOR", "firstCost": 50, "costGrowth": 2, "effectPerLevel": 0.5, "inMvp": false },
-    { "kind": "EXTRA_TURRET", "firstCost": 75, "costGrowth": 3, "effectPerLevel": 1, "inMvp": true }
+    {
+      "kind": "DAMAGE",
+      "firstCost": 20,
+      "costGrowth": 1.6,
+      "effectPerLevel": 0.25,
+      "inMvp": true,
+      "caps": [
+        {
+          "untilFeature": "IF_ELSE",
+          "maxLevel": 0
+        },
+        {
+          "untilFeature": "VARIABLES",
+          "maxLevel": 1
+        },
+        {
+          "untilFeature": "WHILE",
+          "maxLevel": 3
+        }
+      ]
+    },
+    {
+      "kind": "MAGAZINE",
+      "firstCost": 15,
+      "costGrowth": 1.5,
+      "effectPerLevel": 4,
+      "inMvp": true,
+      "caps": [
+        {
+          "untilFeature": "IF_ELSE",
+          "maxLevel": 0
+        },
+        {
+          "untilFeature": "VARIABLES",
+          "maxLevel": 1
+        },
+        {
+          "untilFeature": "WHILE",
+          "maxLevel": 3
+        }
+      ]
+    },
+    {
+      "kind": "MEMORY",
+      "firstCost": 30,
+      "costGrowth": 1.8,
+      "effectPerLevel": 4,
+      "inMvp": false,
+      "caps": []
+    },
+    {
+      "kind": "HEAT_SINK",
+      "firstCost": 40,
+      "costGrowth": 1.6,
+      "effectPerLevel": 5,
+      "inMvp": true,
+      "caps": [
+        {
+          "untilFeature": "LOGIC_OPS",
+          "maxLevel": 0
+        }
+      ]
+    },
+    {
+      "kind": "PROCESSOR",
+      "firstCost": 50,
+      "costGrowth": 2,
+      "effectPerLevel": 0.5,
+      "inMvp": false,
+      "caps": []
+    },
+    {
+      "kind": "EXTRA_TURRET",
+      "firstCost": 75,
+      "costGrowth": 3,
+      "effectPerLevel": 1,
+      "inMvp": true,
+      "caps": [
+        {
+          "untilFeature": "LOGIC_OPS",
+          "maxLevel": 0
+        }
+      ]
+    }
   ]
 }

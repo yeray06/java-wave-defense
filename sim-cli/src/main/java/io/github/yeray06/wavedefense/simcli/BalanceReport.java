@@ -59,7 +59,10 @@ final class BalanceReport {
     return contradictions;
   }
 
-  String render(ProgressionRun.Result run, List<DoubleRule.Entry> doubleRule) {
+  String render(
+      ProgressionRun.Result run,
+      List<DoubleRule.Entry> doubleRule,
+      List<DoubleRule.Entry> doubleRuleWithoutCaps) {
     line("# Balance del MVP (oleadas 1–10)");
     line("");
     line("Generado por `sim-cli` con `./gradlew :sim-cli:run --args=\"--write docs/BALANCE.md\"`.");
@@ -74,7 +77,8 @@ final class BalanceReport {
     walls(run);
     playTime(run);
     rhythm(run);
-    doubleRule(doubleRule);
+    doubleRule(doubleRule, doubleRuleWithoutCaps);
+    hardwareCaps();
     unlosableWaves();
     waveOne(run);
     summary();
@@ -135,6 +139,8 @@ final class BalanceReport {
     line("- Escribe el mejor script de referencia que le permite su sintaxis");
     line("  (`sim-cli/src/main/resources/reference/scripts/`). Con la oleada 6 alcanzada usa");
     line("  `usarMunicion` si su sintaxis cabe en la memoria.");
+    line("- Las variantes `-b` y `-c` dejan fuera otra cosa para caber en 12 líneas. En la");
+    line("  partida usa la primera; en la regla del doble prueba todas y se queda la mejor.");
     line(
         "- Recarga a mano una torreta vacía %s s después de que se quede sin balas, también si",
         decimal(config.manualReloadReactionSeconds()));
@@ -147,7 +153,20 @@ final class BalanceReport {
     line("");
     line("| Script | Memoria | Código |");
     line("|---|---|---|");
-    for (String name : new String[] {"L0", "L1", "L2", "L2-ammo", "L3-ammo", "L4", "L4-ammo"}) {
+    for (String name :
+        new String[] {
+          "L0",
+          "L1",
+          "L2",
+          "L2-ammo",
+          "L2-ammo-b",
+          "L2-ammo-c",
+          "L3-ammo",
+          "L3-ammo-b",
+          "L4",
+          "L4-ammo",
+          "L4-ammo-b"
+        }) {
       String source = ReferencePlayer.resource(name);
       int memory =
           data.compiler()
@@ -293,7 +312,7 @@ final class BalanceReport {
     return item.arrivesAroundWave() + "–" + (item.arrivesAroundWave() + 1);
   }
 
-  private void doubleRule(List<DoubleRule.Entry> entries) {
+  private void doubleRule(List<DoubleRule.Entry> capped, List<DoubleRule.Entry> uncapped) {
     line("## 8. Regla del doble");
     line("");
     line("`k` = mayor multiplicador de vida de los enemigos con el que el jugador de referencia");
@@ -301,12 +320,28 @@ final class BalanceReport {
         "aún supera **sin fugas** la oleada en la que llega la pieza (búsqueda binaria entre %s y"
             + " %s).",
         decimal(config.healthScaleSearch().min()), decimal(config.healthScaleSearch().max()));
-    line("Sin fugas y no solo «superada»: con 20 vidas en el núcleo, una oleada de menos de 20");
-    line("enemigos no se puede perder y la medida se saturaría (ver «Contradicciones»).");
+    line("Sin fugas y no solo «superada»: si una oleada trae menos enemigos que vidas tiene el");
+    line("núcleo, no se puede perder y la medida se saturaría.");
     line("Se parte del estado justo antes de comprar la pieza y se compara la pieza con su");
-    line("script frente al mejor hardware que se compra con el mismo dinero. Cumple si la");
-    line("proporción es ≥ 2.");
+    line("script frente al mejor hardware que se compra con el mismo dinero. En cada lado se");
+    line("prueban todas las variantes de script que caben en memoria y se toma la mejor.");
+    line("Cumple si la proporción es ≥ 2.");
     line("");
+    line("### 8.1 Con los topes de hardware del juego (sección 9)");
+    line("");
+    doubleRuleTable(capped, true);
+    line("### 8.2 Sin topes de hardware (referencia)");
+    line("");
+    line("Lo que pasaría si el hardware no tuviera topes: mide cuánto aporta la pieza por sí");
+    line("sola frente al hardware libre.");
+    line("");
+    doubleRuleTable(uncapped, false);
+    line("D-20 pide comprobar Variables contra el Regenerador: es la fila VARIABLES (oleada 4,");
+    line("la primera con regeneradores).");
+    line("");
+  }
+
+  private void doubleRuleTable(List<DoubleRule.Entry> entries, boolean countsForThePlan) {
     line(
         "| Pieza | Oleada | Con la pieza | k | Sin ella ni hardware | k | Sin ella: mejor hardware"
             + " | k | Proporción | Regla |");
@@ -316,8 +351,10 @@ final class BalanceReport {
         line(
             "| %s | %d | — | — | — | — | — | — | — | no evaluada: no se compró |",
             e.feature(), e.wave());
-        contradictions.add(
-            "Regla del doble de " + e.feature() + " no evaluada: el jugador nunca la compró.");
+        if (countsForThePlan) {
+          contradictions.add(
+              "Regla del doble de " + e.feature() + " no evaluada: el jugador nunca la compró.");
+        }
         continue;
       }
       line(
@@ -333,9 +370,9 @@ final class BalanceReport {
           decimal(e.kWithout()),
           Double.isInfinite(e.ratio()) ? "∞" : decimal(e.ratio()),
           e.passes() ? "cumple" : "**no cumple**");
-      if (!e.passes()) {
+      if (countsForThePlan && !e.passes()) {
         contradictions.add(
-            "Regla del doble: "
+            "Regla del doble (con topes): "
                 + e.feature()
                 + " rinde "
                 + decimal(e.ratio())
@@ -345,8 +382,30 @@ final class BalanceReport {
       }
     }
     line("");
-    line("D-20 pide comprobar Variables contra el Regenerador: es la fila VARIABLES (oleada 4,");
-    line("la primera con regeneradores).");
+  }
+
+  private void hardwareCaps() {
+    line("## 9. Topes de hardware según la sintaxis");
+    line("");
+    line("Red de seguridad aprobada como añadido al plan: un nivel de hardware no se puede");
+    line("comprar hasta tener la pieza indicada. En la tienda: «Necesitas variables para");
+    line("seguir mejorando el daño». Están en `shop.json` (`caps`).");
+    line("");
+    line("| Hardware | Nivel máximo | Hasta comprar |");
+    line("|---|---|---|");
+    boolean any = false;
+    for (ShopConfig.HardwareItem item : data.shop().hardware()) {
+      if (!item.inMvp()) {
+        continue;
+      }
+      for (ShopConfig.LevelCap cap : item.caps()) {
+        any = true;
+        line("| %s | %d | %s |", item.kind(), cap.maxLevel(), cap.untilFeature());
+      }
+    }
+    if (!any) {
+      line("| — | — | sin topes |");
+    }
     line("");
   }
 
@@ -363,11 +422,11 @@ final class BalanceReport {
       warnings.add(
           "Con "
               + data.balance().coreLivesPerWave()
-              + " vidas en el núcleo, las oleadas "
-              + waves.get(0)
-              + "–"
-              + waves.get(waves.size() - 1)
-              + " traen menos enemigos que vidas y no se pueden perder aunque ninguna torreta"
+              + " vidas en el núcleo, "
+              + (waves.size() == 1
+                  ? "la oleada " + waves.get(0) + " trae"
+                  : "las oleadas " + waves.get(0) + "–" + waves.get(waves.size() - 1) + " traen")
+              + " menos enemigos que vidas y no se pueden perder aunque ninguna torreta"
               + " dispare: ahí no puede haber muros y la presión es solo de dinero (menos cobro y"
               + " sin oleada perfecta ni ×3).");
     }
@@ -396,7 +455,7 @@ final class BalanceReport {
   }
 
   private void summary() {
-    line("## 9. Contradicciones con el plan");
+    line("## 10. Contradicciones con el plan");
     line("");
     if (contradictions.isEmpty()) {
       line("Ninguna: con los datos actuales la simulación cumple las reglas del plan.");
@@ -408,7 +467,7 @@ final class BalanceReport {
       }
     }
     line("");
-    line("## 10. Avisos");
+    line("## 11. Avisos");
     line("");
     line("No contradicen el plan, pero conviene saberlos al decidir.");
     line("");

@@ -41,6 +41,11 @@ public record GameData(
     return data;
   }
 
+  /** The same data with the shop's hardware caps removed, for "sin tope" comparisons. */
+  public GameData withoutHardwareCaps() {
+    return new GameData(balance, turret, enemies, waves, shop.withoutCaps(), map, scriptApi);
+  }
+
   public ScriptCompiler compiler() {
     return new ScriptCompiler(scriptApi.api(), scriptApi.limits());
   }
@@ -93,6 +98,14 @@ public record GameData(
     }
     if (balance.startingTurrets() > map.turretSlots().size()) {
       throw new DataException(BALANCE, "startingTurrets exceeds the map's turret slots");
+    }
+    for (ShopConfig.HardwareItem item : shop.hardware()) {
+      for (ShopConfig.LevelCap cap : item.caps()) {
+        if (item.inMvp() && !shop.syntax(cap.untilFeature()).inMvp()) {
+          throw new DataException(
+              SHOP, item.kind() + " is capped until " + cap.untilFeature() + ", outside the MVP");
+        }
+      }
     }
     for (ShopConfig.SyntaxItem item : shop.syntax()) {
       if (item.requires() != null && item.inMvp() && !shop.syntax(item.requires()).inMvp()) {

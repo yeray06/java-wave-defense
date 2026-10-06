@@ -19,6 +19,7 @@ public record TurretConfig(
     double hangSeconds,
     double rangeUnits,
     double bulletSpeedUnitsPerSecond,
+    DefaultTarget defaultTarget,
     String initialScript) {
 
   public TurretConfig {
@@ -39,6 +40,7 @@ public record TurretConfig(
     Check.atLeastZero("hangSeconds", hangSeconds);
     Check.positive("rangeUnits", rangeUnits);
     Check.positive("bulletSpeedUnitsPerSecond", bulletSpeedUnitsPerSecond);
+    Check.present("defaultTarget", defaultTarget);
     Check.present("initialScript", initialScript);
   }
 }

@@ -1,4 +1,4 @@
-if (municion() == 0) {
+if (municion() == 0 || calor() >= 70) {
     recargar();
 } else {
     Enemigo o = objetivo();
@@ -8,7 +8,7 @@ if (municion() == 0) {
     if (o != null) {
         apuntar(o);
         if (o.blindado()) usarMunicion(PERFORANTE); else usarMunicion(NORMAL);
-        while (municion() > 0 && calor() < 70 && objetivo() != null) {
+        while (municion() > 0 && calor() < 60 && objetivo() != null) {
             disparar();
         }
     }

@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import io.github.yeray06.wavedefense.script.api.Feature;
 import io.github.yeray06.wavedefense.script.diag.ErrorCode;
 import io.github.yeray06.wavedefense.script.diag.FaultType;
+import io.github.yeray06.wavedefense.sim.progress.PurchaseCheck;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
@@ -48,6 +49,22 @@ class ScriptMessagesTest {
       text("script.feature." + feature.name());
     }
     text("script.memory.rule");
+    for (HardwareKind kind : HardwareKind.values()) {
+      text("shop.hardware." + kind.name());
+    }
+    for (PurchaseCheck check : PurchaseCheck.values()) {
+      if (check != PurchaseCheck.OK) {
+        text("shop.check." + check.name());
+      }
+    }
+  }
+
+  @Test
+  void hardwareCapMessageReadsAsApproved() {
+    String message =
+        new MessageFormat(text("shop.check.NEEDS_SYNTAX"), Locale.ROOT)
+            .format(new Object[] {text("script.feature.VARIABLES"), text("shop.hardware.DAMAGE")});
+    assertEquals("Necesitas variables para seguir mejorando el daño", message);
   }
 
   @Test
