@@ -447,7 +447,7 @@ los JSON y en `docs/BALANCE.md`.
 | Recarga a mano | Mismo efecto que `recargar()`; **también con la torreta colgada** (la recarga avanza durante el cuelgue); no si ya está recargando | PROVISIONAL (D-03b, cambiada en la fase 3) |
 | Excepción sin capturar | Corta el script, torreta colgada 3 s, error con línea encima | Plan |
 | `disparar()` sin enemigos en rango | Bala «al aire»: gasta bala y calor | PROVISIONAL (D-05) |
-| Objetivo por defecto | Enemigo vivo más cercano **a la torreta** dentro del rango. Configurable en `turret.json` (`defaultTarget`: más cercano a la torreta, más cercano al núcleo o uno al azar en rango, con la semilla de la oleada) para medir; `enemigoMasCercano()` siempre es «a la torreta» | Plan + PROVISIONAL (D-05, D-36) |
+| Objetivo por defecto | Enemigo vivo más cercano **a la torreta** dentro del rango. Configurable en `turret.json` (`defaultTarget`: más cercano a la torreta, más cercano al núcleo o uno al azar en rango, con la semilla de la oleada) para medir; `enemigoMasCercano()` siempre es «a la torreta» | Plan + Yeray (D-05, D-36) |
 | Objetivo fijado | `apuntar(e)` lo mantiene entre ciclos; `objetivo()` da `null` si no hay, murió o salió de rango | Yeray (D-20) |
 | `usarMunicion(tipo)` | Disponible desde la oleada 6; el tipo elegido se mantiene entre ciclos | Plan |
 | Perforante | Ignora la reducción del blindaje; un solo objetivo | PROVISIONAL (D-09) |
@@ -547,6 +547,10 @@ obliga a regenerarlo y a ver el efecto en el mismo PR.
   oleadas 1–6 no se pueden perder y `k` se saturaba en el máximo.
 - **Caso D-20**: la fila VARIABLES es la oleada 4, la primera con
   regeneradores.
+- **Barrido del Regenerador**: `--sweep-regenerator FILE` juega una partida
+  entera y mide la regla del doble de Variables para cada combinación de
+  espera, curación, vida y separación del Regenerador (rejilla en
+  `RegeneratorSweep`), sin tocar los datos del disco. Tarda unos 7 min.
 - **Conclusiones**: el informe separa «Contradicciones con el plan» (reglas
   del plan que no se cumplen) y «Avisos». Nada se ajusta por mi cuenta.
 
@@ -554,8 +558,9 @@ obliga a regenerarlo y a ver el efecto en el mismo PR.
 
 - `Battle` juega una oleada: aparición → ciclos de torreta → balas →
   enemigos → fin. 60 ticks/s; ciclo de torreta cada 30 ticks.
-- Aparición: los «huecos» de salida se reparten por igual en la ventana de
-  20 s; un grupo de enjambre ocupa un hueco y sus miembros salen seguidos a la
+- Aparición: los «huecos» de salida se reparten en la ventana de 20 s; tras
+  cada hueco va un trozo de ventana proporcional al `spawnGapFactor` de su
+  tipo (`enemies.json`; hoy 1 en todos = reparto por igual, D-38); un grupo de enjambre ocupa un hueco y sus miembros salen seguidos a la
   distancia de grupo. El jefe es el último hueco.
 - Balas guiadas; si el objetivo muere antes de llegar, cuentan como «balas en
   enemigos ya muertos». Un enemigo muere con vida ≤ 1e-9 (si no, 5 × 0,2 =
@@ -621,7 +626,8 @@ provisional contradice el plan.
 | D-33 | Jugador de referencia | PROVISIONAL | Política de compra y 1 s de reacción para recargar a mano (sección 11). Solo afecta al informe, no al juego. |
 | D-34 | Topes de hardware según la sintaxis | CERRADA la idea (Yeray); topes PROVISIONAL | Red de seguridad de la regla del doble. Topes en 10.3, configurables en `shop.json`; solo pueden esperar a piezas del MVP (se valida al cargar). |
 | D-35 | Vidas del núcleo | CERRADA (Yeray, cambia el plan) | 10 por oleada en vez de 20. |
-| D-36 | Objetivo por defecto configurable | PROVISIONAL | Medido en la revisión de balance: ni «más cercano al núcleo» ni «al azar» hacen que el Regenerador castigue al que no tiene Variables con la vida original. Con vida ×2 y cura 50 %/s, solo «al azar» lleva Variables a ×2 (2,03), pero contradice el plan («por defecto, el más cercano»): se queda «a la torreta» y «al azar» queda como opción para Yeray. |
+| D-36 | Objetivo por defecto | CERRADA (Yeray) | El más cercano a la torreta, como dice el plan. Sigue siendo configurable en `turret.json` para medir. «Al azar» llevaba Variables a ×2 frente a no tenerla (2,03), pero contradice el plan. |
+| D-38 | Separación al salir por tipo | PROVISIONAL | `spawnGapFactor` por tipo, 1 en todos (sin efecto). Hacía falta para barrer la separación del Regenerador sin tocar las oleadas 1–3. Barrido en `docs/BARRIDO-REGENERADOR.md`: ninguna combinación de los cuatro números lleva Variables a ×2 (máximo 1,20); no se ha aplicado ninguna. |
 | D-37 | Números de enemigos de la revisión | PROVISIONAL | Regenerador vida ×2 y cura 50 %/s; Blindado vida ×2; Enjambre 200 u/s (menos tiempo en rango). Ninguno es del plan. |
 
 Decisiones de stack también cerradas: Kotlin DSL sí; LWJGL el de libGDX

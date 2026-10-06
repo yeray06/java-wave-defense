@@ -8,7 +8,8 @@
 | 1. Esqueleto Gradle, lanzador y CI | ✅ Fusionada | `phase-1-esqueleto` |
 | 2. Intérprete con tests | ✅ Fusionada | `phase-2-interprete` |
 | 3. core-sim y sim-cli, `docs/BALANCE.md` | ✅ Fusionada | `phase-3-simulacion` |
-| 3b. Revisión de balance (decisiones A y B) | ✅ Hecha, en PR | `phase-3b-rebalance` |
+| 3b. Revisión de balance (decisiones A y B) | ✅ Fusionada | `phase-3b-rebalance` |
+| 3c. Barrido del Regenerador | ✅ Hecha, en PR | `phase-3c-regenerador` |
 | 4. Juego: camino, torretas, enemigos, bucle | Solo con Yeray en casa | — |
 | 5. Editor, tienda, parte de oleada, informe | Solo con Yeray en casa | — |
 | 6. Guardado, ajustes, robustez | Solo con Yeray en casa | — |
@@ -143,6 +144,30 @@ Regla del doble, proporción pieza / mismo dinero en hardware (≥ 2 cumple):
 - Con 10 vidas: Jefe 1 derrotado en **25 oleadas jugadas** y **16,1 min**.
   Muros en las oleadas 6 (3 pasadas), 7 (1) y 9 (4): cumple la regla de 5.
 
+## Barrido del Regenerador (hecho)
+
+Encargo de Yeray: con el objetivo por defecto del plan (el más cercano a la
+torreta, D-36 cerrada), buscar espera, curación, vida y separación al salir
+del Regenerador con las que Variables llegue a ×2, sin pasar de 5 pasadas en
+las oleadas 4–5 y sin cambiar las oleadas 1–3. Si ninguna llega, no aplicar
+nada.
+
+- Nuevo `spawnGapFactor` por tipo en `enemies.json` (1 en todos: sin efecto)
+  para poder mover la separación solo del Regenerador. La ventana de salida
+  global habría cambiado también las oleadas 1–3.
+- `sim-cli --sweep-regenerator` y la tabla completa (209 combinaciones) en
+  `docs/BARRIDO-REGENERADOR.md`.
+- **Ninguna combinación llega a ×2**; no se ha aplicado ninguna. La más
+  cercana: vida ×1 (como el Básico), espera 1 s, cualquier curación,
+  separación 1 → **1,20** con topes (1,00 sin topes), frente a 1,07 ahora.
+  Ninguna cambia las oleadas 1–3; solo 3 de 209 ponen muro en la oleada 5,
+  con 2 pasadas como mucho.
+- Por qué: con «el más cercano a la torreta», la torreta sin Variables ya
+  sigue disparando al mismo enemigo mientras se acerca, así que la cura casi
+  nunca llega a empezar. Espera y curación apenas mueven nada; la vida escala
+  a los dos lados por igual; juntar a los regeneradores al salir perjudica
+  también al script con Variables (baja a 0,80).
+
 ## Siguiente: fase 4
 
 Juego: camino, torretas, enemigos y bucle de oleada. **Necesita que estés en
@@ -190,10 +215,7 @@ Propuestas mías aplicadas como PROVISIONAL (detalle en
 - **D-33**: jugador de referencia del simulador (política de compra, 1 s de
   reacción). Solo afecta al informe.
 - **D-34**: los topes concretos de hardware (la idea la aprobó Yeray).
-- **D-36**: objetivo por defecto «más cercano a la torreta». **Para decidir**:
-  «uno al azar en rango» es la única opción medida que lleva Variables a ×2
-  (2,03 frente a no tenerla, sin hardware), pero contradice el plan («por defecto, el
-  enemigo más cercano»), así que no está aplicada.
+- **D-38**: `spawnGapFactor` por tipo (1 en todos, sin efecto).
 - **D-37**: Regenerador vida ×2 y cura 50 %/s; Blindado vida ×2; Enjambre
   200 u/s.
 
