@@ -539,7 +539,8 @@ obliga a regenerarlo y a ver el efecto en el mismo PR.
   cada pieza, desde el estado justo antes de comprarla y en la oleada en que
   «llega» (`shop.json`), `k` = mayor multiplicador de vida enemiga con el que
   la oleada sale **sin fugas**. Se compara la pieza con su script frente al
-  mejor hardware del mismo precio **dentro de los topes** (D-34); el informe
+  mejor hardware del mismo precio **dentro de los topes** (D-34). Variables es
+  excepción aceptada (D-39); el informe
   da también la proporción sin topes como referencia. En cada lado se prueban
   todas las variantes del script que caben en memoria (`L3-ammo`,
   `L3-ammo-b`…) y se toma la mejor. Cumple si la proporción es ≥ 2. La
@@ -627,7 +628,8 @@ provisional contradice el plan.
 | D-34 | Topes de hardware según la sintaxis | CERRADA la idea (Yeray); topes PROVISIONAL | Red de seguridad de la regla del doble. Topes en 10.3, configurables en `shop.json`; solo pueden esperar a piezas del MVP (se valida al cargar). |
 | D-35 | Vidas del núcleo | CERRADA (Yeray, cambia el plan) | 10 por oleada en vez de 20. |
 | D-36 | Objetivo por defecto | CERRADA (Yeray) | El más cercano a la torreta, como dice el plan. Sigue siendo configurable en `turret.json` para medir. «Al azar» llevaba Variables a ×2 frente a no tenerla (2,03), pero contradice el plan. |
-| D-38 | Separación al salir por tipo | PROVISIONAL | `spawnGapFactor` por tipo, 1 en todos (sin efecto). Hacía falta para barrer la separación del Regenerador sin tocar las oleadas 1–3. Barrido en `docs/BARRIDO-REGENERADOR.md`: ninguna combinación de los cuatro números lleva Variables a ×2 (máximo 1,20); no se ha aplicado ninguna. |
+| D-38 | Separación al salir por tipo | CERRADA (Yeray) | `spawnGapFactor` por tipo, **1 en todos** (sin efecto). Hacía falta para barrer la separación del Regenerador sin tocar las oleadas 1–3. Barrido en `docs/BARRIDO-REGENERADOR.md`: ninguna combinación de los cuatro números lleva Variables a ×2 (máximo 1,20, con vida ×1); no se aplica porque gana poco ratio a cambio de acortar el camino al Jefe 1 y de bajar la ganancia de Variables. No se hacen más barridos sobre esto. |
+| D-39 | Variables y la regla del doble | CERRADA (Yeray) | **Excepción documentada** a la regla del doble: Variables rinde 1,07 veces lo mismo en hardware. Motivo: es compra obligatoria para llegar a `&&`, así que no compite con el hardware. `docs/BALANCE.md` la sigue listando entre las contradicciones porque el informe da datos, no decisiones. Se revisa con el playtest (`docs/PROGRESS.md`, «A observar en el playtest»). |
 | D-37 | Números de enemigos de la revisión | PROVISIONAL | Regenerador vida ×2 y cura 50 %/s; Blindado vida ×2; Enjambre 200 u/s (menos tiempo en rango). Ninguno es del plan. |
 
 Decisiones de stack también cerradas: Kotlin DSL sí; LWJGL el de libGDX

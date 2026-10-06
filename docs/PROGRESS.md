@@ -162,7 +162,12 @@ nada.
   separación 1 → **1,20** con topes (1,00 sin topes), frente a 1,07 ahora.
   Ninguna cambia las oleadas 1–3; solo 3 de 209 ponen muro en la oleada 5,
   con 2 pasadas como mucho.
-- Por qué: con «el más cercano a la torreta», la torreta sin Variables ya
+- **Decisión de Yeray**: no se aplica nada. Variables queda como excepción
+  documentada a la regla del doble (1,07; D-39): es compra obligatoria para
+  llegar a `&&`, así que no compite con el hardware. El factor de separación
+  se queda en 1 (D-38). No más barridos sobre esto: se decide con el
+  playtest (ver «A observar en el playtest»).
+- Por qué no llega: con «el más cercano a la torreta», la torreta sin Variables ya
   sigue disparando al mismo enemigo mientras se acerca, así que la cura casi
   nunca llega a empezar. Espera y curación apenas mueven nada; la vida escala
   a los dos lados por igual; juntar a los regeneradores al salir perjudica
@@ -215,12 +220,23 @@ Propuestas mías aplicadas como PROVISIONAL (detalle en
 - **D-33**: jugador de referencia del simulador (política de compra, 1 s de
   reacción). Solo afecta al informe.
 - **D-34**: los topes concretos de hardware (la idea la aprobó Yeray).
-- **D-38**: `spawnGapFactor` por tipo (1 en todos, sin efecto).
 - **D-37**: Regenerador vida ×2 y cura 50 %/s; Blindado vida ×2; Enjambre
   200 u/s.
 
 Números de balance que no vienen del plan (D-12): están en la lista
 `notFromPlan` de cada JSON y en la sección 2 de `docs/BALANCE.md`.
+
+## A observar en el playtest
+
+Preguntas de diseño que solo responde alguien jugando. Se apuntan aquí y se
+deciden con ese dato, no antes.
+
+- [ ] **Variables contra el Regenerador** (D-39): ¿nota el jugador la
+  diferencia al comprar Variables en las oleadas 4–5? Si no la nota, se
+  rediseña el Regenerador con ese dato. El simulador da 1,07 frente al
+  hardware del mismo precio (1,69 frente a no tenerla).
+- [ ] **Recarga a mano en la oleada 1** (decisión C): cuánto tarda el jugador
+  en recargar. El simulador supone 1 s.
 
 ## Pendiente de probar en local
 
