@@ -9,8 +9,9 @@
 | 2. Intérprete con tests | ✅ Fusionada | `phase-2-interprete` |
 | 3. core-sim y sim-cli, `docs/BALANCE.md` | ✅ Fusionada | `phase-3-simulacion` |
 | 3b. Revisión de balance (decisiones A y B) | ✅ Fusionada | `phase-3b-rebalance` |
-| 3c. Barrido del Regenerador | ✅ Hecha, en PR | `phase-3c-regenerador` |
-| 4. Juego: camino, torretas, enemigos, bucle | Solo con Yeray en casa | — |
+| 3c. Barrido del Regenerador | ✅ Fusionada | `phase-3c-regenerador` |
+| 3d. Camino a un render 3D (D-40) | ✅ Fusionada | `phase-3d-render-3d` |
+| 4. Juego: camino, torretas, enemigos, bucle | ✅ Hecha, en PR | `phase-4-juego` |
 | 5. Editor, tienda, parte de oleada, informe | Solo con Yeray en casa | — |
 | 6. Guardado, ajustes, robustez | Solo con Yeray en casa | — |
 | 7. Empaquetado y documentación | Solo con Yeray en casa | — |
@@ -176,12 +177,53 @@ nada.
   a los dos lados por igual; juntar a los regeneradores al salir perjudica
   también al script con Variables (baja a 0,80).
 
-## Siguiente: fase 4
+## Fase 4 (hecha)
 
-Juego: camino, torretas, enemigos y bucle de oleada. **Necesita que estés en
-casa para probarla**; no empiezo sin que me lo digas. En la fase 4 hay que
-registrar cuánto tarda el jugador en recargar a mano durante la oleada 1
-(decisión C de Yeray; el simulador supone 1 s).
+Se juega: `gradlew.bat :lwjgl3:run` abre la pantalla de combate.
+
+- `core-sim`: búfer de sucesos y posición anterior de enemigos y balas (D-40),
+  y `WaveLoop`, el bucle de oleadas con el flujo D-01 (espera a «Desplegar»
+  en oleadas nuevas; encadena repeticiones y oleadas ya superadas).
+- `game`:
+  - `FixedStepClock`: ticks enteros, ×3 = más ticks por frame.
+  - `WorldRenderer` y su versión 2D con `ShapeRenderer`: camino, núcleo,
+    torretas con su alcance y barras de munición y calor, enemigos por tipo
+    con vida y anillo de blindaje, balas normales y perforantes, y efectos
+    (fogonazo, impacto, baja, fuga, excepción, recarga). Interpola entre
+    ticks, tiene la cámara, dice qué torreta hay bajo el puntero y proyecta
+    puntos del mundo a pantalla.
+  - HUD en scene2d (D-41): oleada, núcleo, dinero, ×1/×3 (D-43), avance
+    automático, «Desplegar oleada N», resultado de la última oleada y, encima
+    de cada torreta, la excepción con su línea, «Recargando…» o «¡Sin
+    balas!».
+  - Recarga a mano con clic en la torreta (D-42).
+  - Decisión C: el juego escribe en la consola cuánto tardas en recargar a
+    mano en la oleada 1 y un resumen al acabarla (D-45).
+  - Fuente JetBrains Mono (OFL) con freetype; textos en
+    `messages.properties`.
+- 320 tests en verde. Nuevos: reloj, búfer de sucesos (orden, capacidad, que
+  leerlo no cambia la batalla), posiciones anteriores, `WaveLoop` (flujo
+  D-01, derrota, repetición idéntica), selección y proyección a varios
+  tamaños de ventana, la pantalla convirtiendo un clic en recarga, textos en
+  español y la medida de la decisión C. El juego entero arranca y pinta en el
+  backend headless.
+
+Comprobado aquí con Xvfb y GL por software, con capturas: la pantalla se ve
+como se describe arriba, «Desplegar» arranca la oleada, la excepción sale
+encima de la torreta, el clic recarga, la oleada 1 se supera y paga, la 2
+espera a «Desplegar», y la consola muestra la línea de la decisión C. Eso no
+sustituye la prueba en tu Windows (lista de abajo).
+
+**Dato para la decisión C**: con `disparar();`, la torreta vacía el cargador
+disparando al aire (D-05) antes de que entre el primer enemigo, y se cuelga
+con SinMunicionException. Si el jugador recarga pronto, vuelve a vaciarlo al
+aire. La primera medida de la oleada 1 incluye esa espera, así que conviene
+mirar el resumen entero, no solo la primera línea.
+
+## Siguiente: fase 5
+
+Editor, tienda, parte de oleada e informe. **Necesita que estés en casa**; no
+empiezo sin que me lo digas.
 
 ## Decisiones por revisar
 
@@ -225,6 +267,17 @@ Propuestas mías aplicadas como PROVISIONAL (detalle en
 - **D-34**: los topes concretos de hardware (la idea la aprobó Yeray).
 - **D-37**: Regenerador vida ×2 y cura 50 %/s; Blindado vida ×2; Enjambre
   200 u/s.
+- **D-41**: hasta la fase 5, «Desplegar oleada N» hace de parte, una línea de
+  resultado hace de informe y cada torreta usa su script inicial; cada
+  arranque es partida nueva.
+- **D-42**: recarga a mano con clic izquierdo en la torreta; también con el
+  cargador lleno, como D-03.
+- **D-43**: el botón ×3 recuerda lo pedido; solo se aplica en oleadas
+  superadas sin fugas.
+- **D-44**: la semilla de cada batalla es un contador de la partida.
+- **D-45**: la medida de la decisión C sale por consola (el log a fichero es
+  de la fase 6).
+- **D-46**: UI a 1 píxel por unidad, sin escala configurable hasta la fase 6.
 
 Números de balance que no vienen del plan (D-12): están en la lista
 `notFromPlan` de cada JSON y en la sección 2 de `docs/BALANCE.md`.
@@ -239,9 +292,35 @@ deciden con ese dato, no antes.
   rediseña el Regenerador con ese dato. El simulador da 1,07 frente al
   hardware del mismo precio (1,69 frente a no tenerla).
 - [ ] **Recarga a mano en la oleada 1** (decisión C): cuánto tarda el jugador
-  en recargar. El simulador supone 1 s.
+  en recargar. El simulador supone 1 s. Ya se mide: juega la oleada 1 y
+  copia las líneas `[wave-defense]` de la consola (D-45).
+- [ ] **Disparos al aire en la oleada 1** (D-05): ¿molesta que `disparar();`
+  vacíe el cargador antes de que llegue el primer enemigo?
 
 ## Pendiente de probar en local
+
+Fase 4 (`gradlew.bat :lwjgl3:run`, Windows con GPU real):
+
+- [ ] Se ve el camino, el núcleo azul abajo, la torreta con su círculo de
+  alcance y el hueco gris de la segunda torreta; arriba oleada, núcleo,
+  dinero, ×1 y avance automático; en el centro «Desplegar oleada 1».
+- [ ] «Desplegar» arranca la oleada; los enemigos se mueven suaves (sin
+  tirones) por el camino.
+- [ ] Al vaciarse la torreta sale «SinMunicionException (línea 1)» encima;
+  un clic en la torreta la pone amarilla («Recargando…») y vuelve a disparar.
+- [ ] Se ven las balas, los fogonazos y los anillos al morir un enemigo.
+- [ ] Al acabar la oleada sale «Oleada 1 superada: +N» abajo y la oleada 2
+  espera a «Desplegar».
+- [ ] La consola muestra las líneas `[wave-defense] manual reload…` y el
+  resumen de la oleada 1.
+- [ ] Al perder una oleada se vuelve a la anterior con el avance automático
+  apagado y las repeticiones se encadenan solas; ×3 se activa en oleadas
+  superadas sin fugas.
+- [ ] Cambiar el tamaño de la ventana mantiene el mapa centrado y el clic en
+  la torreta sigue funcionando.
+- [ ] 60 fps estables sin tirones (también a ×3).
+
+Anteriores:
 
 - [ ] (Si hay un Mac a mano) el `StartupHelper` relanza con
   `-XstartOnFirstThread` y la ventana abre.

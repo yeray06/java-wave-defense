@@ -4,7 +4,7 @@ Documento vivo. Cada decisión lleva su motivo en una línea. La fuente de verda
 del diseño es [`plan-diseno.pdf`](plan-diseno.pdf); si algo de aquí lo
 contradice, manda el plan y hay que avisar.
 
-Estado: **fase 3 hecha** (simulación, `sim-cli` y `docs/BALANCE.md`) y **revisión de balance hecha** (decisiones A y B de Yeray: D-34 … D-37). Las decisiones están en la sección 12. Las que
+Estado: **fase 4 hecha** (pantalla de combate jugable: camino, torretas, enemigos y bucle de oleadas). Antes: simulación, `sim-cli`, `docs/BALANCE.md` y la revisión de balance (D-34 … D-39). Las decisiones están en la sección 12. Las que
 llevan **PROVISIONAL** son propuestas mías aceptadas para poder avanzar; se
 listan en `docs/PROGRESS.md` («Decisiones por revisar»). Los números que no
 vienen del plan van marcados en los JSON y en `docs/BALANCE.md`.
@@ -84,8 +84,8 @@ java-wave-defense/
 │   └── src/{main,test}/java/io/github/yeray06/wavedefense/sim/
 │       ├── data/                  # GameData: records de cada JSON, validados al cargar
 │       ├── economy/               # Formulas (las del plan), Money (centésimas)
-│       ├── world/                 # Battle (una oleada), Turret, Enemy, Bullet, pools, PathTrack, WaveReport
-│       ├── progress/              # Progress, Shop, Progression (pago, avance, derrota, ×3)
+│       ├── world/                 # Battle (una oleada), Turret, Enemy, Bullet, pools, PathTrack, WaveReport, BattleEvents
+│       ├── progress/              # Progress, Shop, Progression (pago, avance, derrota, ×3), WaveLoop (D-01)
 │       ├── save/                  # fase 6: SaveData versionado, migraciones, códec JSON
 │       └── rng/                   # SplitMix64 con semilla (reservado: el MVP no tiene azar)
 ├── platform/                      # servicios del SO / Steam. Java puro
@@ -98,14 +98,15 @@ java-wave-defense/
 │   └── src/{main,test}/java/io/github/yeray06/wavedefense/game/
 │       ├── WaveDefenseGame.java   # composición raíz: crea y conecta todo
 │       ├── loop/                  # FixedStepClock (acumulador, x1/x3)
-│       ├── screen/                # Briefing, Battle, Report, Shop, Settings
-│       ├── render/                # ShapeRenderer: camino, enemigos, balas, barras
+│       ├── screen/                # BattleScreen (fase 4); Briefing, Report, Shop, Settings (fases 5–6)
+│       ├── render/                # WorldRenderer (D-40) y ShapeWorldRenderer (2D): mundo, efectos, cámara
 │       ├── ui/                    # scene2d.ui, skin generado por código
 │       ├── editor/                # CodeEditor (widget propio), resaltado y errores por línea
 │       ├── audio/                 # sonidos sintetizados por código propio
 │       ├── input/
 │       ├── i18n/                  # Texts: envoltorio de I18NBundle
 │       ├── settings/              # Settings persistidos
+│       ├── playtest/              # ReloadReactionLog: tiempo de recarga a mano (decisión C)
 │       └── log/                   # handler global y log rotativo
 ├── lwjgl3/                        # lanzador de escritorio + configuración de Construo
 │   └── src/main/java/io/github/yeray06/wavedefense/lwjgl3/
@@ -377,6 +378,18 @@ Así se ve en el propio dato qué es provisional.
   pegada al mundo (error encima de la torreta, barras, botón de recarga) no
   dependan de si el mundo es 2D o 3D. La UI (editor, tienda, parte, informe)
   sigue en scene2d y no pasa por ella.
+- **Pantalla de combate (fase 4)**: `BattleScreen` mueve el `WaveLoop` de
+  `core-sim` con un `FixedStepClock` (ticks enteros; ×3 = tres veces más
+  ticks por frame; máximo 5 ticks por frame y unidad de velocidad), pinta el
+  mundo con `WorldRenderer` y pone encima un HUD de scene2d: oleada, núcleo,
+  dinero, ×1/×3, avance automático, «Desplegar oleada N» (D-41) y una línea
+  con el resultado de la última oleada. Encima de cada torreta, la excepción
+  que la colgó con su línea, «Recargando…» o «¡Sin balas!». Un clic izquierdo
+  en una torreta la recarga a mano (D-42). Los textos solo se rehacen cuando
+  cambia su valor, para no reservar memoria en cada frame.
+- **Conversión pantalla ↔ mundo** en `ShapeWorldRenderer` a mano con los
+  límites del viewport: la cámara 2D no gira ni hace zoom, y
+  `Camera.unproject` invierte la y con la altura global de la ventana.
 - **Editor**: widget scene2d propio (el `TextArea` de libGDX no sirve para
   código: sin números de línea ni marcas). Números de línea, resaltado, marca
   roja en la línea con error y tooltip con el mensaje, contador de memoria.
@@ -586,6 +599,14 @@ obliga a regenerarlo y a ver el efecto en el mismo PR.
 - Funciones matemáticas con `StrictMath`, sin reloj ni `Random`:
   `DeterminismRulesTest` lo vigila en el código fuente. Motivo: `Math.pow` y
   compañía pueden diferir en el último bit entre máquinas.
+- `BattleEvents` (D-40): anillo de capacidad fija (4.096) con columnas
+  primitivas; la batalla escribe disparos, impactos, bajas, fugas,
+  excepciones, recargas y cargadores vacíos, y nunca lee. Enemigos y balas
+  guardan su posición del tick anterior para interpolar.
+- `WaveLoop` (D-01): una batalla tras otra. Una oleada nunca superada espera
+  a `deploy()`; las demás empiezan en cuanto acaba la anterior. Mientras
+  espera, la batalla de esa oleada ya está construida para poder pintarla.
+  Cada batalla lleva como semilla un contador (D-44).
 - La lógica de partida (`Progress`, `Shop`, `Progression`) aplica el plan:
   +25 % por oleada perfecta, ×3 en oleadas superadas sin fugas, derrota =
   cobras lo matado, vuelves una oleada atrás con el avance automático
@@ -639,6 +660,12 @@ provisional contradice el plan.
 | D-36 | Objetivo por defecto | CERRADA (Yeray) | El más cercano a la torreta, como dice el plan. Sigue siendo configurable en `turret.json` para medir. «Al azar» llevaba Variables a ×2 frente a no tenerla (2,03), pero contradice el plan. |
 | D-38 | Separación al salir por tipo | CERRADA (Yeray) | `spawnGapFactor` por tipo, **1 en todos** (sin efecto). Hacía falta para barrer la separación del Regenerador sin tocar las oleadas 1–3. Barrido en `docs/BARRIDO-REGENERADOR.md`: ninguna combinación de los cuatro números lleva Variables a ×2 (máximo 1,20, con vida ×1); no se aplica porque gana poco ratio a cambio de acortar el camino al Jefe 1 y de bajar la ganancia de Variables. No se hacen más barridos sobre esto. |
 | D-40 | Camino a un render 3D | CERRADA (Yeray) | A largo plazo el juego se verá en 3D; el MVP (fase 4) sigue en 2D. Para no cerrar la puerta: la simulación sigue en un plano 2D y no sabe nada del render; todo el dibujo del mundo pasa por una única interfaz (`WorldRenderer`, en `game`) que solo lee el estado de la simulación, para cambiar la implementación 2D por una 3D sin tocar pantallas, UI ni `core-sim`; la UI sigue en scene2d. No se añade ninguna otra abstracción por esto. Además: (1) `WorldRenderer` contiene la cámara y dice qué hay bajo el puntero (de pantalla a mundo); (2) proyecta un punto del mundo a pantalla, para colocar la UI de scene2d pegada al mundo; (3) la simulación guarda los sucesos de un instante (disparo, impacto, muerte, excepción…) en un búfer reutilizable sin reservas; acumula todo lo ocurrido desde la última lectura del render (a ×3 hay varios ticks por frame); el informe de oleada no depende de él (sus datos los acumula la simulación aparte), y el búfer no influye en la simulación ni en su determinismo (la simulación solo escribe en él, nada de la simulación lo lee y la lectura del render lo vacía); tiene capacidad fija y, si nadie lo lee (`sim-cli`, tests) o se llena, se descartan los sucesos más antiguos, lo que solo afecta a efectos visuales; (4) la simulación conserva la posición anterior de cada entidad para que el render interpole entre ticks. |
+| D-41 | Pantalla de combate antes de la fase 5 | PROVISIONAL | Mientras no existan el parte, el informe ni la tienda: un botón «Desplegar oleada N» hace de parte, una línea con el resultado hace de informe y cada torreta ejecuta su script inicial (D-14). Cada arranque es una partida nueva (el guardado es de la fase 6). |
+| D-42 | Recarga a mano | PROVISIONAL | Clic izquierdo sobre la torreta (su cuadrado más 8 px de margen). Funciona como D-03: también con el cargador lleno y con la torreta colgada (D-03b); no mientras ya recarga. |
+| D-43 | Botón ×3 | PROVISIONAL | El botón guarda lo que pide el jugador; solo se aplica en oleadas superadas sin fugas y en las demás va a ×1 (y el botón se ve desactivado). |
+| D-44 | Semilla de cada batalla | PROVISIONAL | Un contador de batallas de la partida: las mismas acciones repiten la misma partida. Hoy solo la usa el objetivo «al azar», que no está activo. |
+| D-45 | Medida de la decisión C | PROVISIONAL | En la oleada 1, segundos reales desde que una torreta se queda sin balas hasta el clic que la recarga, más un resumen al acabar la oleada. Se escribe en la consola (`Gdx.app.log`, etiqueta `wave-defense`); el log a fichero llega en la fase 6. |
+| D-46 | Escala de la UI | PROVISIONAL | `ScreenViewport` a 1 píxel por unidad y fuentes a tamaño fijo (18 y 14 px): nítidas a 1280×720. La escala de UI configurable va con los ajustes (fase 6). |
 | D-39 | Variables y la regla del doble | CERRADA (Yeray) | **Excepción documentada** a la regla del doble: Variables rinde 1,07 veces lo mismo en hardware. Motivo: es compra obligatoria para llegar a `&&`, así que no compite con el hardware. `docs/BALANCE.md` la sigue listando entre las contradicciones porque el informe da datos, no decisiones. Se revisa con el playtest (`docs/PROGRESS.md`, «A observar en el playtest»). |
 | D-37 | Números de enemigos de la revisión | PROVISIONAL | Regenerador vida ×2 y cura 50 %/s; Blindado vida ×2; Enjambre 200 u/s (menos tiempo en rango). Ninguno es del plan. |
 
