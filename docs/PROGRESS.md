@@ -19,7 +19,7 @@ capturas está en [`DIARIO.md`](DIARIO.md).
 | 5b. Manual del jugador | ✅ Hecha, en PR | `phase-5b-manual` |
 | 6. Guardado, ajustes, robustez | ✅ Hecha, en PR | `phase-6-guardado` |
 | 6b. Manual para principiantes y nombres | ✅ Hecha, en PR | `phase-6b-manual-sencillo` |
-| 6c. Economía de estrellas y retos (D-57) | Siguiente | — |
+| 6c. Economía de estrellas y retos (D-57) | ✅ Hecha, en PR | `phase-6c-estrellas` |
 | 7. Empaquetado y documentación | Solo con Yeray en casa | — |
 
 ## Fase 0 (hecha)
@@ -355,13 +355,51 @@ que las piezas tengan nombres que se entiendan sin saber programación (D-58).
 - Decidido para la fase siguiente (D-57): economía de estrellas sin farmeo y
   moneda de jefes.
 
-## Siguiente: fase 6c
+## Fase 6c: economía de estrellas y retos (hecha)
 
-Economía de estrellas (D-57): 3 estrellas por oleada que se cobran una vez
-(superar, sin fugas, reto de código), moneda de jefes, precios en estrellas,
-retos en el parte de oleada y el informe, y `sim-cli` y `BALANCE.md`
-rehechos para calibrarla. Después, la fase 7 (empaquetado), cuando Yeray lo
-diga.
+Pedido por Yeray (D-57): que no se pueda farmear y que avanzar pida
+programar mejor.
+
+- Cada oleada da 3 estrellas, cada una **una sola vez**: superarla,
+  superarla sin fugas y cumplir su **reto de código**. Repetir no paga.
+- Un reto fijo por oleada en `waves.json`: sin disparos al aire, sin recargar
+  a mano, memoria máxima, ninguna bala a enemigos ya derribados, disparos
+  máximos o ninguna excepción. Están escogidos para que el mejor script de
+  referencia **no** los cumpla (salvo el del jefe): hay que cambiar el código.
+- Los jefes dan un **trofeo** la primera vez. En el MVP no se gastan todavía:
+  la tienda lo explica.
+- Precios en estrellas (provisionales, calibrados con `sim-cli`): sintaxis
+  1, 2, 3 y 4; cada nivel de hardware 1; torreta extra 2. Todo el MVP cuesta
+  24 de las 30 estrellas.
+- Guardado versión 2: una partida antigua cambia su dinero por las estrellas
+  que habrían dado sus oleadas superadas y sin fugas.
+- Juego: HUD «Estrellas · Trofeos», parte de oleada con las 3 estrellas y el
+  reto, informe con lo ganado y, si el reto falla, cuánto se hizo, tienda en
+  estrellas con la sección de trofeos, mapa con ●●○ bajo cada oleada y una
+  página nueva del manual, «Estrellas, retos y trofeos».
+- `sim-cli` rehecho: el jugador de referencia compra lo que más le ayuda,
+  repite oleadas por su reto y, atascado, vuelve a por estrellas que le
+  faltan. Avisa si una partida queda **bloqueada**. Mide también una partida
+  sin hacer ningún reto.
+
+Resultado del simulador (`docs/BALANCE.md`):
+
+- El jugador de referencia vence al jefe en 15 oleadas jugadas, sin muros,
+  gastando 20 de las 27 estrellas que dan las oleadas 1–9: le sobran 7.
+- Sin hacer ningún reto se queda **bloqueado en la oleada 7** con 13
+  estrellas: los retos son necesarios, como pedía Yeray.
+- 8,4 min de juego hasta el jefe sin contar el tiempo de escribir (antes,
+  16 min con farmeo). El resto lo pone pensar los retos; hay que medirlo.
+- La sintaxis llega antes que en el plan («Llega hacia la oleada»): if y
+  Variables tras la oleada 1, `&&` tras la 2 y while tras la 4. Es el precio
+  de que el jefe se pueda alcanzar con estrellas que no se repiten.
+- Regla del doble: las 4 piezas siguen sin cumplirla, como antes. La de
+  while sale peor (0,20) porque ahora se compra en la oleada 4 y se mide en
+  la 8.
+
+## Siguiente
+
+La fase 7 (empaquetado), cuando Yeray lo diga.
 
 ## Decisiones por revisar
 
@@ -375,9 +413,6 @@ Propuestas mías aplicadas como PROVISIONAL (detalle en
   con la torreta colgada. Prohibirla dejaba la oleada 1 sin salida (el
   cuelgue dura justo 6 ciclos y la torreta vuelve a colgarse al despertar).
 - **D-09**: perforante solo atraviesa blindaje.
-- **D-10**: jefe paga 549 el primer derribo; después, como 20 enemigos
-  normales de la oleada 10.
-- **D-11**: dinero en centésimas; la UI muestra enteros hacia abajo.
 - **D-13**: hardware aditivo y global.
 - **D-14**: cada torreta empieza con `disparar();`.
 - **D-17 (cambiada en la fase 3)**: regla del doble medida con el factor de
@@ -395,7 +430,7 @@ Propuestas mías aplicadas como PROVISIONAL (detalle en
 - **D-27**: no se comprueba el código inalcanzable (javac sí).
 - **D-28**: un solo «Aún no has desbloqueado X» por pieza y línea.
 - **D-29**: el calor se disipa y la recarga avanza durante un cuelgue.
-- **D-30**: el jefe empieza sin blindaje y no cobra por baja (solo D-10).
+- **D-30**: el jefe empieza sin blindaje.
 - **D-31**: `hayEnemigos()` y `enemigoMasCercano()` solo ven enemigos en rango.
 - **D-32**: orden de aparición de `waves.json`, huecos repartidos en 20 s.
 - **D-33**: jugador de referencia del simulador (política de compra, 1 s de
@@ -429,8 +464,12 @@ Propuestas mías aplicadas como PROVISIONAL (detalle en
   escrito yo; se revisa leyéndolo en el juego.
 - **D-55**: guardado automático (como mucho una vez por segundo mientras se
   escribe); la oleada en curso no se guarda.
-- **D-57**: los números de la economía de estrellas (cuántas hacen falta,
-  precios, retos de cada oleada) se calibran en la fase 6c.
+- **D-57**: los números de la economía de estrellas: precios (sintaxis 1–4,
+  hardware 1 por nivel, torreta extra 2), los 10 retos y 0 estrellas al
+  empezar. Calibrados con `sim-cli`.
+- **Lo comprado no se devuelve** (fase 6c). Con estrellas que no se repiten,
+  una compra que no sirve puede dejarte sin salida: lo pregunto a Yeray
+  (ver la fase 6c en el diario).
 - **D-56**: tamaños de interfaz 100–200 % (limitados a lo que cabe en la
   ventana) y de código 12–22 px.
 
@@ -453,6 +492,19 @@ deciden con ese dato, no antes.
   así: empujan a programar «dispara solo si hay enemigos». D-05 cerrada.
 
 ## Pendiente de probar en local
+
+Fase 6c (`gradlew.bat :lwjgl3:run`):
+
+- [ ] Abrir con la partida de antes: el dinero se ha cambiado por estrellas
+  (una por oleada superada y otra por cada sin fugas) y no se pierde nada.
+- [ ] El parte de oleada enseña las 3 estrellas y el reto; el informe dice
+  qué estrellas son nuevas y, si el reto falla, cuánto has hecho.
+- [ ] Cumplir algún reto cambiando el código (por ejemplo, el de la oleada 3:
+  código de 4 líneas de memoria como mucho).
+- [ ] Repetir una oleada con sus 3 estrellas no da nada.
+- [ ] Tienda en estrellas, con el botón debajo; el mapa con ●●○.
+- [ ] ¿Cuánto se tarda de verdad hasta el jefe? ¿Algún reto es injusto o
+  demasiado fácil?
 
 Arreglo de los botones desplazados:
 
@@ -498,7 +550,7 @@ Fase 5 (`gradlew.bat :lwjgl3:run`):
 - [ ] Al escribir algo no comprado sale el error en rojo con su línea; al
   arreglarlo pone «Compila» y la torreta usa el código nuevo en la siguiente
   oleada.
-- [ ] Tienda: comprar if/else al llegar a 25, ver la tarjeta con el ejemplo,
+- [ ] Tienda: comprar if/else, ver la tarjeta con el ejemplo,
   copiarlo en el editor y ver que la torreta deja de disparar al aire.
 - [ ] Comprar la torreta extra: aparece la segunda torreta y su pestaña en el
   editor.
