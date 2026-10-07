@@ -1,5 +1,8 @@
 # Progreso
 
+Estado actual y lo pendiente. La historia con problemas, soluciones y
+capturas está en [`DIARIO.md`](DIARIO.md).
+
 ## Fases
 
 | Fase | Estado | Rama |
