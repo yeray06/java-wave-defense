@@ -5,6 +5,14 @@
       "id": "START",
       "pages": [
         {
+          "id": "START_PROGRAM",
+          "examples": [
+            {
+              "code": "disparar();\nrecargar();"
+            }
+          ]
+        },
+        {
           "id": "START_CYCLE",
           "examples": [
             {
@@ -13,10 +21,23 @@
           ]
         },
         {
+          "id": "START_FIRST_STEPS",
+          "examples": [
+            {
+              "code": "// Si no quedan balas...\nif (municion() == 0) {\n  recargar();  // ...recarga.\n} else if (hayEnemigos()) {\n  disparar();  // Si hay alguien, dispara.\n}",
+              "needs": [
+                {
+                  "feature": "IF_ELSE"
+                }
+              ]
+            }
+          ]
+        },
+        {
           "id": "START_EDITOR",
           "examples": [
             {
-              "code": "// Esto es un comentario: no ocupa memoria\ndisparar();"
+              "code": "// Esto es un comentario: el juego no lo lee\ndisparar();"
             }
           ]
         },
@@ -24,7 +45,7 @@
           "id": "START_MEMORY",
           "examples": [
             {
-              "code": "if (municion() == 0) {\n  recargar();\n} else {\n  disparar();\n}",
+              "code": "if (municion() == 0) {  // 1\n  recargar();          // 2\n} else {\n  disparar();          // 3\n}",
               "needs": [
                 {
                   "feature": "IF_ELSE"
@@ -42,6 +63,35 @@
       ]
     },
     {
+      "id": "WORDS",
+      "pages": [
+        {
+          "id": "WORDS_SYMBOLS",
+          "examples": [
+            {
+              "code": "// ; termina la orden, () van tras el nombre\ndisparar();"
+            }
+          ]
+        },
+        {
+          "id": "WORDS_GLOSSARY"
+        },
+        {
+          "id": "WORDS_READ_ALOUD",
+          "examples": [
+            {
+              "code": "// si no hay balas, o no hay nadie y quedan pocas\nif (municion() == 0\n    || (!hayEnemigos() && municion() < 6)) {\n  recargar();  // entonces recarga\n}",
+              "needs": [
+                {
+                  "feature": "LOGIC_OPS"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "TURRET",
       "pages": [
         {
@@ -54,7 +104,7 @@
               "code": "disparar();"
             },
             {
-              "code": "disparar();\ndisparar();\ndisparar();"
+              "code": "// tres disparos en el mismo ciclo\ndisparar();\ndisparar();\ndisparar();"
             }
           ]
         },
@@ -65,7 +115,7 @@
           },
           "examples": [
             {
-              "code": "recargar();\ndisparar(); // nunca llega a ejecutarse"
+              "code": "recargar();\ndisparar();  // nunca llega aqui"
             },
             {
               "code": "if (municion() == 0) {\n  recargar();\n}\ndisparar();",
@@ -84,7 +134,7 @@
           },
           "examples": [
             {
-              "code": "if (municion() == 0) {\n  recargar();\n} else if (hayEnemigos()) {\n  disparar();\n}"
+              "code": "// Si no quedan balas...\nif (municion() == 0) {\n  recargar();  // ...recarga.\n} else if (hayEnemigos()) {\n  disparar();  // Si hay alguien, dispara.\n}"
             }
           ]
         },
@@ -95,7 +145,7 @@
           },
           "examples": [
             {
-              "code": "if (municion() == 0) {\n  recargar();\n} else if (calor() < 100) {\n  disparar();\n}"
+              "code": "if (municion() == 0) {\n  recargar();\n} else if (calor() < 100) {\n  disparar();  // solo si no esta al maximo\n}"
             }
           ]
         },
@@ -117,7 +167,7 @@
           },
           "examples": [
             {
-              "code": "if (municion() == 0) recargar();\nEnemigo e = enemigoMasCercano();\nif (e != null) {\n  apuntar(e);\n  disparar();\n}"
+              "code": "if (municion() == 0) recargar();\n// e es el enemigo mas cercano, o null\nEnemigo e = enemigoMasCercano();\nif (e != null) {\n  apuntar(e);\n  disparar();\n}"
             }
           ]
         },
@@ -128,7 +178,7 @@
           },
           "examples": [
             {
-              "code": "if (municion() == 0) recargar();\nEnemigo e = objetivo();\nif (e == null) e = enemigoMasCercano();\nif (e != null) {\n  apuntar(e);\n  disparar();\n}"
+              "code": "if (municion() == 0) recargar();\n// e guarda al enemigo que ya apuntabas\nEnemigo e = objetivo();\n// si no habia ninguno, coge el mas cercano\nif (e == null) e = enemigoMasCercano();\nif (e != null) {\n  apuntar(e);\n  disparar();\n}"
             }
           ]
         },
@@ -142,7 +192,7 @@
               "code": "Enemigo e = enemigoMasCercano();\nif (e != null) apuntar(e);"
             },
             {
-              "code": "Enemigo e = enemigoMasCercano();\napuntar(e); // falla si no hay nadie a tiro"
+              "code": "Enemigo e = enemigoMasCercano();\napuntar(e);  // falla si no hay nadie"
             }
           ]
         },
@@ -176,7 +226,7 @@
           ],
           "examples": [
             {
-              "code": "Enemigo e = enemigoMasCercano();\nif (e == null) {\n  // no hay nadie a tiro\n} else if (e == objetivo()) {\n  // ya le estás apuntando\n} else {\n  apuntar(e);\n}"
+              "code": "Enemigo e = enemigoMasCercano();\nif (e == null) {\n  // no hay nadie a tiro\n} else if (e == objetivo()) {\n  // ya le estas apuntando\n} else {\n  apuntar(e);\n}"
             }
           ]
         },
@@ -187,7 +237,7 @@
           },
           "examples": [
             {
-              "code": "Enemigo e = objetivo();\nEnemigo cerca = enemigoMasCercano();\nif (e == null) e = cerca;\nif (cerca != null) {\n  if (cerca.vida() < e.vida()) e = cerca;\n}\nif (e != null) apuntar(e);"
+              "code": "Enemigo e = objetivo();\nEnemigo cerca = enemigoMasCercano();\nif (e == null) e = cerca;\nif (cerca != null) {\n  // si el cercano tiene menos vida, a por el\n  if (cerca.vida() < e.vida()) e = cerca;\n}\nif (e != null) apuntar(e);"
             }
           ]
         },
@@ -209,7 +259,7 @@
           },
           "examples": [
             {
-              "code": "if (municion() == 0) recargar();\nEnemigo e = enemigoMasCercano();\nif (e != null) {\n  if (e.blindado()) usarMunicion(PERFORANTE);\n  else usarMunicion(NORMAL);\n  disparar();\n}",
+              "code": "if (municion() == 0) recargar();\nEnemigo e = enemigoMasCercano();\nif (e != null) {\n  // perforante contra blindados\n  if (e.blindado()) usarMunicion(PERFORANTE);\n  else usarMunicion(NORMAL);\n  disparar();\n}",
               "needs": [
                 {
                   "call": "USE_AMMO"
@@ -225,7 +275,7 @@
           },
           "examples": [
             {
-              "code": "Enemigo e = objetivo();\nEnemigo cerca = enemigoMasCercano();\nif (e == null) e = cerca;\nif (cerca != null) {\n  if (cerca.distanciaAlNucleo() < 300) e = cerca;\n}\nif (e != null) apuntar(e);"
+              "code": "Enemigo e = objetivo();\nEnemigo cerca = enemigoMasCercano();\nif (e == null) e = cerca;\nif (cerca != null) {\n  // muy cerca del nucleo: prioridad\n  if (cerca.distanciaAlNucleo() < 300) e = cerca;\n}\nif (e != null) apuntar(e);"
             }
           ]
         }
@@ -238,7 +288,7 @@
           "id": "SYNTAX_BASICS",
           "examples": [
             {
-              "code": "// Dispara una vez en cada ciclo\ndisparar(); /* y esto también es un comentario */"
+              "code": "// Dispara una vez en cada ciclo\ndisparar(); /* esto tambien es un comentario */"
             }
           ]
         },
@@ -255,7 +305,7 @@
               "code": "if (municion() == 0) {\n  recargar();\n} else {\n  disparar();\n}"
             },
             {
-              "code": "if (municion() == 0) {\n  recargar();\n} else if (calor() >= 80) {\n  // espera a que se enfríe\n} else if (hayEnemigos()) {\n  disparar();\n}"
+              "code": "if (municion() == 0) {\n  recargar();\n} else if (calor() >= 80) {\n  // espera a que se enfrie\n} else if (hayEnemigos()) {\n  disparar();\n}"
             },
             {
               "code": "if (municion() == 0) recargar();\nelse if (hayEnemigos()) disparar();"
@@ -275,7 +325,7 @@
               "code": "int disparos = 0;\nif (hayEnemigos()) disparos = 2;\nif (municion() < disparos) recargar();\nif (disparos > 0) disparar();\nif (disparos > 1) disparar();"
             },
             {
-              "code": "int n = municion();\nn = n * 2 + 1;\nn++;\nn += 10;\nn = n % 7;"
+              "code": "int n = municion();  // n vale las balas\nn = n * 2 + 1;        // el doble mas uno\nn++;                  // suma 1\nn += 10;              // suma 10\nn = n % 7;            // el resto de dividir"
             }
           ]
         },
@@ -303,13 +353,13 @@
           },
           "examples": [
             {
-              "code": "if (municion() == 0) recargar();\nwhile (hayEnemigos() && municion() > 0\n    && calor() < 80) {\n  disparar();\n}"
+              "code": "if (municion() == 0) recargar();\n// repite mientras se cumplan las tres cosas\nwhile (hayEnemigos() && municion() > 0\n    && calor() < 80) {\n  disparar();\n}"
             },
             {
-              "code": "int n = 0;\nwhile (n < 3 && municion() > 0) {\n  disparar();\n  n++;\n}"
+              "code": "int n = 0;  // cuenta los disparos\nwhile (n < 3 && municion() > 0) {\n  disparar();\n  n++;\n}"
             },
             {
-              "code": "while (hayEnemigos()) {\n  disparar(); // acaba sin balas\n}"
+              "code": "while (hayEnemigos()) {\n  disparar();  // acaba sin balas\n}"
             }
           ]
         }
@@ -328,10 +378,10 @@
           },
           "examples": [
             {
-              "code": "disparar(); // con el cargador vacío, salta"
+              "code": "disparar();  // con el cargador vacio, falla"
             },
             {
-              "code": "if (municion() == 0) {\n  recargar();\n} else if (hayEnemigos()) {\n  disparar();\n}",
+              "code": "// Si no quedan balas...\nif (municion() == 0) {\n  recargar();  // ...recarga.\n} else if (hayEnemigos()) {\n  disparar();  // Si hay alguien, dispara.\n}",
               "needs": [
                 {
                   "feature": "IF_ELSE"
@@ -366,7 +416,7 @@
           },
           "examples": [
             {
-              "code": "Enemigo e = objetivo();\napuntar(e); // si no hay objetivo, salta",
+              "code": "Enemigo e = objetivo();\napuntar(e);  // si no hay objetivo, falla",
               "needs": [
                 {
                   "feature": "VARIABLES"
@@ -390,7 +440,7 @@
           },
           "examples": [
             {
-              "code": "while (calor() < 100) {\n  // se te olvidó disparar: el calor nunca sube\n}",
+              "code": "while (calor() < 100) {\n  // aqui no hay nada que suba el calor\n}",
               "needs": [
                 {
                   "feature": "WHILE"
@@ -414,7 +464,7 @@
           },
           "examples": [
             {
-              "code": "int n = municion();\nint parte = 100 / n; // con 0 balas, salta",
+              "code": "int n = municion();\nint parte = 100 / n;  // con 0 balas, falla",
               "needs": [
                 {
                   "feature": "VARIABLES"
@@ -451,7 +501,7 @@
           },
           "examples": [
             {
-              "code": "if (municion() == 0) {\n  recargar();\n} else if (hayEnemigos()) {\n  disparar();\n}",
+              "code": "// Si no quedan balas...\nif (municion() == 0) {\n  recargar();  // ...recarga.\n} else if (hayEnemigos()) {\n  disparar();  // Si hay alguien, dispara.\n}",
               "needs": [
                 {
                   "feature": "IF_ELSE"
@@ -467,7 +517,7 @@
           },
           "examples": [
             {
-              "code": "if (municion() == 0) recargar();\nEnemigo e = objetivo();\nif (e == null) e = enemigoMasCercano();\nif (e != null) {\n  apuntar(e);\n  disparar();\n}",
+              "code": "if (municion() == 0) recargar();\n// e guarda al enemigo que ya apuntabas\nEnemigo e = objetivo();\n// si no habia ninguno, coge el mas cercano\nif (e == null) e = enemigoMasCercano();\nif (e != null) {\n  apuntar(e);\n  disparar();\n}",
               "needs": [
                 {
                   "feature": "VARIABLES"
@@ -483,7 +533,7 @@
           },
           "examples": [
             {
-              "code": "if (municion() == 0) recargar();\nEnemigo e = enemigoMasCercano();\nif (e != null) {\n  if (e.blindado()) usarMunicion(PERFORANTE);\n  else usarMunicion(NORMAL);\n  disparar();\n}",
+              "code": "if (municion() == 0) recargar();\nEnemigo e = enemigoMasCercano();\nif (e != null) {\n  // perforante contra blindados\n  if (e.blindado()) usarMunicion(PERFORANTE);\n  else usarMunicion(NORMAL);\n  disparar();\n}",
               "needs": [
                 {
                   "feature": "VARIABLES"
@@ -502,7 +552,7 @@
           },
           "examples": [
             {
-              "code": "if (municion() == 0) recargar();\nwhile (hayEnemigos() && municion() > 0\n    && calor() < 80) {\n  disparar();\n}",
+              "code": "if (municion() == 0) recargar();\n// repite mientras se cumplan las tres cosas\nwhile (hayEnemigos() && municion() > 0\n    && calor() < 80) {\n  disparar();\n}",
               "needs": [
                 {
                   "feature": "WHILE"
@@ -544,7 +594,7 @@
           ],
           "examples": [
             {
-              "code": "if (municion() == 0) {\n  recargar();\n} else if (hayEnemigos()) {\n  disparar();\n}"
+              "code": "// Si no quedan balas...\nif (municion() == 0) {\n  recargar();  // ...recarga.\n} else if (hayEnemigos()) {\n  disparar();  // Si hay alguien, dispara.\n}"
             }
           ]
         },
@@ -570,7 +620,7 @@
           ],
           "examples": [
             {
-              "code": "if (municion() == 0) recargar();\nEnemigo e = objetivo();\nif (e == null) e = enemigoMasCercano();\nif (e != null) {\n  apuntar(e);\n  disparar();\n}"
+              "code": "if (municion() == 0) recargar();\n// e guarda al enemigo que ya apuntabas\nEnemigo e = objetivo();\n// si no habia ninguno, coge el mas cercano\nif (e == null) e = enemigoMasCercano();\nif (e != null) {\n  apuntar(e);\n  disparar();\n}"
             }
           ]
         },
@@ -586,7 +636,7 @@
           ],
           "examples": [
             {
-              "code": "if (municion() == 0) recargar();\nEnemigo e = enemigoMasCercano();\nif (e != null) {\n  if (e.blindado()) usarMunicion(PERFORANTE);\n  else usarMunicion(NORMAL);\n  disparar();\n}"
+              "code": "if (municion() == 0) recargar();\nEnemigo e = enemigoMasCercano();\nif (e != null) {\n  // perforante contra blindados\n  if (e.blindado()) usarMunicion(PERFORANTE);\n  else usarMunicion(NORMAL);\n  disparar();\n}"
             }
           ]
         },
@@ -599,7 +649,7 @@
           ],
           "examples": [
             {
-              "code": "if (municion() == 0) recargar();\nwhile (hayEnemigos() && municion() > 0\n    && calor() < 80) {\n  disparar();\n}"
+              "code": "if (municion() == 0) recargar();\n// repite mientras se cumplan las tres cosas\nwhile (hayEnemigos() && municion() > 0\n    && calor() < 80) {\n  disparar();\n}"
             }
           ]
         },

@@ -66,7 +66,8 @@ class ScriptMessagesTest {
     String message =
         new MessageFormat(text("shop.check.NEEDS_SYNTAX"), Locale.ROOT)
             .format(new Object[] {text("script.feature.VARIABLES"), text("shop.hardware.DAMAGE")});
-    assertEquals("Necesitas variables para seguir mejorando el daño", message);
+    // D-34's wording with the piece names Yeray chose for non-programmers (D-58).
+    assertEquals("Necesitas «Recordar (variables)» para seguir mejorando el daño", message);
   }
 
   @Test
@@ -74,7 +75,8 @@ class ScriptMessagesTest {
     String message =
         new MessageFormat(text("script.error.FEATURE_LOCKED"), Locale.ROOT)
             .format(new Object[] {text("script.feature.WHILE")});
-    assertEquals("Aún no has desbloqueado while", message);
+    // The plan's message with the piece names Yeray chose for non-programmers (D-58).
+    assertEquals("Aún no has desbloqueado «Repetir (while)»", message);
   }
 
   @Test
