@@ -57,6 +57,16 @@ public final class EditorDocument {
     return lines.get(index).toString();
   }
 
+  /** A line without copying it, for drawing; valid until the next change. */
+  public CharSequence lineChars(int index) {
+    return lines.get(index);
+  }
+
+  /** Length of a line, without copying it. */
+  public int lineLength(int index) {
+    return lines.get(index).length();
+  }
+
   public int cursorLine() {
     return line;
   }

@@ -9,15 +9,25 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Cell;
+import com.badlogic.gdx.scenes.scene2d.ui.Container;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import io.github.yeray06.wavedefense.game.i18n.ScriptTexts;
 import io.github.yeray06.wavedefense.game.i18n.Texts;
 import io.github.yeray06.wavedefense.game.loop.FixedStepClock;
+import io.github.yeray06.wavedefense.game.panel.BriefingPanel;
+import io.github.yeray06.wavedefense.game.panel.EditorPanel;
+import io.github.yeray06.wavedefense.game.panel.MapPanel;
+import io.github.yeray06.wavedefense.game.panel.ReportLines;
+import io.github.yeray06.wavedefense.game.panel.ReportPanel;
+import io.github.yeray06.wavedefense.game.panel.ShopPanel;
 import io.github.yeray06.wavedefense.game.playtest.ReloadReactionLog;
 import io.github.yeray06.wavedefense.game.render.WorldRenderer;
 import io.github.yeray06.wavedefense.game.ui.SpeedSelector;
@@ -27,6 +37,7 @@ import io.github.yeray06.wavedefense.sim.progress.Progress;
 import io.github.yeray06.wavedefense.sim.progress.WaveLoop;
 import io.github.yeray06.wavedefense.sim.progress.WaveOutcome;
 import io.github.yeray06.wavedefense.sim.world.Battle;
+import io.github.yeray06.wavedefense.sim.world.PathTrack;
 import io.github.yeray06.wavedefense.sim.world.Turret;
 
 /**
@@ -46,6 +57,7 @@ public final class BattleScreen extends ScreenAdapter {
   private static final float LABEL_OFFSET = 46;
   private static final float PAD = 10;
   private static final float BUTTON_PAD = 12;
+  private static final float SIDE_WIDTH = 500;
 
   private final GameData data;
   private final Texts texts;
@@ -62,7 +74,18 @@ public final class BattleScreen extends ScreenAdapter {
   private final Label resultLabel;
   private final SpeedSelector speedSelector;
   private final TextButton autoButton;
-  private final TextButton deployButton;
+  private final BriefingPanel briefing;
+  private final EditorPanel editorPanel;
+  private final ShopPanel shopPanel;
+  private final MapPanel mapPanel;
+  private final ReportPanel reportPanel;
+  private final ScriptTexts names;
+  private final Container<Actor> side;
+  private final ScrollPane shopScroll;
+  private final ScrollPane reportScroll;
+  private final double pathLength;
+  private Actor openPanel;
+  private Cell<Container<Actor>> sideCell;
   private final Label[] turretLabels;
   private final int[] turretLabelState;
 
@@ -71,7 +94,7 @@ public final class BattleScreen extends ScreenAdapter {
   private int shownLives = -1;
   private long shownMoney = -1;
   private int shownAuto = -1;
-  private int shownDeploy = -1;
+  private int shownBriefing = -1;
   private double seconds;
 
   public BattleScreen(
@@ -88,19 +111,34 @@ public final class BattleScreen extends ScreenAdapter {
     this.reactions = reactions;
     this.clock = new FixedStepClock(data.balance().ticksPerSecond(), MAX_TICKS_PER_FRAME);
     this.stage = new Stage(new ScreenViewport());
+    this.names = new ScriptTexts(texts, data);
+    this.pathLength = new PathTrack(data.map().path()).length();
 
     waveLabel = new Label("", skin);
     coreLabel = new Label("", skin);
     moneyLabel = new Label("", skin);
     resultLabel = new Label("", skin, "small");
     autoButton = new TextButton("", skin);
-    deployButton = new TextButton("", skin);
     Label hint = new Label(texts.get("hud.hint.reload"), skin, "small");
     speedSelector =
         new SpeedSelector(
             data.balance().speeds(), skin, speed -> texts.format("hud.speed", speed), BUTTON_PAD);
     autoButton.pad(4, BUTTON_PAD, 4, BUTTON_PAD);
-    deployButton.pad(BUTTON_PAD, BUTTON_PAD * 2, BUTTON_PAD, BUTTON_PAD * 2);
+    int slots = data.map().turretSlots().size();
+    briefing = new BriefingPanel(data, names, skin, loop::deploy);
+    editorPanel = new EditorPanel(loop, names, skin, slots);
+    shopPanel = new ShopPanel(data, loop.progress(), names, skin, this::purchased);
+    mapPanel = new MapPanel(data, loop.progress(), texts, skin, this::chooseWave);
+    reportPanel = new ReportPanel(skin, new Label(texts.get("report.none"), skin, "small"));
+    shopScroll = new ScrollPane(shopPanel, skin);
+    shopScroll.setFadeScrollBars(false);
+    reportScroll = new ScrollPane(reportPanel, skin);
+    reportScroll.setFadeScrollBars(false);
+    side = new Container<>();
+    side.setBackground(skin.getDrawable("panel"));
+    side.pad(PAD);
+    side.top().left();
+    side.setVisible(false);
 
     Table top = new Table();
     top.setFillParent(true);
@@ -110,12 +148,21 @@ public final class BattleScreen extends ScreenAdapter {
     top.add(moneyLabel).left().expandX();
     top.add(speedSelector).right().padRight(PAD);
     top.add(autoButton).right();
+    top.row();
+    Table toolbar = new Table();
+    toolbar.add(panelButton(skin, "hud.panel.code", editorPanel)).padRight(6);
+    toolbar.add(panelButton(skin, "hud.panel.shop", shopScroll)).padRight(6);
+    toolbar.add(panelButton(skin, "hud.panel.map", mapPanel)).padRight(6);
+    toolbar.add(panelButton(skin, "hud.panel.report", reportScroll));
+    top.add(toolbar).colspan(5).right().padTop(6);
     stage.addActor(top);
 
-    Table center = new Table();
-    center.setFillParent(true);
-    center.add(deployButton).pad(PAD * 2);
-    stage.addActor(center);
+    Table middle = new Table();
+    middle.setFillParent(true);
+    middle.padTop(100).padBottom(54);
+    middle.add(briefing).expand().center();
+    sideCell = middle.add(side).width(0).expandY().fillY().right();
+    stage.addActor(middle);
 
     Table bottom = new Table();
     bottom.setFillParent(true);
@@ -124,7 +171,6 @@ public final class BattleScreen extends ScreenAdapter {
     bottom.add(hint);
     stage.addActor(bottom);
 
-    int slots = data.map().turretSlots().size();
     turretLabels = new Label[slots];
     turretLabelState = new int[slots];
     for (int i = 0; i < slots; i++) {
@@ -140,13 +186,83 @@ public final class BattleScreen extends ScreenAdapter {
             loop.progress().setAutoAdvance(autoButton.isChecked());
           }
         });
-    deployButton.addListener(
+  }
+
+  private TextButton panelButton(Skin skin, String key, Actor panel) {
+    TextButton button = new TextButton(texts.get(key), skin);
+    button.pad(4, BUTTON_PAD, 4, BUTTON_PAD);
+    button.setProgrammaticChangeEvents(false);
+    button.addListener(
         new ChangeListener() {
           @Override
           public void changed(ChangeEvent event, Actor actor) {
-            loop.deploy();
+            button.setChecked(false);
+            toggle(panel);
           }
         });
+    return button;
+  }
+
+  /** Opens a side panel, or closes it if it is the one open. */
+  void toggle(Actor panel) {
+    open(openPanel == panel ? null : panel);
+  }
+
+  private void open(Actor panel) {
+    openPanel = panel;
+    side.setActor(panel);
+    side.setVisible(panel != null);
+    sideCell.width(panel != null ? SIDE_WIDTH : 0).padRight(panel != null ? PAD : 0);
+    sideCell.getTable().invalidateHierarchy();
+    if (panel == shopScroll) {
+      shopPanel.rebuild();
+    }
+    if (panel == editorPanel) {
+      editorPanel.focus();
+    } else {
+      stage.setKeyboardFocus(null);
+    }
+  }
+
+  /** The side panel open now, or {@code null}. */
+  Actor openPanel() {
+    return openPanel;
+  }
+
+  EditorPanel editorPanel() {
+    return editorPanel;
+  }
+
+  ShopPanel shopPanel() {
+    return shopPanel;
+  }
+
+  MapPanel mapPanel() {
+    return mapPanel;
+  }
+
+  private void purchased(Object item) {
+    loop.purchased();
+    editorPanel.purchased();
+  }
+
+  private void chooseWave(int wave) {
+    if (loop.selectWave(wave)) {
+      open(null);
+    }
+  }
+
+  private void waveFinished() {
+    reportPanel.show(
+        ReportLines.build(
+            loop.lastReport(),
+            loop.lastOutcome(),
+            names,
+            data.balance().ticksPerSecond(),
+            pathLength));
+    if (openPanel == null) {
+      open(reportScroll);
+    }
   }
 
   @Override
@@ -187,6 +303,7 @@ public final class BattleScreen extends ScreenAdapter {
         loop.tick();
         if (loop.wavesFinished() != finished) {
           reactions.waveFinished(loop.lastOutcome().wave());
+          waveFinished();
         }
         reactions.afterTick(loop.battle(), seconds);
       }
@@ -226,11 +343,13 @@ public final class BattleScreen extends ScreenAdapter {
       autoButton.setProgrammaticChangeEvents(true);
       autoButton.setText(texts.get(progress.autoAdvance() ? "hud.auto.on" : "hud.auto.off"));
     }
-    int deploy = loop.state() == WaveLoop.State.AWAITING_DEPLOY ? battle.wave() : 0;
-    if (deploy != shownDeploy) {
-      shownDeploy = deploy;
-      deployButton.setVisible(deploy > 0);
-      deployButton.setText(texts.format("hud.deploy", deploy));
+    int waiting = loop.state() == WaveLoop.State.AWAITING_DEPLOY ? battle.wave() : 0;
+    if (waiting != shownBriefing) {
+      shownBriefing = waiting;
+      briefing.setVisible(waiting > 0);
+      if (waiting > 0) {
+        briefing.show(waiting);
+      }
     }
     if (loop.wavesFinished() != shownFinished) {
       shownFinished = loop.wavesFinished();
@@ -278,9 +397,7 @@ public final class BattleScreen extends ScreenAdapter {
       if (state >= 1000) {
         label.setText(
             texts.format(
-                "hud.turret.fault",
-                texts.get("script.fault." + turret.lastFault().name()),
-                turret.lastFaultLine()));
+                "hud.turret.fault", names.fault(turret.lastFault()), turret.lastFaultLine()));
       } else if (state == 2) {
         label.setText(texts.get("hud.turret.reloading"));
       } else if (state == 1) {

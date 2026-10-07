@@ -18,6 +18,9 @@ import io.github.yeray06.wavedefense.sim.progress.Shop;
  * the texts never repeat a balance number.
  */
 public final class ScriptTexts {
+  /** How the interpreter names the end of the script in "expected X and found Y" errors. */
+  private static final String END_OF_CODE = "EOF";
+
   private final Texts texts;
   private final GameData data;
 
@@ -48,6 +51,8 @@ public final class ScriptTexts {
     for (int i = 0; i < args.length; i++) {
       if (args[i] instanceof Feature feature) {
         args[i] = feature(feature);
+      } else if (END_OF_CODE.equals(args[i])) {
+        args[i] = texts.get("script.token.EOF");
       }
     }
     return texts.format("script.error." + error.code().name(), args);
