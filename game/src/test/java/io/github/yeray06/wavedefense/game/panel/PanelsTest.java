@@ -3,6 +3,7 @@ package io.github.yeray06.wavedefense.game.panel;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.badlogic.gdx.Gdx;
@@ -15,9 +16,11 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.utils.Clipboard;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import io.github.yeray06.wavedefense.game.GameTestData;
 import io.github.yeray06.wavedefense.game.Headless;
+import io.github.yeray06.wavedefense.game.editor.CodeView;
 import io.github.yeray06.wavedefense.game.i18n.ScriptTexts;
 import io.github.yeray06.wavedefense.game.i18n.Texts;
 import io.github.yeray06.wavedefense.game.ui.UiSkin;
@@ -33,7 +36,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-/** Phase 5 panels: editor, shop, map, briefing and report, on the headless backend. */
+/** Phase 5 panels: editor, shop, map, briefing, report and manual, on the headless backend. */
 class PanelsTest {
   private interface Body {
     void run(GameData data, ScriptTexts names, Skin skin, Stage stage);
@@ -145,6 +148,101 @@ class PanelsTest {
           float[] boss = map.position(data.balance().lastWave());
           assertTrue(boss[1] > first[1], "the road goes up to the boss");
         });
+  }
+
+  @Test
+  void theManualListsEveryPageLocksWhatIsNotOwnedAndCopiesItsExamples() {
+    withUi(
+        (data, names, skin, stage) -> {
+          Progress progress = Progress.newGame(data).copyWithMoney(100_00);
+          String[] copied = {null};
+          Clipboard clipboard =
+              new Clipboard() {
+                @Override
+                public boolean hasContents() {
+                  return copied[0] != null;
+                }
+
+                @Override
+                public String getContents() {
+                  return copied[0];
+                }
+
+                @Override
+                public void setContents(String content) {
+                  copied[0] = content;
+                }
+              };
+          ManualPanel manual = new ManualPanel(data, progress, names, skin, clipboard);
+          stage.addActor(manual);
+          manual.act(0);
+          int pages = data.manual().pages().size();
+          for (var page : data.manual().pages()) {
+            assertNotNull(button(manual, manual.title(page)), page.id());
+          }
+          long locks = locks(manual, skin);
+          assertTrue(locks > 0 && locks < pages, "some pages locked: " + locks);
+
+          var aim = page(data, "CALL_AMMO");
+          assertEquals(
+              List.of(
+                  names.texts().format("manual.locked.feature", names.feature(Feature.IF_ELSE))),
+              manual.lockReasons(aim));
+          new io.github.yeray06.wavedefense.sim.progress.Shop(data).buy(progress, Feature.IF_ELSE);
+          manual.act(0);
+          assertTrue(manual.lockReasons(aim).isEmpty(), "bought: unlocked");
+          assertTrue(locks(manual, skin) < locks, "the index follows purchases");
+          assertEquals(
+              List.of(names.texts().format("manual.locked.enemy", 8)),
+              manual.lockReasons(page(data, "ENEMY_SWARM")));
+
+          button(manual, manual.title(aim)).fire(new ChangeListener.ChangeEvent());
+          assertEquals("CALL_AMMO", manual.currentPage().id());
+          button(manual, names.texts().get("manual.copy")).fire(new ChangeListener.ChangeEvent());
+          assertEquals(aim.examples().get(0).code(), clipboard.getContents());
+          assertNotNull(button(manual, names.texts().get("manual.copied")));
+
+          button(manual, names.texts().get("manual.next")).fire(new ChangeListener.ChangeEvent());
+          assertEquals("CALL_HEAT", manual.currentPage().id());
+          button(manual, names.texts().get("manual.prev")).fire(new ChangeListener.ChangeEvent());
+          assertEquals("CALL_AMMO", manual.currentPage().id());
+          button(manual, names.texts().get("manual.index")).fire(new ChangeListener.ChangeEvent());
+          assertNull(manual.currentPage());
+        });
+  }
+
+  @Test
+  void everyManualPageOpensAndItsCodeFitsThePanel() {
+    withUi(
+        (data, names, skin, stage) -> {
+          ManualPanel manual = new ManualPanel(data, Progress.newGame(data), names, skin, null);
+          stage.addActor(manual);
+          for (var page : data.manual().pages()) {
+            manual.showPage(page.id());
+            manual.validate();
+            for (Actor actor : all(manual)) {
+              if (actor instanceof CodeView code) {
+                assertTrue(
+                    code.getPrefWidth() <= manual.getPrefWidth(),
+                    page.id() + " has code wider than the panel");
+              }
+              if (actor instanceof Label label) {
+                assertFalse(label.getText().toString().contains("???"), page.id());
+              }
+            }
+          }
+        });
+  }
+
+  private static long locks(Group root, Skin skin) {
+    return all(root).stream()
+        .filter(a -> a instanceof Image i && i.getDrawable() == skin.getDrawable("lock"))
+        .count();
+  }
+
+  private static io.github.yeray06.wavedefense.sim.data.ManualConfig.Page page(
+      GameData data, String id) {
+    return data.manual().pages().stream().filter(p -> p.id().equals(id)).findFirst().orElseThrow();
   }
 
   @Test

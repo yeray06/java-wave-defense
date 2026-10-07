@@ -34,7 +34,7 @@ class BattleTest {
             d.waves().spawnWindowSeconds(),
             List.of(new WaveTable.WaveSpec(1, List.of(groups))));
     return new GameData(
-        d.balance(), d.turret(), d.enemies(), waves, d.shop(), d.map(), d.scriptApi());
+        d.balance(), d.turret(), d.enemies(), waves, d.shop(), d.map(), d.scriptApi(), d.manual());
   }
 
   private static Battle battle(GameData data, int wave, String... scripts) {
@@ -260,7 +260,7 @@ class BattleTest {
             mode,
             t.initialScript());
     return new GameData(
-        d.balance(), turret, d.enemies(), d.waves(), d.shop(), d.map(), d.scriptApi());
+        d.balance(), turret, d.enemies(), d.waves(), d.shop(), d.map(), d.scriptApi(), d.manual());
   }
 
   @Test

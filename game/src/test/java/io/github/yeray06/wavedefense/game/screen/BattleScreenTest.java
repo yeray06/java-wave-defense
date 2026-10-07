@@ -75,6 +75,9 @@ class BattleScreenTest {
           assertTrue(screen.openPanel() == screen.editorPanel());
           screen.toggle(screen.editorPanel());
           assertTrue(screen.openPanel() == null);
+          screen.toggle(screen.manualScroll());
+          assertTrue(screen.openPanel() == screen.manualScroll(), "the manual opens");
+          screen.toggle(screen.manualScroll());
 
           loop.deploy();
           for (int frame = 0; frame < 20_000 && loop.wavesFinished() == 0; frame++) {

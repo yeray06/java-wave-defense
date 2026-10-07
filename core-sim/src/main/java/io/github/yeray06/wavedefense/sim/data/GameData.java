@@ -2,12 +2,17 @@ package io.github.yeray06.wavedefense.sim.data;
 
 import io.github.yeray06.wavedefense.script.CompileResult;
 import io.github.yeray06.wavedefense.script.ScriptCompiler;
+import io.github.yeray06.wavedefense.script.api.ApiFunction;
 import io.github.yeray06.wavedefense.script.api.Feature;
+import io.github.yeray06.wavedefense.script.api.Requirement;
 import io.github.yeray06.wavedefense.script.api.Unlocks;
+import io.github.yeray06.wavedefense.script.diag.FaultType;
 import io.github.yeray06.wavedefense.sim.data.ScriptApiLoader.ScriptApiData;
 import io.github.yeray06.wavedefense.sim.economy.Formulas;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
 
 /** Every data file, loaded and cross-checked. Immutable; share it freely. */
 public record GameData(
@@ -17,7 +22,8 @@ public record GameData(
     WaveTable waves,
     ShopConfig shop,
     MapConfig map,
-    ScriptApiData scriptApi) {
+    ScriptApiData scriptApi,
+    ManualConfig manual) {
 
   public static final String BALANCE = "data/balance.json";
   public static final String TURRET = "data/turret.json";
@@ -25,6 +31,7 @@ public record GameData(
   public static final String WAVES = "data/waves.json";
   public static final String SHOP = "data/shop.json";
   public static final String MAP = "data/map.json";
+  public static final String MANUAL = "data/manual.json";
 
   /**
    * @throws DataException naming the file and the problem
@@ -38,18 +45,62 @@ public record GameData(
             Json.readStrict(read(source, WAVES), WaveTable.class, WAVES),
             Json.readStrict(read(source, SHOP), ShopConfig.class, SHOP),
             Json.readStrict(read(source, MAP), MapConfig.class, MAP),
-            ScriptApiLoader.load(read(source, ScriptApiLoader.FILE)));
+            ScriptApiLoader.load(read(source, ScriptApiLoader.FILE)),
+            Json.read(read(source, MANUAL), ManualConfig.class, MANUAL));
     data.crossCheck();
     return data;
   }
 
   /** The same data with the shop's hardware caps removed, for "sin tope" comparisons. */
   public GameData withoutHardwareCaps() {
-    return new GameData(balance, turret, enemies, waves, shop.withoutCaps(), map, scriptApi);
+    return new GameData(
+        balance, turret, enemies, waves, shop.withoutCaps(), map, scriptApi, manual);
   }
 
   public ScriptCompiler compiler() {
     return new ScriptCompiler(scriptApi.api(), scriptApi.limits());
+  }
+
+  /**
+   * What a manual topic asks of the player before it is theirs: the shop piece or the wave of a
+   * call, the piece itself, or the first wave of an enemy. Nothing for exceptions and general
+   * pages.
+   */
+  public List<Requirement> requirements(ManualConfig.Topic topic) {
+    if (topic.call() != null) {
+      Requirement requirement = scriptApi.api().requirement(topic.call());
+      return requirement instanceof Requirement.Free ? List.of() : List.of(requirement);
+    }
+    if (topic.feature() != null) {
+      return List.of(new Requirement.NeedsFeature(topic.feature()));
+    }
+    if (topic.enemy() != null && waves.firstWave(topic.enemy()) > 1) {
+      return List.of(new Requirement.NeedsWave(waves.firstWave(topic.enemy())));
+    }
+    return List.of();
+  }
+
+  /**
+   * The least a player owns when every topic is theirs: the pieces with the ones they require
+   * first, and the latest wave. Manual examples compile with this.
+   */
+  public Unlocks unlocksFor(List<ManualConfig.Topic> topics) {
+    EnumSet<Feature> features = EnumSet.noneOf(Feature.class);
+    int wave = 1;
+    for (ManualConfig.Topic topic : topics) {
+      for (Requirement requirement : requirements(topic)) {
+        switch (requirement) {
+          case Requirement.NeedsFeature needs -> {
+            for (Feature f = needs.feature(); f != null; f = shop.syntax(f).requires()) {
+              features.add(f);
+            }
+          }
+          case Requirement.NeedsWave needs -> wave = Math.max(wave, needs.wave());
+          case Requirement.Free free -> {}
+        }
+      }
+    }
+    return new Unlocks(features, wave);
   }
 
   private static String read(DataSource source, String file) {
@@ -132,11 +183,60 @@ public record GameData(
             SHOP, item.feature() + " example does not compile: " + example.errors());
       }
     }
+    checkManual();
     CompileResult initial =
         compiler().compile(turret.initialScript(), Unlocks.of(1), turret.memoryLines());
     if (!initial.succeeded()) {
       throw new DataException(
           TURRET, "initialScript does not compile with nothing unlocked: " + initial.errors());
+    }
+  }
+
+  /** Every call, piece, enemy and exception has its page, and every example works as it is. */
+  private void checkManual() {
+    List<ManualConfig.Topic> subjects = new ArrayList<>();
+    for (ApiFunction call : ApiFunction.values()) {
+      subjects.add(new ManualConfig.Topic(call, null, null, null));
+    }
+    for (ShopConfig.SyntaxItem item : shop.syntax()) {
+      if (item.inMvp()) {
+        subjects.add(new ManualConfig.Topic(null, item.feature(), null, null));
+      }
+    }
+    for (EnemyKind kind : EnemyKind.values()) {
+      subjects.add(new ManualConfig.Topic(null, null, kind, null));
+    }
+    for (FaultType fault : FaultType.values()) {
+      if (fault != FaultType.INTERNAL_ERROR) {
+        subjects.add(new ManualConfig.Topic(null, null, null, fault));
+      }
+    }
+    for (ManualConfig.Topic subject : subjects) {
+      long pages = manual.pages().stream().filter(p -> p.about().equals(subject)).count();
+      if (pages != 1) {
+        throw new DataException(MANUAL, "needs exactly one page about " + subject + ": " + pages);
+      }
+    }
+    for (ManualConfig.Page page : manual.pages()) {
+      for (ManualConfig.Topic topic : page.topics()) {
+        if (topic.feature() != null && !shop.syntax(topic.feature()).inMvp()) {
+          throw new DataException(MANUAL, page.id() + " is about a piece outside the MVP");
+        }
+        if (topic.enemy() != null && waves.firstWave(topic.enemy()) == 0) {
+          throw new DataException(MANUAL, page.id() + ": " + topic.enemy() + " is in no wave");
+        }
+      }
+      for (int i = 0; i < page.examples().size(); i++) {
+        ManualConfig.Example example = page.examples().get(i);
+        List<ManualConfig.Topic> topics = new ArrayList<>(page.topics());
+        topics.addAll(example.needs());
+        CompileResult result =
+            compiler().compile(example.code(), unlocksFor(topics), turret.memoryLines());
+        if (!result.succeeded()) {
+          throw new DataException(
+              MANUAL, page.id() + " example " + (i + 1) + " does not compile: " + result.errors());
+        }
+      }
     }
   }
 }

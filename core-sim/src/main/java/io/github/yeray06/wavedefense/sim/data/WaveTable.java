@@ -42,4 +42,14 @@ public record WaveTable(List<String> notFromPlan, double spawnWindowSeconds, Lis
   public WaveSpec wave(int number) {
     return waves.get(number - 1);
   }
+
+  /** The first wave a kind of enemy comes in, or 0 if it never does. */
+  public int firstWave(EnemyKind kind) {
+    for (WaveSpec spec : waves) {
+      if (spec.groups().stream().anyMatch(g -> g.type() == kind)) {
+        return spec.wave();
+      }
+    }
+    return 0;
+  }
 }

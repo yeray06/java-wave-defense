@@ -13,6 +13,7 @@
 | 3d. Camino a un render 3D (D-40) | ✅ Fusionada | `phase-3d-render-3d` |
 | 4. Juego: camino, torretas, enemigos, bucle | ✅ Fusionada | `phase-4-juego` |
 | 5. Editor, tienda, parte de oleada, informe, mapa | ✅ Hecha, en PR | `phase-5-interfaz` |
+| 5b. Manual del jugador | ✅ Hecha, en PR | `phase-5b-manual` |
 | 6. Guardado, ajustes, robustez | Solo con Yeray en casa | — |
 | 7. Empaquetado y documentación | Solo con Yeray en casa | — |
 
@@ -261,6 +262,31 @@ Comprobado aquí con Xvfb y capturas: parte de oleada, editor escribiendo un
 `if` (sangría, colores, «Aún no has desbloqueado if/else», memoria 3/12),
 tienda, mapa con candados y bandera, y el informe al acabar la oleada 1.
 
+## Fase 5b: manual del jugador (hecha)
+
+Pedido por Yeray (no viene del plan, D-54): un libro dentro del juego con
+todo lo que puede necesitar el jugador y código que se pueda copiar.
+
+- Botón **Manual** en la barra. Índice con 8 capítulos: primeros pasos (el
+  ciclo, el editor, la memoria, cómo se juega, la tienda), lo que hace la
+  torreta (una página por llamada), lo que se le pregunta a un enemigo,
+  sintaxis (lo básico, if/else, variables, `&& || !`, while), excepciones
+  (qué las provoca y cómo evitarlas), errores al escribir, enemigos y recetas
+  completas para copiar.
+- Lo que aún no tienes sale con candado y dice qué lo trae: «llega con
+  if/else, en la Tienda», «llega en la oleada 6», «aparece en la oleada 8».
+- Cada ejemplo con los colores del editor, la memoria que ocupa y un botón
+  «Copiar»; se pega en el editor con Ctrl+V.
+- `data/manual.json` (estructura, desbloqueos y código) validado al cargar:
+  una página por cada llamada, pieza del MVP, enemigo y excepción, y cada
+  ejemplo compila con lo que pide su página. Textos en `manual.*`; los
+  números salen de los datos por nombre (`ManualFacts`).
+- La página de SinMunicionException explica lo que le pasó a Yeray: cada
+  torreta tiene su código y el código nuevo entra en la siguiente oleada.
+- Tests: rechazos del manual en `GameDataTest`, textos completos y sin números
+  inventados (`ManualTextsTest`), índice, candados, copiar, anterior y
+  siguiente, todas las páginas abren y su código cabe en el panel.
+
 ## Siguiente: fase 6
 
 Guardado, ajustes y robustez. **Necesita que estés en casa**; no empiezo sin
@@ -328,6 +354,8 @@ Propuestas mías aplicadas como PROVISIONAL (detalle en
 - **D-52**: paneles a la derecha, uno a la vez, sin parar la oleada; el
   informe se abre solo si no hay otro panel abierto.
 - **D-53**: los ejemplos de las tarjetas de la tienda los he escrito yo.
+- **D-54**: el contenido del manual (textos, ejemplos y recetas) lo he
+  escrito yo; se revisa leyéndolo en el juego.
 
 Números de balance que no vienen del plan (D-12): están en la lista
 `notFromPlan` de cada JSON y en la sección 2 de `docs/BALANCE.md`.
@@ -348,6 +376,15 @@ deciden con ese dato, no antes.
   así: empujan a programar «dispara solo si hay enemigos». D-05 cerrada.
 
 ## Pendiente de probar en local
+
+Fase 5b (`gradlew.bat :lwjgl3:run`):
+
+- [ ] El botón Manual abre el índice; las páginas que no tienes llevan
+  candado y al comprar if/else se quitan las suyas.
+- [ ] Una página se lee bien: título, texto, ejemplos con colores y memoria;
+  anterior, siguiente e índice funcionan y vuelve arriba al cambiar.
+- [ ] «Copiar» cambia a «¡Copiado!» y Ctrl+V en el editor pega el ejemplo.
+- [ ] Leer el manual entero y decir qué falta, sobra o no se entiende.
 
 Fase 5 (`gradlew.bat :lwjgl3:run`):
 
