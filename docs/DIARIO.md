@@ -157,3 +157,33 @@ De ahí salió la idea de un manual dentro del juego (D-54).
 | Los textos del manual citan muchos números y los ejemplos llevan llaves, que el formateador de mensajes no admite. | Los números se citan por nombre (`{cargador}`) y se rellenan sin el formateador; el código va en `manual.json`. |
 | Algunas líneas de código no cabían a lo ancho del panel. | Partidas en dos líneas, y un test comprueba que todo cabe. |
 | En los tests no hay portapapeles. | El panel recibe el portapapeles por constructor. |
+
+## Fase 6 · 7 de octubre · Guardado, ajustes y robustez
+
+**Decidido por Yeray antes de empezar**: una sola partida, guardado
+automático sin botón, se guardan el borrador y la versión buena del código, y
+los ajustes son pantalla completa, tamaño de la interfaz, tamaño del código y
+nueva partida.
+
+- Se guarda solo (al acabar oleada, comprar, cambiar código, elegir oleada y
+  cerrar) en `save.json`, con escritura atómica y copia `.bak`.
+- Si la partida está rota, se usa la copia; si también lo está, partida nueva
+  con aviso. El fichero roto se guarda aparte.
+- Panel de Ajustes y log en `logs/`. Un error en un frame se apunta en el log
+  y el juego sigue.
+
+![Ajustes](capturas/fase6-01-ajustes.png)
+![Código a 20 px sin perder lo escrito](capturas/fase6-02-codigo-a-20-px-sin-perder-lo-escrito.png)
+![Partida recuperada al volver a abrir](capturas/fase6-04-partida-recuperada-al-volver.png)
+
+| Problema | Solución |
+|---|---|
+| Con la interfaz al 150 % en una ventana de 1280×720 no cabía nada: el parte de oleada se salía de la pantalla (captura de abajo). | La interfaz crece solo hasta donde cabe en la ventana: el 150 % necesita 1920×1080 o pantalla completa. El panel lo explica. |
+| Al arrastrar el borde de la ventana, la escala cambiaría con cada píxel y regeneraría las fuentes sin parar. | La escala salta solo entre los tamaños de la lista. |
+| Cambiar un tamaño rehace toda la pantalla, y el editor guardaba el texto dentro de la pantalla. | Los borradores viven en `WaveLoop` (también se guardan), así que el código sobrevive. |
+| Rehacer la pantalla desde un clic de esa misma pantalla la destruía mientras se usaba. | El cambio se hace en el frame siguiente. |
+| En los tests no hay portapapeles ni ventana. | Las dependencias entran por constructor (`GameControls`, carpeta y reloj). |
+| Mi primera prueba seguía al 150 %: un reemplazo de texto en el código no se había aplicado. | Lo detectó la línea nueva del log («Interface at 100 % (asked 150 %)»); arreglado y comprobado. |
+
+![Interfaz al 150 % sin límite (el problema)](capturas/fase6-03-interfaz-al-150-sin-limite-problema.png)
+
