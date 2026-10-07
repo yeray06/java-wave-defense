@@ -184,7 +184,8 @@ final class BalanceReport {
     line("  gasta en hardware. Atascado tras una derrota: sintaxis si llega; si no, la torreta");
     line("  extra; si no, el hardware más barato, y vuelve a intentarlo. Sin nada que comprar,");
     line("  repite la primera oleada anterior que aún le dé una estrella (sin fugas o su reto).");
-    line("  Si no queda ninguna, la partida está **bloqueada**.");
+    line("  Si no queda ninguna, prueba a devolver un nivel de mejora y comprar otro (D-59);");
+    line("  si tampoco le hace más fuerte, la partida está **bloqueada**.");
     line(
         "- Usa ×3 en las oleadas que ya superó sin fugas. El tiempo de escribir código no cuenta.");
     line("");

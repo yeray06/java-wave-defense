@@ -168,6 +168,29 @@ final class ProgressionRun {
       }
       Optional<Revisit> revisit = revisit(progress, wall);
       if (revisit.isEmpty()) {
+        Optional<String> swap = swap(progress, wall);
+        if (swap.isPresent()) {
+          Row last = rows.remove(rows.size() - 1);
+          List<String> bought = new ArrayList<>(last.bought());
+          bought.add(swap.get());
+          rows.add(
+              new Row(
+                  last.number(),
+                  last.wave(),
+                  last.purpose(),
+                  last.won(),
+                  last.leaks(),
+                  last.earned(),
+                  progress.stars(),
+                  last.script(),
+                  progress.turretCount(),
+                  bought,
+                  last.seconds(),
+                  last.speedUp(),
+                  last.faults()));
+          progress.goTo(wall);
+          continue;
+        }
         locked = wall;
         break;
       }
@@ -293,6 +316,54 @@ final class ProgressionRun {
       }
     }
     return Optional.empty();
+  }
+
+  /**
+   * Stuck with nothing to buy or earn: gives back one upgrade level and buys another (D-59) if that
+   * makes the player stronger against the wall. Each swap must raise the strength, so this ends.
+   *
+   * @return the swap as "-MAGAZINE +HEAT_SINK", or empty if none helps
+   */
+  private Optional<String> swap(Progress progress, int wall) {
+    double now = strength(wall, progress);
+    Progress best = null;
+    String bestName = null;
+    double bestStrength = now;
+    for (HardwareKind from : HARDWARE_BY_PREFERENCE) {
+      if (!shop.canRefund(progress, from)) {
+        continue;
+      }
+      for (HardwareKind to : HARDWARE_BY_PREFERENCE) {
+        if (to == from) {
+          continue;
+        }
+        Progress option = progress.copy();
+        shop.refund(option, from);
+        if (shop.buy(option, to) != PurchaseCheck.OK) {
+          continue;
+        }
+        double strength = strength(wall, option);
+        if (strength > bestStrength) {
+          best = option;
+          bestName = "-" + from.name() + " +" + to.name();
+          bestStrength = strength;
+        }
+      }
+    }
+    if (best == null) {
+      return Optional.empty();
+    }
+    for (HardwareKind kind : HARDWARE_BY_PREFERENCE) {
+      while (progress.level(kind) > best.level(kind)) {
+        shop.refund(progress, kind);
+      }
+    }
+    for (HardwareKind kind : HARDWARE_BY_PREFERENCE) {
+      while (progress.level(kind) < best.level(kind)) {
+        shop.buy(progress, kind);
+      }
+    }
+    return Optional.of(bestName);
   }
 
   private List<String> buy(Progress progress, Integer wall, Map<Feature, Progress> beforeBuying) {

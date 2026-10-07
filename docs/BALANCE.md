@@ -87,7 +87,8 @@ Valores provisionales (D-12 y siguientes) que el plan no fija. Salen de la lista
   gasta en hardware. Atascado tras una derrota: sintaxis si llega; si no, la torreta
   extra; si no, el hardware más barato, y vuelve a intentarlo. Sin nada que comprar,
   repite la primera oleada anterior que aún le dé una estrella (sin fugas o su reto).
-  Si no queda ninguna, la partida está **bloqueada**.
+  Si no queda ninguna, prueba a devolver un nivel de mejora y comprar otro (D-59);
+  si tampoco le hace más fuerte, la partida está **bloqueada**.
 - Usa ×3 en las oleadas que ya superó sin fugas. El tiempo de escribir código no cuenta.
 
 | Script | Memoria | Código |
