@@ -113,4 +113,58 @@ class WaveLoopTest {
     }
     assertSame(WaveLoop.State.AWAITING_DEPLOY, first.state());
   }
+
+  @Test
+  void codeThatCompilesReplacesTheScriptAndEntersTheNextWave() {
+    Progress progress = Progress.newGame(data());
+    progress.features.add(io.github.yeray06.wavedefense.script.api.Feature.IF_ELSE);
+    WaveLoop loop = new WaveLoop(data(), progress);
+    String ifScript = "if (hayEnemigos()) {\n  disparar();\n}";
+    assertTrue(loop.setScript(0, ifScript).succeeded());
+    assertEquals(ifScript, loop.script(0));
+    assertEquals(WaveLoop.State.AWAITING_DEPLOY, loop.state(), "still waiting, rebuilt");
+
+    loop.deploy();
+    Battle running = loop.battle();
+    var broken = loop.setScript(0, "while (true) disparar();");
+    assertFalse(broken.succeeded(), "while is not bought");
+    assertEquals(ifScript, loop.script(0), "the last compiling script stays");
+    assertSame(running, loop.battle(), "a running wave keeps its code");
+  }
+
+  @Test
+  void theMapGoesToReachedWavesOnlyAndTheChosenOneWaits() {
+    Progress progress = Progress.newGame(data());
+    progress.beatenWaves.set(1, 4);
+    progress.currentWave = 4;
+    progress.highestWaveReached = 4;
+    WaveLoop loop = new WaveLoop(data(), progress);
+    loop.deploy();
+    for (int i = 0; i < 100; i++) {
+      loop.tick();
+    }
+    assertFalse(loop.selectWave(5), "not reached: locked");
+    assertFalse(loop.selectWave(0));
+    assertTrue(loop.selectWave(2));
+    assertEquals(2, loop.battle().wave());
+    assertEquals(0, loop.battle().tickCount());
+    assertEquals(WaveLoop.State.AWAITING_DEPLOY, loop.state(), "a beaten wave also waits");
+    assertEquals(0, loop.wavesFinished(), "the abandoned wave neither pays nor counts");
+    loop.deploy();
+    finishWave(loop);
+    assertEquals(2, loop.lastReport().wave());
+    assertEquals(3, loop.battle().wave(), "auto-advance goes on from the chosen wave");
+  }
+
+  @Test
+  void aPurchaseRebuildsTheWaitingWave() {
+    Progress progress = Progress.newGame(data()).copyWithMoney(1_000_000);
+    WaveLoop loop = new WaveLoop(data(), progress);
+    Shop shop = new Shop(data().withoutHardwareCaps());
+    assertEquals(
+        PurchaseCheck.OK,
+        shop.buy(progress, io.github.yeray06.wavedefense.sim.data.HardwareKind.EXTRA_TURRET));
+    loop.purchased();
+    assertEquals(2, loop.battle().turretCount());
+  }
 }

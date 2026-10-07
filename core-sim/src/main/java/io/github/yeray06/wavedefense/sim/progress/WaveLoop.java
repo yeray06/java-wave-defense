@@ -1,5 +1,6 @@
 package io.github.yeray06.wavedefense.sim.progress;
 
+import io.github.yeray06.wavedefense.script.CompileResult;
 import io.github.yeray06.wavedefense.script.runtime.CompiledScript;
 import io.github.yeray06.wavedefense.sim.data.GameData;
 import io.github.yeray06.wavedefense.sim.world.Battle;
@@ -81,6 +82,59 @@ public final class WaveLoop {
     return state == State.RUNNING && turret < battle.turretCount() && battle.manualReload(turret);
   }
 
+  /**
+   * The player's code for a turret slot (plan, "Edición en caliente"). If it compiles it replaces
+   * the slot's script: a waiting wave is rebuilt with it, a running one keeps its code and the new
+   * one enters the next wave. If it does not compile, the slot keeps its last compiling script.
+   *
+   * @return the compilation, for the editor's errors and memory counter
+   */
+  public CompileResult setScript(int slot, String source) {
+    CompileResult result = compile(source);
+    if (result.succeeded()) {
+      sources.set(slot, source);
+      if (state == State.AWAITING_DEPLOY) {
+        build(true);
+      }
+    }
+    return result;
+  }
+
+  /** The script a slot runs: the last one that compiled, or the initial script (D-14). */
+  public String script(int slot) {
+    return sources.get(slot);
+  }
+
+  /** Compiles code with the player's current unlocks and the turret's memory. */
+  public CompileResult compile(String source) {
+    return data.compiler().compile(source, progress.unlocks(), data.turret().memoryLines());
+  }
+
+  /**
+   * The wave map (D-49): goes to any wave already reached. A running wave is abandoned without pay
+   * or defeat (D-50) and the chosen one waits for {@link #deploy()}.
+   *
+   * @return false for a wave not reached yet
+   */
+  public boolean selectWave(int wave) {
+    if (wave < 1 || wave > progress.highestWaveReached()) {
+      return false;
+    }
+    progress.currentWave = wave;
+    build(true);
+    return true;
+  }
+
+  /**
+   * Something bought in the shop: a waiting wave is rebuilt with it (a new turret, more damage…); a
+   * running one keeps what it started with.
+   */
+  public void purchased() {
+    if (state == State.AWAITING_DEPLOY) {
+      build(true);
+    }
+  }
+
   /** Speed ×3 only on waves already beaten without leaks (plan, "Farmeo"). */
   public boolean speedUpAllowed() {
     return progress.speedUpAllowed(battle.wave());
@@ -115,17 +169,19 @@ public final class WaveLoop {
   }
 
   private void next() {
-    int wave = progress.currentWave();
+    build(!progress.beaten(progress.currentWave()));
+  }
+
+  private void build(boolean wait) {
     List<CompiledScript> scripts = new ArrayList<>();
     for (int i = 0; i < progress.turretCount(); i++) {
-      scripts.add(
-          data.compiler()
-              .compile(sources.get(i), progress.unlocks(), data.turret().memoryLines())
-              .script()
-              .orElse(null));
+      scripts.add(compile(sources.get(i)).script().orElse(null));
     }
     battle =
-        new Battle(data, new BattleSetup(wave, scripts, progress.loadout(), 1.0, battlesBuilt++));
-    state = progress.beaten(wave) ? State.RUNNING : State.AWAITING_DEPLOY;
+        new Battle(
+            data,
+            new BattleSetup(
+                progress.currentWave(), scripts, progress.loadout(), 1.0, battlesBuilt++));
+    state = wait ? State.AWAITING_DEPLOY : State.RUNNING;
   }
 }
