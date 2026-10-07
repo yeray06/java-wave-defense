@@ -1,5 +1,6 @@
 package io.github.yeray06.wavedefense.game.screen;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -104,6 +105,61 @@ class BattleScreenTest {
           assertTrue(loop.wavesFinished() > 0, "wave 1 ended");
           assertTrue(screen.openPanel() != null, "the report opened by itself");
           screen.render(1f / 60);
+          screen.dispose();
+          world.dispose();
+          skin.dispose();
+        });
+  }
+
+  /**
+   * Yeray: in a window that is not 16:9, buttons answered clicks beside them. The world letterboxes
+   * the GL viewport; the HUD must draw over the whole window, where its clicks are mapped.
+   */
+  @Test
+  void theHudDrawsOverTheWholeWindowWhateverItsShape() {
+    Headless.run(
+        () -> {
+          GameData data = GameTestData.load();
+          Texts texts = Texts.load(Gdx.files.internal("i18n/messages"));
+          Skin skin = UiSkin.create(Gdx.files.internal("fonts/JetBrainsMono-Regular.ttf"));
+          ShapeWorldRenderer world = new ShapeWorldRenderer(data);
+          WaveLoop loop = new WaveLoop(data, Progress.newGame(data));
+          BattleScreen screen =
+              new BattleScreen(
+                  data,
+                  texts,
+                  skin,
+                  loop,
+                  world,
+                  new ReloadReactionLog(1, 2, line -> {}),
+                  new FakeControls(),
+                  1);
+          com.badlogic.gdx.graphics.GL20 real = Gdx.gl;
+          List<int[]> viewports = new ArrayList<>();
+          Gdx.gl =
+              Gdx.gl20 =
+                  (com.badlogic.gdx.graphics.GL20)
+                      java.lang.reflect.Proxy.newProxyInstance(
+                          getClass().getClassLoader(),
+                          new Class<?>[] {com.badlogic.gdx.graphics.GL20.class},
+                          (proxy, method, args) -> {
+                            if (method.getName().equals("glViewport")) {
+                              viewports.add(
+                                  new int[] {
+                                    (int) args[0], (int) args[1], (int) args[2], (int) args[3]
+                                  });
+                            }
+                            return method.invoke(real, args);
+                          });
+          try {
+            screen.resize(1920, 1009);
+            viewports.clear();
+            screen.render(1f / 60);
+            int[] last = viewports.get(viewports.size() - 1);
+            assertArrayEquals(new int[] {0, 0, 1920, 1009}, last, "the HUD's viewport");
+          } finally {
+            Gdx.gl = Gdx.gl20 = real;
+          }
           screen.dispose();
           world.dispose();
           skin.dispose();

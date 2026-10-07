@@ -382,6 +382,8 @@ public final class BattleScreen extends ScreenAdapter {
     world.render(loop.battle(), clock.alpha(), delta);
     updateHud();
     stage.act(delta);
+    // The world letterboxes the GL viewport; the HUD covers the whole window, where clicks land.
+    stage.getViewport().apply();
     stage.draw();
   }
 
