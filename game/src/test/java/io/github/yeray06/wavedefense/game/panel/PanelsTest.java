@@ -36,7 +36,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-/** Phase 5 panels: editor, shop, map, briefing, report and manual, on the headless backend. */
+/** The side panels and the briefing, on the headless backend. */
 class PanelsTest {
   private interface Body {
     void run(GameData data, ScriptTexts names, Skin skin, Stage stage);
@@ -243,6 +243,37 @@ class PanelsTest {
   private static io.github.yeray06.wavedefense.sim.data.ManualConfig.Page page(
       GameData data, String id) {
     return data.manual().pages().stream().filter(p -> p.id().equals(id)).findFirst().orElseThrow();
+  }
+
+  @Test
+  void theSettingsApplyAtOnceAndANewGameAsksFirst() {
+    withUi(
+        (data, names, skin, stage) -> {
+          var controls = new io.github.yeray06.wavedefense.game.screen.FakeControls();
+          SettingsPanel settings = new SettingsPanel(controls, names.texts(), skin);
+          stage.addActor(settings);
+          button(settings, names.texts().format("settings.percent", 150)).toggle();
+          assertEquals(150, controls.settings.uiScalePercent());
+          button(settings, "18").toggle();
+          assertEquals(18, controls.settings.codeFontSize());
+          button(settings, names.texts().get("settings.fullscreen.off"))
+              .fire(new ChangeListener.ChangeEvent());
+          assertTrue(controls.settings.fullscreen());
+          assertNotNull(button(settings, names.texts().get("settings.fullscreen.on")));
+
+          button(settings, names.texts().get("settings.newGame"))
+              .fire(new ChangeListener.ChangeEvent());
+          assertEquals(0, controls.newGames, "only after confirming");
+          Dialog dialog =
+              (Dialog)
+                  all(stage.getRoot()).stream()
+                      .filter(a -> a instanceof Dialog)
+                      .findFirst()
+                      .orElseThrow();
+          button(dialog, names.texts().get("settings.newGame.yes"))
+              .fire(new ChangeListener.ChangeEvent());
+          assertEquals(1, controls.newGames);
+        });
   }
 
   @Test

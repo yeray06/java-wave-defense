@@ -59,8 +59,8 @@ public final class EditorPanel extends Table {
     results = new CompileResult[slots];
     TextureRegion white = new TextureRegion(skin.get("white", Texture.class));
     for (int i = 0; i < slots; i++) {
-      documents[i] = new EditorDocument(loop.script(i));
-      editors[i] = new CodeEditor(documents[i], skin.getFont("small"), white);
+      documents[i] = new EditorDocument(loop.draft(i));
+      editors[i] = new CodeEditor(documents[i], skin.getFont("code"), white);
       compiledVersion[i] = -1;
     }
     scroll = new ScrollPane(editors[0], skin);

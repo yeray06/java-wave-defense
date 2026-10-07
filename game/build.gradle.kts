@@ -4,6 +4,9 @@ dependencies {
   "api"(project(":platform"))
   "api"(libs.gdx)
   "api"(libs.gdx.freetype)
+  // settings.json, written like the save (core-sim reads its data with the same library).
+  "implementation"(platform(libs.jackson.bom))
+  "implementation"(libs.jackson.databind)
 
   "testImplementation"(libs.gdx.backend.headless)
   "testRuntimeOnly"(variantOf(libs.gdx.platform) { classifier("natives-desktop") })

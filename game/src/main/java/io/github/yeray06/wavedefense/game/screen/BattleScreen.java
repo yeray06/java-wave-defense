@@ -17,6 +17,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import io.github.yeray06.wavedefense.game.i18n.ScriptTexts;
@@ -28,6 +29,7 @@ import io.github.yeray06.wavedefense.game.panel.ManualPanel;
 import io.github.yeray06.wavedefense.game.panel.MapPanel;
 import io.github.yeray06.wavedefense.game.panel.ReportLines;
 import io.github.yeray06.wavedefense.game.panel.ReportPanel;
+import io.github.yeray06.wavedefense.game.panel.SettingsPanel;
 import io.github.yeray06.wavedefense.game.panel.ShopPanel;
 import io.github.yeray06.wavedefense.game.playtest.ReloadReactionLog;
 import io.github.yeray06.wavedefense.game.render.WorldRenderer;
@@ -59,6 +61,7 @@ public final class BattleScreen extends ScreenAdapter {
   private static final float PAD = 10;
   private static final float BUTTON_PAD = 12;
   private static final float SIDE_WIDTH = 500;
+  private static final float NOTICE_SECONDS = 12;
 
   private final GameData data;
   private final Texts texts;
@@ -81,11 +84,15 @@ public final class BattleScreen extends ScreenAdapter {
   private final MapPanel mapPanel;
   private final ReportPanel reportPanel;
   private final ManualPanel manualPanel;
+  private final SettingsPanel settingsPanel;
+  private final Label noticeLabel;
+  private float noticeSeconds;
   private final ScriptTexts names;
   private final Container<Actor> side;
   private final ScrollPane shopScroll;
   private final ScrollPane reportScroll;
   private final ScrollPane manualScroll;
+  private final ScrollPane settingsScroll;
   private final double pathLength;
   private Actor openPanel;
   private Cell<Container<Actor>> sideCell;
@@ -106,14 +113,19 @@ public final class BattleScreen extends ScreenAdapter {
       Skin skin,
       WaveLoop loop,
       WorldRenderer world,
-      ReloadReactionLog reactions) {
+      ReloadReactionLog reactions,
+      GameControls controls,
+      float uiScale) {
     this.data = data;
     this.texts = texts;
     this.loop = loop;
     this.world = world;
     this.reactions = reactions;
     this.clock = new FixedStepClock(data.balance().ticksPerSecond(), MAX_TICKS_PER_FRAME);
-    this.stage = new Stage(new ScreenViewport());
+    ScreenViewport viewport = new ScreenViewport();
+    // D-56: the interface keeps its layout in units and is drawn bigger.
+    viewport.setUnitsPerPixel(1 / uiScale);
+    this.stage = new Stage(viewport);
     this.names = new ScriptTexts(texts, data);
     this.pathLength = new PathTrack(data.map().path()).length();
 
@@ -140,6 +152,12 @@ public final class BattleScreen extends ScreenAdapter {
     manualPanel = new ManualPanel(data, loop.progress(), names, skin, Gdx.app.getClipboard());
     manualScroll = new ScrollPane(manualPanel, skin);
     manualScroll.setFadeScrollBars(false);
+    settingsPanel = new SettingsPanel(controls, texts, skin);
+    settingsScroll = new ScrollPane(settingsPanel, skin);
+    settingsScroll.setFadeScrollBars(false);
+    noticeLabel = new Label("", skin, "warning");
+    noticeLabel.setWrap(true);
+    noticeLabel.setAlignment(Align.center);
     side = new Container<>();
     side.setBackground(skin.getDrawable("panel"));
     side.pad(PAD);
@@ -160,7 +178,8 @@ public final class BattleScreen extends ScreenAdapter {
     toolbar.add(panelButton(skin, "hud.panel.shop", shopScroll)).padRight(6);
     toolbar.add(panelButton(skin, "hud.panel.map", mapPanel)).padRight(6);
     toolbar.add(panelButton(skin, "hud.panel.report", reportScroll)).padRight(6);
-    toolbar.add(panelButton(skin, "hud.panel.manual", manualScroll));
+    toolbar.add(panelButton(skin, "hud.panel.manual", manualScroll)).padRight(6);
+    toolbar.add(panelButton(skin, "hud.panel.settings", settingsScroll));
     top.add(toolbar).colspan(5).right().padTop(6);
     stage.addActor(top);
 
@@ -174,6 +193,7 @@ public final class BattleScreen extends ScreenAdapter {
     Table bottom = new Table();
     bottom.setFillParent(true);
     bottom.bottom().pad(PAD);
+    bottom.add(noticeLabel).width(700).row();
     bottom.add(resultLabel).row();
     bottom.add(hint);
     stage.addActor(bottom);
@@ -190,7 +210,7 @@ public final class BattleScreen extends ScreenAdapter {
         new ChangeListener() {
           @Override
           public void changed(ChangeEvent event, Actor actor) {
-            loop.progress().setAutoAdvance(autoButton.isChecked());
+            loop.setAutoAdvance(autoButton.isChecked());
           }
         });
   }
@@ -227,6 +247,9 @@ public final class BattleScreen extends ScreenAdapter {
     if (panel == manualScroll) {
       manualPanel.refresh();
     }
+    if (panel == settingsScroll) {
+      settingsPanel.rebuild();
+    }
     if (panel == editorPanel) {
       editorPanel.focus();
     } else {
@@ -257,6 +280,26 @@ public final class BattleScreen extends ScreenAdapter {
 
   ScrollPane manualScroll() {
     return manualScroll;
+  }
+
+  ScrollPane settingsScroll() {
+    return settingsScroll;
+  }
+
+  /** Opens the settings panel: after the screen is rebuilt for new sizes, it stays in view. */
+  public void openSettings() {
+    open(settingsScroll);
+  }
+
+  /** A message for the player above the result line: a recovered save, a failed write… */
+  public void showNotice(String text) {
+    noticeLabel.setText(text);
+    noticeSeconds = NOTICE_SECONDS;
+  }
+
+  /** The notice shown now, or "". */
+  String notice() {
+    return noticeLabel.getText().toString();
   }
 
   private void purchased(Object item) {
@@ -329,6 +372,12 @@ public final class BattleScreen extends ScreenAdapter {
       clock.reset();
     }
 
+    if (noticeSeconds > 0) {
+      noticeSeconds -= delta;
+      if (noticeSeconds <= 0) {
+        noticeLabel.setText("");
+      }
+    }
     ScreenUtils.clear(BACKGROUND);
     world.render(loop.battle(), clock.alpha(), delta);
     updateHud();

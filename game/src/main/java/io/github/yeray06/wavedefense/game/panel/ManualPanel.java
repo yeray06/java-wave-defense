@@ -205,11 +205,12 @@ public final class ManualPanel extends Table {
         .width(WIDTH)
         .colspan(2)
         .row();
-    box.add(new CodeView(example.code(), skin.getFont("small"), white))
-        .left()
-        .colspan(2)
-        .padTop(4)
-        .row();
+    // Wide code at a big code size scrolls sideways instead of widening the panel.
+    ScrollPane code =
+        new ScrollPane(new CodeView(example.code(), skin.getFont("code"), white), skin);
+    code.setScrollingDisabled(false, true);
+    code.setFadeScrollBars(false);
+    box.add(code).left().width(WIDTH).colspan(2).padTop(4).row();
     CompileResult compiled = compile(page, example);
     box.add(
             wrapped(

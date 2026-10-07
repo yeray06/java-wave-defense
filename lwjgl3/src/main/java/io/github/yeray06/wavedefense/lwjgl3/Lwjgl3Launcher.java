@@ -4,20 +4,22 @@ import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import io.github.yeray06.wavedefense.game.WaveDefenseGame;
 import io.github.yeray06.wavedefense.platform.NoOpPlatformServices;
+import io.github.yeray06.wavedefense.platform.UserDataDirectory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.util.Properties;
 
 /** Desktop entry point. */
 public final class Lwjgl3Launcher {
   private static final String MESSAGES = "i18n/messages.properties";
   private static final String TITLE_KEY = "game.title";
-  private static final int WINDOW_WIDTH = 1280;
-  private static final int WINDOW_HEIGHT = 720;
+  private static final UserDataDirectory USER_FOLDER =
+      new UserDataDirectory("JavaWaveDefense", "java-wave-defense");
   private static final int FOREGROUND_FPS = 60;
 
   private Lwjgl3Launcher() {}
@@ -26,7 +28,9 @@ public final class Lwjgl3Launcher {
     if (StartupHelper.relaunchedOnMainThread()) {
       return;
     }
-    WaveDefenseGame game = new WaveDefenseGame(new NoOpPlatformServices());
+    WaveDefenseGame game =
+        new WaveDefenseGame(
+            new NoOpPlatformServices(), USER_FOLDER.resolveCurrent(), Clock.systemDefaultZone());
     Lwjgl3ApplicationConfiguration config = configuration();
     config.setWindowListener(new RedrawWhileMoving(game));
     new Lwjgl3Application(game, config);
@@ -35,7 +39,7 @@ public final class Lwjgl3Launcher {
   private static Lwjgl3ApplicationConfiguration configuration() {
     Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
     config.setTitle(loadTitle());
-    config.setWindowedMode(WINDOW_WIDTH, WINDOW_HEIGHT);
+    config.setWindowedMode(WaveDefenseGame.WINDOW_WIDTH, WaveDefenseGame.WINDOW_HEIGHT);
     config.useVsync(true);
     config.setForegroundFPS(FOREGROUND_FPS);
     return config;
