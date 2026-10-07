@@ -1,5 +1,5 @@
 {
-  "notFromPlan": ["ticksPerSecond", "startingMoney", "boss.repeatKillRewardInEnemies"],
+  "notFromPlan": ["ticksPerSecond", "startingMoney", "boss.repeatKillRewardInEnemies", "speeds[1]"],
   "ticksPerSecond": 60,
   "enemyHealth": { "base": 10, "growthPerWave": 1.18 },
   "rewardPerEnemy": { "base": 2, "growthPerWave": 1.15 },
@@ -9,5 +9,6 @@
   "boss": { "everyWaves": 10, "firstKillRewardInWaves": 3, "repeatKillRewardInEnemies": 20 },
   "lastWave": 10,
   "startingTurrets": 1,
-  "startingMoney": 0
+  "startingMoney": 0,
+  "speeds": [1, 2, 3]
 }

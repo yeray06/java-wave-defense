@@ -81,6 +81,11 @@ public final class Turret {
     return lastFaultLine;
   }
 
+  /** Whether a script is loaded; a turret whose code does not compile stands idle. */
+  public boolean hasScript() {
+    return script != null;
+  }
+
   WaveReport.TurretReport report() {
     return new WaveReport.TurretReport(
         shots, airShots, wastedOnDead, reloads, hungTicks, faults.snapshot());

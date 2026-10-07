@@ -5,6 +5,7 @@ dependencies {
   "implementation"(project(":game"))
   "implementation"(libs.gdx.backend.lwjgl3)
   "runtimeOnly"(variantOf(libs.gdx.platform) { classifier("natives-desktop") })
+  "runtimeOnly"(variantOf(libs.gdx.freetype.platform) { classifier("natives-desktop") })
 }
 
 sourceSets { main { resources.srcDir(rootProject.file("assets")) } }
