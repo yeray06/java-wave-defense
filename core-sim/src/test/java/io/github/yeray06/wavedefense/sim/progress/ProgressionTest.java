@@ -202,6 +202,36 @@ class ProgressionTest {
   }
 
   @Test
+  void hardwareCanBeGivenBackForWhatItCostLevelByLevel() {
+    Progress progress = withAllSyntax(1);
+    List<Integer> prices = data.shop().hardware(HardwareKind.HEAT_SINK).prices();
+    progress.stars = prices.get(0) + prices.get(1);
+    assertFalse(shop.canRefund(progress, HardwareKind.HEAT_SINK), "nothing bought yet");
+    assertFalse(shop.refund(progress, HardwareKind.HEAT_SINK));
+    shop.buy(progress, HardwareKind.HEAT_SINK);
+    shop.buy(progress, HardwareKind.HEAT_SINK);
+    assertEquals(0, progress.stars());
+
+    assertEquals(prices.get(1), shop.refundValue(progress, HardwareKind.HEAT_SINK));
+    assertTrue(shop.refund(progress, HardwareKind.HEAT_SINK));
+    assertEquals(1, progress.level(HardwareKind.HEAT_SINK));
+    assertEquals(prices.get(1), progress.stars());
+    assertTrue(shop.refund(progress, HardwareKind.HEAT_SINK));
+    assertEquals(0, progress.level(HardwareKind.HEAT_SINK));
+    assertEquals(prices.get(0) + prices.get(1), progress.stars(), "everything back");
+  }
+
+  @Test
+  void theExtraTurretIsNotGivenBack() {
+    Progress progress = withAllSyntax(1);
+    progress.stars = 1_000;
+    shop.buy(progress, HardwareKind.EXTRA_TURRET);
+    assertFalse(shop.canRefund(progress, HardwareKind.EXTRA_TURRET));
+    assertFalse(shop.refund(progress, HardwareKind.EXTRA_TURRET));
+    assertEquals(2, progress.turretCount());
+  }
+
+  @Test
   void theMvpHasTwoTurrets() {
     Progress progress = withAllSyntax(1);
     progress.stars = 1_000;

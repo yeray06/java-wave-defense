@@ -95,6 +95,36 @@ public final class Shop {
     return check;
   }
 
+  /**
+   * Whether the last level of {@code kind} can be given back (D-59). With stars that are earned
+   * only once, a useless purchase could leave the game without a way forward. The extra turret is
+   * not given back: its code and editor tab would go with it.
+   */
+  public boolean canRefund(Progress progress, HardwareKind kind) {
+    return kind != HardwareKind.EXTRA_TURRET && progress.level(kind) > 0;
+  }
+
+  /** Stars that giving back the last level of {@code kind} returns: what it cost. */
+  public int refundValue(Progress progress, HardwareKind kind) {
+    return canRefund(progress, kind)
+        ? data.shop().hardware(kind).prices().get(progress.level(kind) - 1)
+        : 0;
+  }
+
+  /**
+   * Gives back the last level of {@code kind} for what it cost.
+   *
+   * @return false if there is nothing to give back
+   */
+  public boolean refund(Progress progress, HardwareKind kind) {
+    if (!canRefund(progress, kind)) {
+      return false;
+    }
+    progress.stars += refundValue(progress, kind);
+    progress.levels.merge(kind, -1, Integer::sum);
+    return true;
+  }
+
   private static PurchaseCheck affordable(Progress progress, int price) {
     return progress.stars >= price ? PurchaseCheck.OK : PurchaseCheck.NOT_ENOUGH_STARS;
   }
