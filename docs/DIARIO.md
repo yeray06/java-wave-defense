@@ -245,11 +245,13 @@ sola vez, un reto fijo por oleada y una moneda que solo dan los jefes.
 ![Tienda: trofeos de jefe](capturas/fase6c-04-tienda-trofeos.png)
 ![Mapa con las estrellas de cada oleada](capturas/fase6c-05-mapa-con-estrellas.png)
 ![Manual: Estrellas, retos y trofeos](capturas/fase6c-06-manual-estrellas-retos-trofeos.png)
+![Tienda: devolver una mejora](capturas/fase6c-07-tienda-devolver.png)
 
 | Problema | Solución |
 |---|---|
 | Con los primeros precios (sintaxis 2, 4, 6 y 8) el simulador se quedaba **bloqueado en la oleada 6**: sin estrellas para comprar y sin oleadas que dieran más. Antes, farmear lo arreglaba todo. | Medí oleada por oleada lo mínimo para ganarla (una sonda temporal). La sintaxis es lo que más pesa: con las 4 piezas la oleada 6 sale sin hardware. Precios bajados a 1–4 y 1 por nivel de hardware. Ahora sobran 7 estrellas. |
-| El jugador de referencia gastaba en cargador, que no sirve contra el jefe, y luego le faltaban estrellas para el disipador: **una mala compra te deja sin salida para siempre**. | El jugador de referencia ahora compra lo que más le ayuda contra la oleada que tiene delante. Pero un jugador de verdad puede equivocarse: queda como pregunta para Yeray (devolver lo comprado). |
+| El jugador de referencia gastaba en cargador, que no sirve contra el jefe, y luego le faltaban estrellas para el disipador: **una mala compra te deja sin salida para siempre**. | El jugador de referencia ahora compra lo que más le ayuda contra la oleada que tiene delante. Para las personas, Yeray aprobó **devolver mejoras** (D-59): daño, cargador y disipador se devuelven nivel a nivel por lo que costaron. La sintaxis y la torreta extra no, porque se perdería código. |
+| «Devolver: +1 estrella» y «Comprar: 1 estrella» juntos no cabían en la fila. | El botón de devolver dice solo «Devolver (+1)». |
 | Los primeros retos los cumplía sin querer el mejor script (7 de 10): no obligaban a pensar. | Medí cada script en cada oleada (memoria, disparos, al aire, balas perdidas) y escogí retos que el mejor script no cumple pero otro sí. Ahora hay que cambiar el código en 9 de 10. |
 | Sin retos, ¿se llega al jefe? | El simulador juega también sin intentarlos: se bloquea en la oleada 7. Los retos son necesarios, como quería Yeray. |
 | La fuente no tiene ★. | Las estrellas se marcan con ✓ y ○ (y ●○ en el mapa), que sí tiene; los añadí a los caracteres de la fuente. |

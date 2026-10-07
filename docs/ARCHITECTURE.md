@@ -424,7 +424,8 @@ Así se ve en el propio dato qué es provisional.
 - **Tienda**: el árbol entero con precios desde el principio (plan), cada
   pieza con lo que «te quita de encima» y, si no se puede comprar, por qué
   (estrellas, requisito, fuera del MVP, tope de sintaxis D-34). Precios en
-  estrellas; el botón va debajo del texto para que quepa. Al final, los
+  estrellas; el botón va debajo del texto para que quepa. Las mejoras con
+  algún nivel llevan «Devolver (+N)» (D-59). Al final, los
   trofeos de jefe, que se gastarán en los actos siguientes. Al comprar una
   pieza se abre su tarjeta con el ejemplo de `shop.json`, que se valida al
   cargar: compila con esa pieza y cabe en `exampleLines` (5, plan). El
@@ -615,7 +616,7 @@ retos son PROVISIONAL: salen de calibrar con `sim-cli` (ver
 | Ámbito del hardware | Global, para todas las torretas | PROVISIONAL (D-13) |
 | Segunda torreta | «Torreta extra»; tope 2 en el MVP | Plan |
 | Topes de hardware | Un nivel de hardware no se compra hasta tener cierta sintaxis (`shop.json`, `caps`): daño y cargador, nivel 1 con if, 2 con Variables, 4 con while; disipador y torreta extra, con `&&`. La tienda dice «Necesitas variables para seguir mejorando el daño» | Yeray (red de seguridad, D-34); topes concretos PROVISIONAL |
-| Lo comprado | No se devuelve | PROVISIONAL (pendiente de Yeray, ver PROGRESS) |
+| Devolver | Daño, cargador y disipador se devuelven nivel a nivel por lo que costaron; la sintaxis y la torreta extra, no | Yeray (D-59) |
 | Avance automático | Interruptor; apagado repite la oleada. Encendido en partida nueva | Plan + PROVISIONAL (D-02) |
 | Velocidad ×3 | Solo en oleadas superadas alguna vez sin fugas | Plan |
 | Derrota | Conservas todo, vuelves a la oleada anterior (mín. 1) con avance automático apagado | Plan |
@@ -651,8 +652,10 @@ obliga a regenerarlo y a ver el efecto en el mismo PR.
   estrellas. Atascado tras una derrota: sintaxis si llega; si no, el
   hardware que más ayuda contra ese muro (aunque no ayude nada), y vuelve a
   intentarlo. Sin nada que comprar, repite la primera oleada anterior que aún
-  le dé una estrella (sin fugas o su reto). Si no queda ninguna, la partida
-  está **bloqueada** y sale en «Contradicciones». Usa ×3 donde se puede. El
+  le dé una estrella (sin fugas o su reto). Si no queda ninguna, prueba a
+  devolver un nivel de mejora y comprar otro (D-59) mientras eso le haga más
+  fuerte. Si tampoco, la partida está **bloqueada** y sale en
+  «Contradicciones». Usa ×3 donde se puede. El
   tiempo de escribir código no cuenta.
 - **Sin retos**: la misma partida con un jugador que nunca intenta los
   retos (solo los cumple si le salen solos). Mide si hacen falta para llegar
@@ -776,6 +779,7 @@ provisional contradice el plan.
 | D-56 | Ajustes (fase 6) | CERRADA (Yeray) qué ajustes; valores PROVISIONAL | Pantalla completa, tamaño de la interfaz (100, 125, 150, 175 y 200 %), tamaño del código del editor y del manual (12 a 22 px, 14 por defecto) y «Nueva partida» con confirmación. Se aplican al momento y se guardan aparte de la partida. |
 | D-57 | Economía sin farmeo | CERRADA la idea (Yeray); números PROVISIONAL | **Cambia el plan** («Farmeo»: repetir paga, oleada perfecta +25 %, regla de las 5 pasadas). Repitiendo una oleada a ×3 se compraba toda la sintaxis en minutos sin programar mejor (oleada 3 perfecta a ×3: 159 por minuto; la sintaxis cuesta 385). Nuevo modelo: cada oleada da 3 estrellas que se cobran **una sola vez**: superarla, superarla sin fugas y un reto de código fijo de esa oleada (menos memoria, sin disparos al aire, sin excepciones…; son los «contratos» del plan, que entran ya). Las estrellas compran sintaxis y hardware. Además, una segunda moneda que solo dan los jefes, la primera vez, para lo más grande; en el MVP solo hay un jefe, así que queda preparada para los actos siguientes. Repetir una oleada solo sirve para sacar las estrellas que falten mejorando el código. Implementada en la fase 6c: precios, retos y calibración en §10.3 y `docs/BALANCE.md`; el simulador comprueba que no haya partidas bloqueadas y mide una partida sin retos. |
 | D-58 | Nombres y manual para principiantes | CERRADA (Yeray) | Las piezas se llaman «Decidir (if/else)», «Recordar (variables)», «Combinar condiciones (&&, ||, !)» y «Repetir (while)» (y «Contar (for)», «Reutilizar código (métodos)», «Atrapar errores (try/catch)», «Tipos de torreta (clases)»). Cambia el texto del plan: «Aún no has desbloqueado «Repetir (while)»». El manual se escribe para quien nunca ha programado: capítulo «Empieza aquí», «Símbolos y palabras» (cada símbolo, glosario y cómo leer el código en voz alta), títulos que dicen qué hace cada orden y ejemplos comentados. |
+| D-59 | Devolver mejoras | CERRADA (Yeray) | Con estrellas que no se repiten, una mejora inútil podía dejar la partida sin salida. Daño, cargador y disipador se devuelven nivel a nivel (el último primero) por lo que costaron, en cualquier momento; la oleada en curso sigue con lo que empezó. La sintaxis no (el código que la usa dejaría de compilar) ni la torreta extra (se perdería su código y su pestaña). No cambia el guardado: los niveles ya se guardan. |
 | D-54 | Manual del jugador (fase 5b) | CERRADA la idea (Yeray, no viene del plan); contenido PROVISIONAL | Un libro dentro del juego con cada llamada, pieza de sintaxis, excepción y enemigo, ejemplos que se copian con un botón y recetas. Todo visible desde el principio; lo no desbloqueado, con candado y qué lo trae, como el árbol de la tienda. Textos y ejemplos escritos por mí; los ejemplos se compilan al cargar y los números salen de los datos. |
 | D-44 | Semilla de cada batalla | PROVISIONAL | Un contador de batallas de la partida: las mismas acciones repiten la misma partida. Hoy solo la usa el objetivo «al azar», que no está activo. |
 | D-45 | Medida de la decisión C | PROVISIONAL | En la oleada 1, segundos reales desde que una torreta se queda sin balas hasta el clic que la recarga, más un resumen al acabar la oleada. Se escribe en la consola (`Gdx.app.log`, etiqueta `wave-defense`); el log a fichero llega en la fase 6. |

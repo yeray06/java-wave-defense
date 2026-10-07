@@ -381,6 +381,11 @@ programar mejor.
   repite oleadas por su reto y, atascado, vuelve a por estrellas que le
   faltan. Avisa si una partida queda **bloqueada**. Mide también una partida
   sin hacer ningún reto.
+- **Devolver mejoras** (D-59, decidido por Yeray tras ver el problema): daño,
+  cargador y disipador se devuelven nivel a nivel por lo que costaron. Así
+  una mala compra no deja la partida sin salida. La sintaxis y la torreta
+  extra no se devuelven. El simulador, antes de dar una partida por
+  bloqueada, prueba a cambiar una mejora por otra.
 
 Resultado del simulador (`docs/BALANCE.md`):
 
@@ -467,9 +472,6 @@ Propuestas mías aplicadas como PROVISIONAL (detalle en
 - **D-57**: los números de la economía de estrellas: precios (sintaxis 1–4,
   hardware 1 por nivel, torreta extra 2), los 10 retos y 0 estrellas al
   empezar. Calibrados con `sim-cli`.
-- **Lo comprado no se devuelve** (fase 6c). Con estrellas que no se repiten,
-  una compra que no sirve puede dejarte sin salida: lo pregunto a Yeray
-  (ver la fase 6c en el diario).
 - **D-56**: tamaños de interfaz 100–200 % (limitados a lo que cabe en la
   ventana) y de código 12–22 px.
 
@@ -502,6 +504,8 @@ Fase 6c (`gradlew.bat :lwjgl3:run`):
 - [ ] Cumplir algún reto cambiando el código (por ejemplo, el de la oleada 3:
   código de 4 líneas de memoria como mucho).
 - [ ] Repetir una oleada con sus 3 estrellas no da nada.
+- [ ] Comprar una mejora y devolverla con «Devolver»: vuelven las estrellas
+  y el nivel baja; la oleada en curso no cambia.
 - [ ] Tienda en estrellas, con el botón debajo; el mapa con ●●○.
 - [ ] ¿Cuánto se tarda de verdad hasta el jefe? ¿Algún reto es injusto o
   demasiado fácil?
