@@ -51,6 +51,8 @@ class ScriptMessagesTest {
     text("script.memory.rule");
     for (HardwareKind kind : HardwareKind.values()) {
       text("shop.hardware." + kind.name());
+      text("shop.item." + kind.name());
+      text("shop.item." + kind.name() + ".effect");
     }
     for (PurchaseCheck check : PurchaseCheck.values()) {
       if (check != PurchaseCheck.OK) {

@@ -85,6 +85,16 @@ public final class EditorPanel extends Table {
     rebuildTabs();
   }
 
+  /** The draft of a turret slot, as the player is writing it. */
+  public EditorDocument document(int slot) {
+    return documents[slot];
+  }
+
+  /** The latest compilation of the open turret's draft. */
+  public CompileResult result() {
+    return results[slot];
+  }
+
   /** Puts the keyboard on the open turret's editor. */
   public void focus() {
     if (getStage() != null) {
