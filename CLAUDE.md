@@ -87,3 +87,6 @@ cada decisión técnica en una línea. Di sin rodeos cuándo algo es mala idea.
   local» en `docs/PROGRESS.md`; nunca se da por verificado.
 - Al final de cada fase, actualizar CLAUDE.md, docs/ARCHITECTURE.md y
   docs/PROGRESS.md en el mismo PR.
+- Y añadir su entrada a `docs/DIARIO.md` (qué se hizo, problemas y cómo se
+  resolvieron) con las capturas que se hayan hecho, en `docs/capturas/`
+  (`faseN-NN-que-se-ve.png`).

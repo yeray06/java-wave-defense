@@ -127,6 +127,8 @@ java-wave-defense/
     ├── plan-diseno.pdf
     ├── ARCHITECTURE.md
     ├── PROGRESS.md
+    ├── DIARIO.md                  # diario: qué se hizo, problemas y soluciones, con capturas
+    ├── capturas/                  # capturas de cada fase (faseN-NN-que-se-ve.png)
     ├── BALANCE.md                 # generado por sim-cli; un test exige que esté al día
     └── STEAM.md                   # fase 7
 ```
