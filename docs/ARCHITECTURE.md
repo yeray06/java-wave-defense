@@ -24,7 +24,7 @@ Comprobado el 2026-10-02 contra Maven Central y el portal de plugins de Gradle.
 | JSON (módulos puros) | Jackson databind 2.22.x | `core-sim` no puede usar `Json` de libGDX; Jackson soporta records y da línea/columna en errores de datos. |
 | Tests | JUnit Jupiter 6.1.x (D-16) | Versión actual; misma API Jupiter que la 5; pide Java 17+. |
 | Formato | Spotless 8.10.3, aplicado una vez desde la raíz: google-java-format para Java y ktfmt (estilo Google) para `*.gradle.kts` | Formato automático. ⚠️ google-java-format va en la versión que fija Spotless: la 1.37.0 rompe su código de enlace (`NoSuchMethodError` en `Style.valueOf`). Necesita `--add-exports` de `jdk.compiler` en `org.gradle.jvmargs`. |
-| Empaquetado | Construo 2.2.x (plugin Gradle) | Genera Windows/Linux/macOS con JRE recortado **desde Linux**; jpackage obliga a ejecutar en cada SO. |
+| Empaquetado | Construo 2.2.2 (plugin Gradle), Java Temurin 21 recortado con jlink | Genera Windows/Linux/macOS **desde un solo sistema**; jpackage obliga a ejecutar en cada SO. Detalle en §9.1. |
 | Fuente | JetBrains Mono (OFL 1.1) vía gdx-freetype | Monoespaciada, libre, nítida a cualquier escala. Se incluye `OFL.txt`. |
 
 Avisos de compatibilidad:
@@ -47,6 +47,7 @@ java-wave-defense/
 ├── .gitignore
 ├── .java-version                 # versión de Java: única fuente para Gradle y CI
 ├── .github/workflows/ci.yml       # build + tests + spotlessCheck en cada PR y push a main
+├── .github/workflows/package.yml  # zips con Java incluido, solo a mano o con etiqueta v*
 ├── CLAUDE.md
 ├── README.md                      # ejecutar, testear y empaquetar
 ├── build.gradle.kts               # convenciones comunes (toolchain, Spotless, JUnit)
@@ -131,7 +132,7 @@ java-wave-defense/
     ├── DIARIO.md                  # diario: qué se hizo, problemas y soluciones, con capturas
     ├── capturas/                  # capturas de cada fase (faseN-NN-que-se-ve.png)
     ├── BALANCE.md                 # generado por sim-cli; un test exige que esté al día
-    └── STEAM.md                   # fase 7
+    └── STEAM.md                   # publicar en Steam (fase 7)
 ```
 
 Paquete raíz `io.github.yeray06.wavedefense` (convención de gdx-liftoff para
@@ -510,8 +511,9 @@ Así se ve en el propio dato qué es provisional.
 
 Todo lo de Steam pasará por `PlatformServices` (`unlockAchievement`,
 `isCloudEnabled`…); en el MVP, `NoOpPlatformServices`. La nube se hará con
-Auto-Cloud (por rutas), así que el guardado no necesita API. `docs/STEAM.md`
-se escribe en la fase 7.
+Auto-Cloud (por rutas), así que el guardado no necesita API. Los pasos para
+publicar (depots, Auto-Cloud por sistema, steamworks4j, SteamPipe) están en
+`docs/STEAM.md`.
 
 ## 9. Herramientas y CI
 
@@ -532,6 +534,32 @@ se escribe en la fase 7.
   simulado, así que el test instala un `GL20` vacío: comprueba el ciclo de
   vida, no lo que se dibuja.
 - `sim-cli` y `script` existen como módulos vacíos hasta sus fases (2 y 3).
+
+### 9.1 Empaquetado (fase 7)
+
+- `lwjgl3/build.gradle.kts` aplica Construo. `distJar` hace un único jar con
+  el juego, sus librerías, los nativos de los tres sistemas y `assets/`
+  (`*-all.jar`); Construo lo junta con un Java recortado y su lanzador nativo
+  (roast) en un zip por sistema, en `build/dist/`:
+  `packageWinX64`, `packageLinuxX64`, `packageMacM1` y `packageMacX64`.
+- **Java que va dentro**: Temurin `runtimeRelease` (hoy 21.0.8+9), bajado de las
+  *releases* de GitHub de Adoptium con su SHA-256 (api.adoptium.net no siempre
+  es accesible). El build falla si su versión mayor no es la de
+  `.java-version`. Subir de versión = cambiar `runtimeRelease`, las cuatro
+  sumas y, si cambia la mayor, `.java-version`.
+- **Módulos de jlink**: `java.base`, `java.desktop`, `java.logging` y
+  `jdk.unsupported` (lo que usan el juego, libGDX, LWJGL y Jackson). El zip
+  pesa unos 45 MB. Si una versión nueva de una librería pide otro módulo, el
+  juego empaquetado falla al arrancar: se ve en el log y se añade aquí.
+- **macOS**: el lanzador ya arranca en el primer hilo (`runOnFirstThread`) y
+  pasa `-Dwavedefense.relaunched=true` para que `StartupHelper` no relance la
+  JVM (lo haría con `java.management`, que no va en el runtime). La app no
+  está firmada.
+- **Workflow `Package`** (`.github/workflows/package.yml`): solo a mano o con
+  una etiqueta `v*`. Pasa `./gradlew build`, genera los cuatro zips y los deja
+  como *artifacts* 14 días. El CI normal no empaqueta: gasta minutos y no
+  añade nada en cada commit.
+- Publicar en Steam: `docs/STEAM.md`.
 
 ## 10. Reglas del juego tal y como se implementarán
 

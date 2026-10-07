@@ -257,3 +257,25 @@ sola vez, un reto fijo por oleada y una moneda que solo dan los jefes.
 | La fuente no tiene ★. | Las estrellas se marcan con ✓ y ○ (y ●○ en el mapa), que sí tiene; los añadí a los caracteres de la fuente. |
 | «Comprar: 1 estrella» es más largo que «Comprar: 25» y la tienda se salía del panel por la izquierda. | El botón va debajo del texto de cada fila. |
 | El parte de oleada movía la fila del enemigo a la derecha al añadir la línea larga de las estrellas. | La columna del texto se lleva el espacio sobrante. |
+
+## Fase 7 · 7 de octubre · Empaquetado y documentación
+
+**Qué se buscaba**: que el juego se pueda dar a alguien sin que tenga que
+instalar Java ni Gradle, y dejar escrito cómo llevarlo a Steam.
+
+- Un zip por sistema (Windows, Linux, macOS Intel y Apple Silicon) con el
+  juego y su propio Java dentro, de unos 45 MB. Se hacen todos desde Linux con
+  Construo.
+- Un botón en GitHub Actions (*Package*) que los genera y los deja para
+  descargar, sin gastar minutos en cada commit.
+- `docs/STEAM.md` con los pasos para publicar en Steam y un README al día.
+
+![El juego empaquetado, con su propio Java, arrancando](capturas/fase7-01-zip-linux-arranca.png)
+![Y jugando la oleada 1](capturas/fase7-02-zip-linux-oleada.png)
+
+| Problema | Solución |
+|---|---|
+| Construo baja Java de api.adoptium.net, que la red de la sesión bloquea (403). | Cada sistema apunta a las *releases* de GitHub de Adoptium, que sí se pueden bajar, con su SHA-256 para comprobar que el fichero es el bueno. En GitHub Actions también funciona. |
+| En macOS, `StartupHelper` relanza Java con `-XstartOnFirstThread` usando `java.management`, que no va en el Java recortado: la app de Mac habría fallado al arrancar. | El lanzador de Construo ya arranca en el primer hilo; el paquete pasa `-Dwavedefense.relaunched=true` para que no relance. |
+| ¿Funciona de verdad el Java recortado (solo 4 módulos)? | Probado aquí: el zip de Linux, en una carpeta limpia, arranca, guarda la partida, escribe el log y juega una oleada. |
+| No puedo abrir los de Windows ni macOS. | Se generan y su contenido es el esperado (`.exe`, `.app` con `Info.plist`); probarlos queda en «Pendiente de probar en local». |
