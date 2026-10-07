@@ -53,6 +53,7 @@ Valores provisionales (D-12 y siguientes) que el plan no fija. Salen de la lista
 | `data/enemies.json` | `types.BOSS.spawnGapFactor` | 1 |
 | `data/waves.json` | `spawnWindowSeconds` | 20 |
 | `data/waves.json` | `waves` | [{"wave":1,"groups":[{"type":"BASIC","count":8}]},{"wave":2,"groups":[{"type":"BASIC","count":10}]},{"wave":3,"groups… |
+| `data/shop.json` | `syntax[].example` | (no encontrado) |
 | `data/map.json` | `path` | [{"x":0,"y":560},{"x":1000,"y":560},{"x":1000,"y":300},{"x":240,"y":300},{"x":240,"y":80},{"x":500,"y":80}] |
 | `data/map.json` | `turretSlots` | [{"x":620,"y":430},{"x":620,"y":190}] |
 | `data/script-api.json` | `limits.maxStepsPerCycle` | 100000 |

@@ -11,8 +11,8 @@
 | 3b. Revisión de balance (decisiones A y B) | ✅ Fusionada | `phase-3b-rebalance` |
 | 3c. Barrido del Regenerador | ✅ Fusionada | `phase-3c-regenerador` |
 | 3d. Camino a un render 3D (D-40) | ✅ Fusionada | `phase-3d-render-3d` |
-| 4. Juego: camino, torretas, enemigos, bucle | ✅ Hecha, en PR | `phase-4-juego` |
-| 5. Editor, tienda, parte de oleada, informe | Solo con Yeray en casa | — |
+| 4. Juego: camino, torretas, enemigos, bucle | ✅ Fusionada | `phase-4-juego` |
+| 5. Editor, tienda, parte de oleada, informe, mapa | ✅ Hecha, en PR | `phase-5-interfaz` |
 | 6. Guardado, ajustes, robustez | Solo con Yeray en casa | — |
 | 7. Empaquetado y documentación | Solo con Yeray en casa | — |
 
@@ -229,13 +229,42 @@ que parece anticipada, 1,28 s). El simulador supone 1 s: se sostiene.
 D-05 queda cerrada: los disparos al aire molestan, y es lo que se busca,
 porque empujan a programar «dispara solo si hay enemigos».
 
-## Siguiente: fase 5
+## Fase 5 (hecha)
 
-Editor, tienda, parte de oleada e informe. **Necesita que estés en casa**; no
-empiezo sin que me lo digas.
+El bucle del plan ya está entero: parte de oleada → editar y comprar →
+desplegar → informe → avanzar o repetir.
 
-Entra también el **mapa de oleadas** que pidió Yeray (D-49): elegir cualquier
-oleada ya alcanzada, al estilo de un mapa de niveles.
+- `core-sim`: `WaveLoop.setScript` (edición en caliente: el código que
+  compila entra en la siguiente oleada), `selectWave` (mapa, D-50) y
+  `purchased` (rehace la oleada que espera tras una compra). Ejemplos de las
+  tarjetas de la tienda en `shop.json`, validados al cargar (D-53).
+- `game`:
+  - **Editor** (`EditorDocument` + `CodeEditor`): pestaña por torreta,
+    números de línea, colores con el lexer del juego, barra de memoria por
+    instrucción, errores en rojo con su mensaje, cursor, selección,
+    portapapeles, deshacer y sangría automática. Compila al escribir (D-51).
+  - **Tienda**: árbol entero con precios, lo que te quita de encima cada
+    pieza, por qué no se puede comprar algo, hardware con nivel y efecto,
+    tarjeta con ejemplo al comprar.
+  - **Parte de oleada**: enemigos por tipo, cuántos y qué los hace
+    especiales; botón «Desplegar».
+  - **Informe**: dinero desglosado, fugas por tipo y por tramo del camino,
+    y por torreta disparos, recargas, segundos colgada y excepciones con su
+    línea. Se abre solo al acabar la oleada (D-52).
+  - **Mapa de oleadas** (D-49): candados, bandera roja en la actual, jefe
+    destacado; elegir una alcanzada la deja esperando a «Desplegar» (D-50).
+- Tests nuevos: editor (escritura, sangría, selección, deshacer), colores,
+  textos del intérprete, flujo del editor con `WaveLoop`, compra con tarjeta,
+  candados del mapa, parte, informe y la pantalla abriendo el informe sola.
+
+Comprobado aquí con Xvfb y capturas: parte de oleada, editor escribiendo un
+`if` (sangría, colores, «Aún no has desbloqueado if/else», memoria 3/12),
+tienda, mapa con candados y bandera, y el informe al acabar la oleada 1.
+
+## Siguiente: fase 6
+
+Guardado, ajustes y robustez. **Necesita que estés en casa**; no empiezo sin
+que me lo digas. Hasta entonces cada arranque es una partida nueva.
 
 ## Decisiones por revisar
 
@@ -292,6 +321,13 @@ Propuestas mías aplicadas como PROVISIONAL (detalle en
   fugas). La forma del selector la pidió Yeray.
 - **D-48**: el juego avanza y se dibuja mientras se mueve o redimensiona la
   ventana, con cada aviso de GLFW; con el ratón quieto espera.
+- **D-50**: elegir oleada en el mapa abandona la que está en curso sin cobrar
+  ni contar como derrota; la elegida espera a «Desplegar».
+- **D-51**: el código con errores se queda en el editor; la torreta sigue con
+  su última versión buena.
+- **D-52**: paneles a la derecha, uno a la vez, sin parar la oleada; el
+  informe se abre solo si no hay otro panel abierto.
+- **D-53**: los ejemplos de las tarjetas de la tienda los he escrito yo.
 
 Números de balance que no vienen del plan (D-12): están en la lista
 `notFromPlan` de cada JSON y en la sección 2 de `docs/BALANCE.md`.
@@ -313,6 +349,24 @@ deciden con ese dato, no antes.
 
 ## Pendiente de probar en local
 
+Fase 5 (`gradlew.bat :lwjgl3:run`):
+
+- [ ] Parte de oleada en el centro con los enemigos y «Desplegar».
+- [ ] Editor: escribir, borrar, flechas (también mantenidas), Inicio/Fin,
+  selección con Mayús y con el ratón, Ctrl+A/C/X/V, Ctrl+Z/Y, Tab, Intro con
+  sangría, `}` que vuelve atrás. Pegar código desde fuera del juego.
+- [ ] Al escribir algo no comprado sale el error en rojo con su línea; al
+  arreglarlo pone «Compila» y la torreta usa el código nuevo en la siguiente
+  oleada.
+- [ ] Tienda: comprar if/else al llegar a 25, ver la tarjeta con el ejemplo,
+  copiarlo en el editor y ver que la torreta deja de disparar al aire.
+- [ ] Comprar la torreta extra: aparece la segunda torreta y su pestaña en el
+  editor.
+- [ ] Informe al acabar cada oleada; al perder, dice por dónde se colaron.
+- [ ] Mapa: candados, bandera roja, clic en una oleada superada para jugarla.
+- [ ] Los paneles no tapan nada importante a 1280×720 ni con la ventana más
+  grande.
+
 Fase 4 (`gradlew.bat :lwjgl3:run`, Windows con GPU real):
 
 - [x] Se ven el campo y el HUD, «Desplegar» arranca la oleada, la excepción
@@ -321,10 +375,10 @@ Fase 4 (`gradlew.bat :lwjgl3:run`, Windows con GPU real):
 - [x] Al perder una oleada se vuelve a la anterior (Yeray).
 - [x] Cambiar el tamaño de la ventana mantiene el mapa y el juego va bien
   (Yeray). Pedido: que no se congele al mover o redimensionar → D-48.
-- [ ] Selector de velocidad (D-47): con el ratón encima se abre en ×1, ×2 y
+- [x] Selector de velocidad (D-47): con el ratón encima se abre en ×1, ×2 y
   ×3; un clic cambia la velocidad; ×2 y ×3 solo se pueden elegir en oleadas
   superadas sin fugas.
-- [ ] Mover la ventana o cambiar su tamaño con una oleada en marcha: los
+- [x] Mover la ventana o cambiar su tamaño con una oleada en marcha: los
   enemigos siguen moviéndose mientras arrastras (D-48).
 - [ ] 60 fps estables sin tirones (también a ×3).
 

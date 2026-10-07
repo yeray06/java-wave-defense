@@ -57,4 +57,39 @@ class BattleScreenTest {
           skin.dispose();
         });
   }
+
+  @Test
+  void panelsToggleAndTheReportOpensItselfWhenAWaveEnds() {
+    Headless.run(
+        () -> {
+          GameData data = GameTestData.load();
+          Texts texts = Texts.load(Gdx.files.internal("i18n/messages"));
+          Skin skin = UiSkin.create(Gdx.files.internal("fonts/JetBrainsMono-Regular.ttf"));
+          ShapeWorldRenderer world = new ShapeWorldRenderer(data);
+          WaveLoop loop = new WaveLoop(data, Progress.newGame(data));
+          BattleScreen screen =
+              new BattleScreen(
+                  data, texts, skin, loop, world, new ReloadReactionLog(1, 2, line -> {}));
+          screen.resize(1280, 720);
+          screen.toggle(screen.editorPanel());
+          assertTrue(screen.openPanel() == screen.editorPanel());
+          screen.toggle(screen.editorPanel());
+          assertTrue(screen.openPanel() == null);
+
+          loop.deploy();
+          for (int frame = 0; frame < 20_000 && loop.wavesFinished() == 0; frame++) {
+            Battle battle = loop.battle();
+            if (battle.turret(0).ammo() == 0) {
+              loop.manualReload(0);
+            }
+            screen.render(1f / 20);
+          }
+          assertTrue(loop.wavesFinished() > 0, "wave 1 ended");
+          assertTrue(screen.openPanel() != null, "the report opened by itself");
+          screen.render(1f / 60);
+          screen.dispose();
+          world.dispose();
+          skin.dispose();
+        });
+  }
 }

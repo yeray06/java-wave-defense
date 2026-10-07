@@ -42,6 +42,8 @@ cada decisión técnica en una línea. Di sin rodeos cuándo algo es mala idea.
 - Nada de reservar memoria en el bucle caliente (pools).
 - Todo el dibujo del mundo pasa por `WorldRenderer` y solo lee la simulación
   (D-40); la UI (HUD, editor, tienda, informe) va en scene2d.
+- El editor de código tiene su texto en `EditorDocument` (Java puro, con
+  tests) y colorea con el lexer del intérprete: nada de un segundo parser.
 - Steam solo a través de `PlatformServices` (implementación vacía en el MVP).
 - JDK 21 LTS; la versión vive solo en `.java-version` (Gradle y CI la leen). libGDX
   1.14.2 con su LWJGL. Gradle Kotlin DSL. JUnit 6.

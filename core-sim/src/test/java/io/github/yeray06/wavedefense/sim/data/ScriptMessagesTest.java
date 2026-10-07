@@ -51,6 +51,8 @@ class ScriptMessagesTest {
     text("script.memory.rule");
     for (HardwareKind kind : HardwareKind.values()) {
       text("shop.hardware." + kind.name());
+      text("shop.item." + kind.name());
+      text("shop.item." + kind.name() + ".effect");
     }
     for (PurchaseCheck check : PurchaseCheck.values()) {
       if (check != PurchaseCheck.OK) {
@@ -90,6 +92,21 @@ class ScriptMessagesTest {
       // A single quote silently swallows text in MessageFormat (and in libGDX's I18NBundle).
       assertFalse(value.contains("'"), key);
       new MessageFormat(value, Locale.ROOT).format(new Object[] {"a", "b", "c"});
+    }
+  }
+
+  @Test
+  void everyShopPieceSaysWhatItTakesOffYourHands() {
+    for (Feature feature : Feature.values()) {
+      text("shop.relief." + feature.name());
+    }
+  }
+
+  @Test
+  void everyEnemyHasANameAndADescription() {
+    for (EnemyKind kind : EnemyKind.values()) {
+      text("enemy." + kind.name() + ".name");
+      text("enemy." + kind.name() + ".info");
     }
   }
 }

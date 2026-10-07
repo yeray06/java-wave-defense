@@ -74,6 +74,12 @@ class GameDataTest {
     assertRejected(GameData.BALANCE, "\"speeds\": [1, 2, 3]", "\"speeds\": [2, 3]", "start at 1");
     assertRejected(GameData.BALANCE, "\"speeds\": [1, 2, 3]", "\"speeds\": [1, 3, 2]", "grow");
     assertRejected(GameData.SHOP, "\"kind\": \"DAMAGE\"", "\"kind\": \"MEMORY\"", "exactly once");
+    assertRejected(GameData.SHOP, "\"exampleLines\": 5", "\"exampleLines\": 3", "at most 3 lines");
+    assertRejected(
+        GameData.SHOP,
+        "while (hayEnemigos() && municion()",
+        "for (hayEnemigos() && municion()",
+        "example does not compile");
     assertRejected(
         GameData.SHOP,
         "\"untilFeature\": \"WHILE\"",

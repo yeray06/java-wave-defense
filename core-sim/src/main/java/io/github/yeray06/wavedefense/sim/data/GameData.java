@@ -2,10 +2,12 @@ package io.github.yeray06.wavedefense.sim.data;
 
 import io.github.yeray06.wavedefense.script.CompileResult;
 import io.github.yeray06.wavedefense.script.ScriptCompiler;
+import io.github.yeray06.wavedefense.script.api.Feature;
 import io.github.yeray06.wavedefense.script.api.Unlocks;
 import io.github.yeray06.wavedefense.sim.data.ScriptApiLoader.ScriptApiData;
 import io.github.yeray06.wavedefense.sim.economy.Formulas;
 import java.io.IOException;
+import java.util.EnumSet;
 
 /** Every data file, loaded and cross-checked. Immutable; share it freely. */
 public record GameData(
@@ -110,6 +112,24 @@ public record GameData(
     for (ShopConfig.SyntaxItem item : shop.syntax()) {
       if (item.requires() != null && item.inMvp() && !shop.syntax(item.requires()).inMvp()) {
         throw new DataException(SHOP, item.feature() + " is in the MVP but requires a later piece");
+      }
+    }
+    EnumSet<Feature> owned = EnumSet.noneOf(Feature.class);
+    for (ShopConfig.SyntaxItem item : shop.syntax()) {
+      if (!item.inMvp()) {
+        continue;
+      }
+      owned.add(item.feature());
+      if (item.example() == null || item.example().lines().count() > shop.exampleLines()) {
+        throw new DataException(
+            SHOP,
+            item.feature() + " needs an example of at most " + shop.exampleLines() + " lines");
+      }
+      CompileResult example =
+          compiler().compile(item.example(), new Unlocks(owned, 1), turret.memoryLines());
+      if (!example.succeeded()) {
+        throw new DataException(
+            SHOP, item.feature() + " example does not compile: " + example.errors());
       }
     }
     CompileResult initial =

@@ -8,7 +8,6 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import io.github.yeray06.wavedefense.script.api.AmmoType;
-import io.github.yeray06.wavedefense.sim.data.EnemyKind;
 import io.github.yeray06.wavedefense.sim.data.GameData;
 import io.github.yeray06.wavedefense.sim.data.MapConfig;
 import io.github.yeray06.wavedefense.sim.world.Battle;
@@ -53,21 +52,6 @@ public final class ShapeWorldRenderer implements WorldRenderer {
   private static final Color ARMOR_RING = new Color(0.80f, 0.82f, 0.86f, 1f);
   private static final Color BULLET_NORMAL = new Color(1f, 0.92f, 0.55f, 1f);
   private static final Color BULLET_PIERCING = new Color(0.45f, 0.95f, 1f, 1f);
-  private static final Color[] ENEMY = new Color[EnemyKind.values().length];
-  private static final float[] ENEMY_RADIUS = new float[EnemyKind.values().length];
-
-  static {
-    put(EnemyKind.BASIC, new Color(0.85f, 0.40f, 0.40f, 1f), 12);
-    put(EnemyKind.REGENERATOR, new Color(0.40f, 0.85f, 0.50f, 1f), 12);
-    put(EnemyKind.ARMORED, new Color(0.60f, 0.62f, 0.68f, 1f), 14);
-    put(EnemyKind.SWARM, new Color(0.95f, 0.65f, 0.30f, 1f), 7);
-    put(EnemyKind.BOSS, new Color(0.70f, 0.40f, 0.90f, 1f), 26);
-  }
-
-  private static void put(EnemyKind kind, Color color, float radius) {
-    ENEMY[kind.ordinal()] = color;
-    ENEMY_RADIUS[kind.ordinal()] = radius;
-  }
 
   /** Short-lived visual effects started by the battle's events. */
   private enum Effect {
@@ -240,9 +224,8 @@ public final class ShapeWorldRenderer implements WorldRenderer {
       }
       float x = lerp(enemy.prevX(), enemy.x(), alpha);
       float y = lerp(enemy.prevY(), enemy.y(), alpha);
-      int kind = enemy.kind().ordinal();
-      float radius = ENEMY_RADIUS[kind];
-      shapes.setColor(ENEMY[kind]);
+      float radius = EnemyPalette.radius(enemy.kind());
+      shapes.setColor(EnemyPalette.color(enemy.kind()));
       shapes.circle(x, y, radius, 20);
       if (enemy.health() < enemy.maxHealth()) {
         float width = Math.max(16, radius * 2);
@@ -286,7 +269,7 @@ public final class ShapeWorldRenderer implements WorldRenderer {
         shapes.circle(
             lerp(enemy.prevX(), enemy.x(), alpha),
             lerp(enemy.prevY(), enemy.y(), alpha),
-            ENEMY_RADIUS[enemy.kind().ordinal()] + 3,
+            EnemyPalette.radius(enemy.kind()) + 3,
             20);
       }
     }
