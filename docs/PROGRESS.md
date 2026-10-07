@@ -192,7 +192,7 @@ Se juega: `gradlew.bat :lwjgl3:run` abre la pantalla de combate.
     (fogonazo, impacto, baja, fuga, excepción, recarga). Interpola entre
     ticks, tiene la cámara, dice qué torreta hay bajo el puntero y proyecta
     puntos del mundo a pantalla.
-  - HUD en scene2d (D-41): oleada, núcleo, dinero, ×1/×3 (D-43), avance
+  - HUD en scene2d (D-41): oleada, núcleo, dinero, selector ×1/×2/×3 (D-43, D-47), avance
     automático, «Desplegar oleada N», resultado de la última oleada y, encima
     de cada torreta, la excepción con su línea, «Recargando…» o «¡Sin
     balas!».
@@ -285,6 +285,10 @@ Propuestas mías aplicadas como PROVISIONAL (detalle en
 - **D-45**: la medida de la decisión C sale por consola (el log a fichero es
   de la fase 6).
 - **D-46**: UI a 1 píxel por unidad, sin escala configurable hasta la fase 6.
+- **D-47**: ×2 sigue la misma regla que ×3 (solo en oleadas superadas sin
+  fugas). La forma del selector la pidió Yeray.
+- **D-48**: el juego avanza y se dibuja mientras se mueve o redimensiona la
+  ventana, con cada aviso de GLFW; con el ratón quieto espera.
 
 Números de balance que no vienen del plan (D-12): están en la lista
 `notFromPlan` de cada JSON y en la sección 2 de `docs/BALANCE.md`.
@@ -311,11 +315,14 @@ Fase 4 (`gradlew.bat :lwjgl3:run`, Windows con GPU real):
 - [x] Se ven el campo y el HUD, «Desplegar» arranca la oleada, la excepción
   sale encima de la torreta, el clic recarga, se ven los efectos, la oleada 1
   se supera y la consola da la medida de la decisión C (Yeray, Windows 11).
-- [ ] Al perder una oleada se vuelve a la anterior con el avance automático
-  apagado y las repeticiones se encadenan solas; ×3 se activa en oleadas
+- [x] Al perder una oleada se vuelve a la anterior (Yeray).
+- [x] Cambiar el tamaño de la ventana mantiene el mapa y el juego va bien
+  (Yeray). Pedido: que no se congele al mover o redimensionar → D-48.
+- [ ] Selector de velocidad (D-47): con el ratón encima se abre en ×1, ×2 y
+  ×3; un clic cambia la velocidad; ×2 y ×3 solo se pueden elegir en oleadas
   superadas sin fugas.
-- [ ] Cambiar el tamaño de la ventana mantiene el mapa centrado y el clic en
-  la torreta sigue funcionando.
+- [ ] Mover la ventana o cambiar su tamaño con una oleada en marcha: los
+  enemigos siguen moviéndose mientras arrastras (D-48).
 - [ ] 60 fps estables sin tirones (también a ×3).
 
 Anteriores:

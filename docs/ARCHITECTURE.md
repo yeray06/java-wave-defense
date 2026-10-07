@@ -382,7 +382,7 @@ Así se ve en el propio dato qué es provisional.
   `core-sim` con un `FixedStepClock` (ticks enteros; ×3 = tres veces más
   ticks por frame; máximo 5 ticks por frame y unidad de velocidad), pinta el
   mundo con `WorldRenderer` y pone encima un HUD de scene2d: oleada, núcleo,
-  dinero, ×1/×3, avance automático, «Desplegar oleada N» (D-41) y una línea
+  dinero, selector de velocidad ×1/×2/×3 (D-47), avance automático, «Desplegar oleada N» (D-41) y una línea
   con el resultado de la última oleada. Encima de cada torreta, la excepción
   que la colgó con su línea, «Recargando…» o «¡Sin balas!». Un clic izquierdo
   en una torreta la recarga a mano (D-42). Los textos solo se rehacen cuando
@@ -663,6 +663,8 @@ provisional contradice el plan.
 | D-41 | Pantalla de combate antes de la fase 5 | PROVISIONAL | Mientras no existan el parte, el informe ni la tienda: un botón «Desplegar oleada N» hace de parte, una línea con el resultado hace de informe y cada torreta ejecuta su script inicial (D-14). Cada arranque es una partida nueva (el guardado es de la fase 6). |
 | D-42 | Recarga a mano | PROVISIONAL | Clic izquierdo sobre la torreta (su cuadrado más 8 px de margen). Funciona como D-03: también con el cargador lleno y con la torreta colgada (D-03b); no mientras ya recarga. |
 | D-43 | Botón ×3 | PROVISIONAL | El botón guarda lo que pide el jugador; solo se aplica en oleadas superadas sin fugas y en las demás va a ×1 (y el botón se ve desactivado). |
+| D-47 | Selector de velocidad | CERRADA la forma (Yeray); regla de ×2 PROVISIONAL | Plegado muestra la velocidad en uso; con el ratón encima se abre a lo ancho en ×1, ×2 y ×3 y un clic elige. Las velocidades están en `balance.json` (`speeds`; el ×2 no viene del plan). ×2 sigue la misma regla que ×3: solo en oleadas superadas sin fugas. |
+| D-48 | El juego sigue al mover o redimensionar la ventana | PROVISIONAL | En Windows, arrastrar o redimensionar la ventana bloquea el bucle del juego hasta soltar. El lanzador dibuja (y avanza) un frame en cada cambio de posición que GLFW avisa desde ese bucle, como libGDX ya hace al redimensionar, y el juego mide su propio tiempo entre frames (`FrameTimer`) porque el del backend no se actualiza ahí. Con el ratón quieto en mitad del arrastre Windows no avisa y el juego espera. |
 | D-44 | Semilla de cada batalla | PROVISIONAL | Un contador de batallas de la partida: las mismas acciones repiten la misma partida. Hoy solo la usa el objetivo «al azar», que no está activo. |
 | D-45 | Medida de la decisión C | PROVISIONAL | En la oleada 1, segundos reales desde que una torreta se queda sin balas hasta el clic que la recarga, más un resumen al acabar la oleada. Se escribe en la consola (`Gdx.app.log`, etiqueta `wave-defense`); el log a fichero llega en la fase 6. |
 | D-46 | Escala de la UI | PROVISIONAL | `ScreenViewport` a 1 píxel por unidad y fuentes a tamaño fijo (18 y 14 px): nítidas a 1280×720. La escala de UI configurable va con los ajustes (fase 6). |
