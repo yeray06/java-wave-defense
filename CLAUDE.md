@@ -62,7 +62,8 @@ cada decisión técnica en una línea. Di sin rodeos cuándo algo es mala idea.
 - Empaquetado con Construo: `./gradlew :lwjgl3:packageWinX64` (y Linux, Mac)
   deja en `build/dist/` un zip con Java Temurin dentro. Su versión
   (`runtimeRelease` en `lwjgl3/build.gradle.kts`) tiene la misma mayor que
-  `.java-version`. El workflow `Package` solo se lanza a mano o con `v*`.
+  `.java-version`. El workflow `Package` solo se lanza a mano o con una etiqueta
+  `v*`, que además publica una Release con los zips.
 - JDK 21 LTS; la versión vive solo en `.java-version` (Gradle y CI la leen). libGDX
   1.14.2 con su LWJGL. Gradle Kotlin DSL. JUnit 6.
 - Decisiones de diseño cerradas y provisionales: `docs/ARCHITECTURE.md` §12.
