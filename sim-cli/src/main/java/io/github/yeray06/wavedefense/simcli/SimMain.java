@@ -1,7 +1,6 @@
 package io.github.yeray06.wavedefense.simcli;
 
 import io.github.yeray06.wavedefense.sim.data.GameData;
-import io.github.yeray06.wavedefense.sim.economy.Money;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
@@ -58,18 +57,25 @@ public final class SimMain {
     BalanceReport report = new BalanceReport(data, assets, config, player);
     List<DoubleRule.Entry> doubleRuleWithoutCaps =
         new DoubleRule(data.withoutHardwareCaps(), player, config).evaluate(run.beforeBuying());
-    String markdown = report.render(run, doubleRule, doubleRuleWithoutCaps);
+    String markdown =
+        report.render(
+            run,
+            new ProgressionRun(data, player, config, false).run(),
+            doubleRule,
+            doubleRuleWithoutCaps);
 
     out.printf(
-        "Waves played: %d, boss defeated: %s, play time: %.1f min, money left: %d%n",
+        "Waves played: %d, boss defeated: %s, locked at: %s, play time: %.1f min,"
+            + " stars earned: %d, left: %d%n",
         run.rows().size(),
         run.bossDefeated(),
+        run.lockedAt(),
         run.playSeconds() / 60,
-        Money.wholeUnits(run.finalProgress().moneyCents()));
+        run.finalProgress().starsEarned(),
+        run.finalProgress().stars());
     for (ProgressionRun.Wall wall : run.walls()) {
       out.printf(
-          "Wall at wave %d: %d attempts, %d passes%n",
-          wall.wave(), wall.attempts(), wall.farmedWaves());
+          "Wall at wave %d: %d attempts, %d passes%n", wall.wave(), wall.attempts(), wall.passes());
     }
     for (DoubleRule.Entry e : doubleRule) {
       DoubleRule.Entry free =

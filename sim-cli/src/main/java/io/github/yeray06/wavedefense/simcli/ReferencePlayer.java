@@ -48,15 +48,7 @@ final class ReferencePlayer {
    * double rule tries each choice so the comparison is fair.
    */
   List<ChosenScript> variants(Unlocks unlocks) {
-    int level = level(unlocks);
-    List<String> candidates = new ArrayList<>();
-    for (int l = level; l >= 0; l--) {
-      candidates.add("L" + l + "-ammo");
-    }
-    for (int l = level; l >= 0; l--) {
-      candidates.add("L" + l);
-    }
-    for (String base : candidates) {
+    for (String base : candidates(level(unlocks))) {
       List<ChosenScript> found = new ArrayList<>();
       for (String suffix : new String[] {"", "-b", "-c"}) {
         String name = base + suffix;
@@ -74,6 +66,38 @@ final class ReferencePlayer {
       }
     }
     throw new IllegalStateException("no reference script compiles with " + unlocks);
+  }
+
+  /**
+   * Every reference script these unlocks compile, strongest first: what a player could write when a
+   * code challenge asks for something else than the best script.
+   */
+  List<ChosenScript> allScripts(Unlocks unlocks) {
+    List<ChosenScript> found = new ArrayList<>();
+    for (String base : candidates(level(unlocks))) {
+      for (String suffix : new String[] {"", "-b", "-c"}) {
+        String source = resource(base + suffix);
+        if (source == null) {
+          continue;
+        }
+        CompileResult result = compiler.compile(source, unlocks, data.turret().memoryLines());
+        if (result.succeeded()) {
+          found.add(new ChosenScript(base + suffix, source, result.memoryUsed(), unlocks));
+        }
+      }
+    }
+    return found;
+  }
+
+  private static List<String> candidates(int level) {
+    List<String> candidates = new ArrayList<>();
+    for (int l = level; l >= 0; l--) {
+      candidates.add("L" + l + "-ammo");
+    }
+    for (int l = level; l >= 0; l--) {
+      candidates.add("L" + l);
+    }
+    return candidates;
   }
 
   /** How many shop pieces, in the plan's order, are owned without gaps. */
