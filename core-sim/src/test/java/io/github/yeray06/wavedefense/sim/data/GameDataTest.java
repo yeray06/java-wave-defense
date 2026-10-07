@@ -59,6 +59,16 @@ class GameDataTest {
         "\"type\": \"SWARM\", \"count\": 10 }, { \"type\": \"ARMORED\", \"count\": 3 }",
         "\"type\": \"SWARM\", \"count\": 5 }, { \"type\": \"ARMORED\", \"count\": 8 }",
         "groups of 10");
+    assertRejected(
+        GameData.WAVES,
+        "{ \"type\": \"MAX_MEMORY\", \"limit\": 4 }",
+        "{ \"type\": \"MAX_MEMORY\", \"limit\": 40 }",
+        "memory challenge");
+    assertRejected(
+        GameData.WAVES,
+        "{ \"type\": \"NO_AIR_SHOTS\", \"limit\": 0 }",
+        "{ \"type\": \"NO_AIR_SHOTS\", \"limit\": 3 }",
+        "takes no limit");
     assertRejected(GameData.ENEMIES, "\"speed\": 80", "\"speed\": 0", "speed must be positive");
     assertRejected(
         GameData.ENEMIES,

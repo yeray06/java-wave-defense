@@ -44,6 +44,9 @@ public final class WaveLoop {
   private long battlesBuilt;
   private long revision;
 
+  /** The most memory any turret's code takes in the battle built: for the code challenge. */
+  private int memoryUsed;
+
   /** Starts from {@code progress}; every turret runs the data's initial script (D-14). */
   public WaveLoop(GameData data, Progress progress) {
     this.data = data;
@@ -83,7 +86,7 @@ public final class WaveLoop {
     battle.tick();
     if (battle.finished()) {
       lastReport = battle.report();
-      lastOutcome = progression.apply(progress, lastReport);
+      lastOutcome = progression.apply(progress, lastReport, memoryUsed);
       wavesFinished++;
       revision++;
       next();
@@ -181,10 +184,9 @@ public final class WaveLoop {
    * @return false for a wave not reached yet
    */
   public boolean selectWave(int wave) {
-    if (wave < 1 || wave > progress.highestWaveReached()) {
+    if (!progress.goTo(wave)) {
       return false;
     }
-    progress.currentWave = wave;
     revision++;
     build(true);
     return true;
@@ -240,8 +242,11 @@ public final class WaveLoop {
 
   private void build(boolean wait) {
     List<CompiledScript> scripts = new ArrayList<>();
+    memoryUsed = 0;
     for (int i = 0; i < progress.turretCount(); i++) {
-      scripts.add(compile(sources.get(i)).script().orElse(null));
+      CompileResult compiled = compile(sources.get(i));
+      scripts.add(compiled.script().orElse(null));
+      memoryUsed = Math.max(memoryUsed, compiled.memoryUsed());
     }
     battle =
         new Battle(

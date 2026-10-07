@@ -23,7 +23,6 @@ public record EnemyCatalog(
   public record EnemyType(
       int speed,
       double healthMultiplier,
-      double rewardMultiplier,
       boolean armored,
       double regenDelaySeconds,
       double regenFractionPerSecond,
@@ -36,7 +35,6 @@ public record EnemyCatalog(
     public EnemyType {
       Check.positive("speed", speed);
       Check.positive("healthMultiplier", healthMultiplier);
-      Check.atLeastZero("rewardMultiplier", rewardMultiplier);
       Check.atLeastZero("regenDelaySeconds", regenDelaySeconds);
       Check.atLeastZero("regenFractionPerSecond", regenFractionPerSecond);
       Check.positive("groupSize", groupSize);

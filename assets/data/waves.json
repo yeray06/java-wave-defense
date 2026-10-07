@@ -1,16 +1,16 @@
 {
-  "notFromPlan": ["spawnWindowSeconds", "waves"],
+  "notFromPlan": ["spawnWindowSeconds", "waves", "waves[].challenge"],
   "spawnWindowSeconds": 20,
   "waves": [
-    { "wave": 1, "groups": [{ "type": "BASIC", "count": 8 }] },
-    { "wave": 2, "groups": [{ "type": "BASIC", "count": 10 }] },
-    { "wave": 3, "groups": [{ "type": "BASIC", "count": 12 }] },
-    { "wave": 4, "groups": [{ "type": "BASIC", "count": 5 }, { "type": "REGENERATOR", "count": 4 }, { "type": "BASIC", "count": 5 }] },
-    { "wave": 5, "groups": [{ "type": "BASIC", "count": 5 }, { "type": "REGENERATOR", "count": 6 }, { "type": "BASIC", "count": 5 }] },
-    { "wave": 6, "groups": [{ "type": "BASIC", "count": 4 }, { "type": "ARMORED", "count": 5 }, { "type": "REGENERATOR", "count": 5 }, { "type": "BASIC", "count": 4 }] },
-    { "wave": 7, "groups": [{ "type": "BASIC", "count": 4 }, { "type": "ARMORED", "count": 6 }, { "type": "REGENERATOR", "count": 6 }, { "type": "BASIC", "count": 4 }] },
-    { "wave": 8, "groups": [{ "type": "BASIC", "count": 3 }, { "type": "REGENERATOR", "count": 3 }, { "type": "SWARM", "count": 10 }, { "type": "ARMORED", "count": 3 }, { "type": "BASIC", "count": 3 }] },
-    { "wave": 9, "groups": [{ "type": "BASIC", "count": 2 }, { "type": "ARMORED", "count": 6 }, { "type": "SWARM", "count": 10 }, { "type": "REGENERATOR", "count": 4 }, { "type": "BASIC", "count": 2 }] },
-    { "wave": 10, "groups": [{ "type": "BASIC", "count": 3 }, { "type": "REGENERATOR", "count": 5 }, { "type": "SWARM", "count": 10 }, { "type": "ARMORED", "count": 5 }, { "type": "BASIC", "count": 3 }, { "type": "BOSS", "count": 1 }] }
+    { "wave": 1, "groups": [{ "type": "BASIC", "count": 8 }], "challenge": { "type": "NO_AIR_SHOTS", "limit": 0 } },
+    { "wave": 2, "groups": [{ "type": "BASIC", "count": 10 }], "challenge": { "type": "NO_MANUAL_RELOADS", "limit": 0 } },
+    { "wave": 3, "groups": [{ "type": "BASIC", "count": 12 }], "challenge": { "type": "MAX_MEMORY", "limit": 4 } },
+    { "wave": 4, "groups": [{ "type": "BASIC", "count": 5 }, { "type": "REGENERATOR", "count": 4 }, { "type": "BASIC", "count": 5 }], "challenge": { "type": "NO_WASTED_SHOTS", "limit": 0 } },
+    { "wave": 5, "groups": [{ "type": "BASIC", "count": 5 }, { "type": "REGENERATOR", "count": 6 }, { "type": "BASIC", "count": 5 }], "challenge": { "type": "MAX_SHOTS", "limit": 52 } },
+    { "wave": 6, "groups": [{ "type": "BASIC", "count": 4 }, { "type": "ARMORED", "count": 5 }, { "type": "REGENERATOR", "count": 5 }, { "type": "BASIC", "count": 4 }], "challenge": { "type": "MAX_MEMORY", "limit": 10 } },
+    { "wave": 7, "groups": [{ "type": "BASIC", "count": 4 }, { "type": "ARMORED", "count": 6 }, { "type": "REGENERATOR", "count": 6 }, { "type": "BASIC", "count": 4 }], "challenge": { "type": "MAX_SHOTS", "limit": 100 } },
+    { "wave": 8, "groups": [{ "type": "BASIC", "count": 3 }, { "type": "REGENERATOR", "count": 3 }, { "type": "SWARM", "count": 10 }, { "type": "ARMORED", "count": 3 }, { "type": "BASIC", "count": 3 }], "challenge": { "type": "MAX_SHOTS", "limit": 90 } },
+    { "wave": 9, "groups": [{ "type": "BASIC", "count": 2 }, { "type": "ARMORED", "count": 6 }, { "type": "SWARM", "count": 10 }, { "type": "REGENERATOR", "count": 4 }, { "type": "BASIC", "count": 2 }], "challenge": { "type": "MAX_MEMORY", "limit": 9 } },
+    { "wave": 10, "groups": [{ "type": "BASIC", "count": 3 }, { "type": "REGENERATOR", "count": 5 }, { "type": "SWARM", "count": 10 }, { "type": "ARMORED", "count": 5 }, { "type": "BASIC", "count": 3 }, { "type": "BOSS", "count": 1 }], "challenge": { "type": "NO_FAULTS", "limit": 0 } }
   ]
 }

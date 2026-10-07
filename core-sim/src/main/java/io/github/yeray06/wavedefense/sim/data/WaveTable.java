@@ -12,10 +12,14 @@ public record WaveTable(List<String> notFromPlan, double spawnWindowSeconds, Lis
     }
   }
 
-  public record WaveSpec(int wave, List<Group> groups) {
+  /**
+   * @param challenge the code challenge for the wave's third star (D-57)
+   */
+  public record WaveSpec(int wave, List<Group> groups, Challenge challenge) {
     public WaveSpec {
       Check.positive("wave", wave);
       groups = List.copyOf(Check.notEmpty("groups", groups));
+      Check.present("challenge of wave " + wave, challenge);
     }
 
     /** Enemies the plan's formula counts: everyone but the boss. */

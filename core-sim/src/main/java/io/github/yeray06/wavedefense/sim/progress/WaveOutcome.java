@@ -1,22 +1,29 @@
 package io.github.yeray06.wavedefense.sim.progress;
 
+import java.util.List;
+
 /**
- * What a finished wave paid and where the player goes next.
+ * What a finished wave earned and where the player goes next (D-57).
  *
- * @param killCents money from kills (also paid on defeat)
- * @param perfectBonusCents the plan's +25 % for a wave without leaks
- * @param bossBonusCents first-kill or repeat-kill payment for the boss
+ * @param challengeMet whether this run met the wave's code challenge, earned before or not
+ * @param newGoals goals met for the first time: one star each
+ * @param trophies boss trophies earned: the first kill of a boss only
  */
 public record WaveOutcome(
     int wave,
     boolean won,
     boolean perfect,
-    long killCents,
-    long perfectBonusCents,
-    long bossBonusCents,
+    boolean challengeMet,
+    List<Goal> newGoals,
+    int trophies,
     int nextWave) {
 
-  public long totalCents() {
-    return killCents + perfectBonusCents + bossBonusCents;
+  public WaveOutcome {
+    newGoals = List.copyOf(newGoals);
+  }
+
+  /** Stars earned by this wave. */
+  public int stars() {
+    return newGoals.size();
   }
 }

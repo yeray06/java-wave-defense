@@ -7,7 +7,6 @@ import java.util.List;
 /**
  * What happened in one wave: the data for the after-wave report (plan, "Informe" and "Derrota").
  *
- * @param earnedCents money from kills only; bonuses are added by the progression rules
  * @param ticks how long the wave lasted, in simulation ticks
  */
 public record WaveReport(
@@ -18,7 +17,6 @@ public record WaveReport(
     List<Leak> leaks,
     boolean bossKilled,
     boolean bossLeaked,
-    long earnedCents,
     int ticks,
     List<TurretReport> turrets) {
 
@@ -45,6 +43,8 @@ public record WaveReport(
   /**
    * @param airShots shots fired with no enemy in range
    * @param wastedOnDead bullets whose target died before they arrived
+   * @param reloads every reload, by code or by hand
+   * @param manualReloads reloads the player clicked
    * @param hungTicks ticks spent hung after exceptions
    */
   public record TurretReport(
@@ -52,6 +52,7 @@ public record WaveReport(
       int airShots,
       int wastedOnDead,
       int reloads,
+      int manualReloads,
       int hungTicks,
       List<FaultCount> faults) {
     public TurretReport {

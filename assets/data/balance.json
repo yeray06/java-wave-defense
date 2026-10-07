@@ -1,14 +1,12 @@
 {
-  "notFromPlan": ["ticksPerSecond", "startingMoney", "boss.repeatKillRewardInEnemies", "speeds[1]"],
+  "notFromPlan": ["ticksPerSecond", "speeds[1]", "startingStars"],
   "ticksPerSecond": 60,
   "enemyHealth": { "base": 10, "growthPerWave": 1.18 },
-  "rewardPerEnemy": { "base": 2, "growthPerWave": 1.15 },
   "enemyCount": { "base": 6, "perWave": 2, "max": 60 },
   "coreLivesPerWave": 10,
-  "perfectWaveBonus": 0.25,
-  "boss": { "everyWaves": 10, "firstKillRewardInWaves": 3, "repeatKillRewardInEnemies": 20 },
+  "boss": { "everyWaves": 10 },
   "lastWave": 10,
   "startingTurrets": 1,
-  "startingMoney": 0,
+  "startingStars": 0,
   "speeds": [1, 2, 3]
 }

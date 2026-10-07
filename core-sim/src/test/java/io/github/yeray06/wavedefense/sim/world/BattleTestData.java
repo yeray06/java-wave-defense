@@ -1,6 +1,7 @@
 package io.github.yeray06.wavedefense.sim.world;
 
 import io.github.yeray06.wavedefense.sim.TestData;
+import io.github.yeray06.wavedefense.sim.data.Challenge;
 import io.github.yeray06.wavedefense.sim.data.EnemyKind;
 import io.github.yeray06.wavedefense.sim.data.GameData;
 import io.github.yeray06.wavedefense.sim.data.WaveTable;
@@ -17,7 +18,11 @@ final class BattleTestData {
         new WaveTable(
             List.of(),
             d.waves().spawnWindowSeconds(),
-            List.of(new WaveTable.WaveSpec(1, List.of(new WaveTable.Group(kind, count)))));
+            List.of(
+                new WaveTable.WaveSpec(
+                    1,
+                    List.of(new WaveTable.Group(kind, count)),
+                    new Challenge(Challenge.Type.NO_FAULTS, 0))));
     return new GameData(
         d.balance(), d.turret(), d.enemies(), waves, d.shop(), d.map(), d.scriptApi(), d.manual());
   }
