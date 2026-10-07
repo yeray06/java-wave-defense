@@ -56,7 +56,7 @@ class ShapeWorldRendererTest {
 
   /** A new game with the second turret bought (shop caps lifted), so both slots are drawn. */
   private static WaveLoop twoTurrets() {
-    Progress progress = Progress.newGame(GameTestData.load()).copyWithMoney(1_000_000);
+    Progress progress = Progress.newGame(GameTestData.load()).copyWithStars(1_000);
     Shop shop = new Shop(GameTestData.load().withoutHardwareCaps());
     assertEquals(PurchaseCheck.OK, shop.buy(progress, HardwareKind.EXTRA_TURRET));
     return new WaveLoop(GameTestData.load(), progress);

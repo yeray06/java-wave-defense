@@ -45,7 +45,6 @@ public final class ManualFacts {
     put("alcance", Math.round(turret.rangeUnits()));
     put("vueltas", data.scriptApi().limits().maxLoopIterations());
     put("vidas", balance.coreLivesPerWave());
-    put("perfecta", balance.perfectWaveBonus() * 100);
     put("oleadas", balance.lastWave());
     put("velocidadMax", Collections.max(balance.speeds()));
     put("camino", Math.round(new PathTrack(data.map().path()).length()));

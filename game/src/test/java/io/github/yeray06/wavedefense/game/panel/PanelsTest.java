@@ -28,6 +28,7 @@ import io.github.yeray06.wavedefense.script.api.Feature;
 import io.github.yeray06.wavedefense.script.diag.FaultType;
 import io.github.yeray06.wavedefense.sim.data.EnemyKind;
 import io.github.yeray06.wavedefense.sim.data.GameData;
+import io.github.yeray06.wavedefense.sim.progress.Goal;
 import io.github.yeray06.wavedefense.sim.progress.Progress;
 import io.github.yeray06.wavedefense.sim.progress.WaveLoop;
 import io.github.yeray06.wavedefense.sim.progress.WaveOutcome;
@@ -79,7 +80,7 @@ class PanelsTest {
   void theEditorCompilesAsYouTypeAndOnlyCompilingCodeReachesTheTurret() {
     withUi(
         (data, names, skin, stage) -> {
-          Progress progress = Progress.newGame(data).copyWithMoney(100_00);
+          Progress progress = Progress.newGame(data).copyWithStars(100);
           WaveLoop loop = new WaveLoop(data, progress);
           EditorPanel editor = new EditorPanel(loop, names, skin, 2);
           stage.addActor(editor);
@@ -105,14 +106,33 @@ class PanelsTest {
   void theShopSellsTheNextPieceShowsItsCardAndKeepsTheRestLocked() {
     withUi(
         (data, names, skin, stage) -> {
-          Progress progress = Progress.newGame(data).copyWithMoney(100_00);
+          Progress progress = Progress.newGame(data).copyWithStars(100);
           List<Object> bought = new ArrayList<>();
           ShopPanel shop = new ShopPanel(data, progress, names, skin, bought::add);
           stage.addActor(shop);
           shop.rebuild();
-          TextButton buyIf = button(shop, names.texts().format("shop.buy", 25));
+          var prices = new io.github.yeray06.wavedefense.sim.progress.Shop(data);
+          TextButton buyIf =
+              button(
+                  shop,
+                  names.texts().format("shop.buy", names.stars(prices.price(Feature.IF_ELSE))));
           assertFalse(buyIf.isDisabled());
-          TextButton buyWhile = button(shop, names.texts().format("shop.buy", 200));
+          assertTrue(
+              all(shop).stream()
+                  .anyMatch(
+                      a ->
+                          a instanceof Label l
+                              && l.getText()
+                                  .toString()
+                                  .equals(
+                                      names
+                                          .texts()
+                                          .format(
+                                              "shop.wallet", names.stars(100), names.trophies(0)))),
+              "the wallet shows stars and trophies");
+          TextButton buyWhile =
+              button(
+                  shop, names.texts().format("shop.buy", names.stars(prices.price(Feature.WHILE))));
           assertTrue(buyWhile.isDisabled(), "while needs && first");
 
           buyIf.fire(new ChangeListener.ChangeEvent());
@@ -129,7 +149,7 @@ class PanelsTest {
   void theShopKeepsItsScrollWhenItIsRebuilt() {
     withUi(
         (data, names, skin, stage) -> {
-          Progress progress = Progress.newGame(data).copyWithMoney(1_000_00);
+          Progress progress = Progress.newGame(data).copyWithStars(1_000);
           ShopPanel shop = new ShopPanel(data, progress, names, skin, item -> {});
           com.badlogic.gdx.scenes.scene2d.ui.ScrollPane scroll =
               new com.badlogic.gdx.scenes.scene2d.ui.ScrollPane(shop, skin);
@@ -141,7 +161,16 @@ class PanelsTest {
           scroll.updateVisualScroll();
           float bottom = scroll.getScrollY();
           assertTrue(bottom > 0, "the shop is taller than its window");
-          button(shop, names.texts().format("shop.buy", 25)).fire(new ChangeListener.ChangeEvent());
+          button(
+                  shop,
+                  names
+                      .texts()
+                      .format(
+                          "shop.buy",
+                          names.stars(
+                              new io.github.yeray06.wavedefense.sim.progress.Shop(data)
+                                  .price(Feature.IF_ELSE))))
+              .fire(new ChangeListener.ChangeEvent());
           // The bought piece's row got shorter, so the bottom is a little higher now.
           assertEquals(
               Math.min(bottom, scroll.getMaxY()),
@@ -151,7 +180,7 @@ class PanelsTest {
           assertTrue(scroll.getScrollY() > 0, "not back at the top");
           float after = scroll.getScrollY();
           shop.rebuild();
-          assertEquals(after, scroll.getScrollY(), 0.5f, "so does money coming in");
+          assertEquals(after, scroll.getScrollY(), 0.5f, "so do stars coming in");
         });
   }
 
@@ -184,7 +213,7 @@ class PanelsTest {
   void theManualListsEveryPageLocksWhatIsNotOwnedAndCopiesItsExamples() {
     withUi(
         (data, names, skin, stage) -> {
-          Progress progress = Progress.newGame(data).copyWithMoney(100_00);
+          Progress progress = Progress.newGame(data).copyWithStars(100);
           String[] copied = {null};
           Clipboard clipboard =
               new Clipboard() {
@@ -311,7 +340,8 @@ class PanelsTest {
     withUi(
         (data, names, skin, stage) -> {
           List<Integer> deployed = new ArrayList<>();
-          BriefingPanel briefing = new BriefingPanel(data, names, skin, () -> deployed.add(1));
+          BriefingPanel briefing =
+              new BriefingPanel(data, Progress.newGame(data), names, skin, () -> deployed.add(1));
           briefing.show(10);
           List<String> texts = new ArrayList<>();
           for (Actor actor : all(briefing)) {
@@ -324,6 +354,10 @@ class PanelsTest {
                   names.texts().format("briefing.group", 1, names.enemyName(EnemyKind.BOSS))),
               texts.toString());
           assertTrue(texts.stream().anyMatch(t -> t.contains(names.enemyInfo(EnemyKind.ARMORED))));
+          assertTrue(
+              texts.contains(
+                  names.goalLine(Goal.CHALLENGE, data.waves().wave(10).challenge(), false)),
+              "the briefing shows the challenge, not met yet");
           button(briefing, names.texts().format("hud.deploy", 10))
               .fire(new ChangeListener.ChangeEvent());
           assertEquals(List.of(1), deployed);
@@ -331,7 +365,7 @@ class PanelsTest {
   }
 
   @Test
-  void theReportExplainsMoneyLeaksAndExceptions() {
+  void theReportExplainsStarsLeaksAndExceptions() {
     withUi(
         (data, names, skin, stage) -> {
           WaveReport report =
@@ -346,7 +380,6 @@ class PanelsTest {
                       new WaveReport.Leak(EnemyKind.BASIC, 1, -1)),
                   false,
                   false,
-                  1_234,
                   2_700,
                   List.of(
                       new WaveReport.TurretReport(
@@ -354,13 +387,28 @@ class PanelsTest {
                           6,
                           2,
                           3,
+                          0,
                           360,
                           List.of(new WaveReport.FaultCount(FaultType.NO_AMMO, 1, 2)))));
-          WaveOutcome outcome = new WaveOutcome(4, false, false, 1_234, 0, 0, 3);
-          List<ReportLines.Line> lines = ReportLines.build(report, outcome, names, 60, 2_500);
+          WaveOutcome outcome = new WaveOutcome(4, false, false, false, 30, List.of(), 0, 3);
+          var challenge =
+              new io.github.yeray06.wavedefense.sim.data.Challenge(
+                  io.github.yeray06.wavedefense.sim.data.Challenge.Type.MAX_SHOTS, 20);
+          List<ReportLines.Line> lines =
+              ReportLines.build(
+                  report, outcome, Progress.newGame(data), challenge, names, 60, 2_500);
           List<String> texts = lines.stream().map(ReportLines.Line::text).toList();
           assertEquals(names.texts().format("report.title.lost", 4), texts.get(0));
-          assertTrue(texts.contains(names.texts().format("report.money", 12)));
+          assertTrue(texts.contains(names.texts().get("report.stars.none")));
+          assertTrue(
+              texts.contains(
+                  names
+                      .texts()
+                      .format(
+                          "report.challenge.got",
+                          names.goalLine(Goal.CHALLENGE, challenge, false),
+                          30)),
+              "a missed challenge says how far off it was");
           assertTrue(texts.contains(names.texts().format("report.next.lost", 3)));
           assertTrue(texts.contains(names.texts().format("report.leaks", 3)));
           assertTrue(
@@ -382,6 +430,49 @@ class PanelsTest {
           ReportPanel panel = new ReportPanel(skin, new Label("", skin));
           panel.show(lines);
           assertEquals(lines.size(), panel.getChildren().size);
+        });
+  }
+
+  @Test
+  void aWonWaveReportsItsNewStarsAndTheMapShowsThem() {
+    withUi(
+        (data, names, skin, stage) -> {
+          Progress progress = Progress.newGame(data);
+          WaveReport report =
+              new WaveReport(
+                  1,
+                  true,
+                  8,
+                  8,
+                  List.of(),
+                  false,
+                  false,
+                  1_200,
+                  List.of(new WaveReport.TurretReport(8, 0, 0, 1, 0, 0, List.of())));
+          WaveOutcome outcome =
+              new io.github.yeray06.wavedefense.sim.progress.Progression(data)
+                  .apply(progress, report, 4);
+          var challenge = data.waves().wave(1).challenge();
+          List<String> texts =
+              ReportLines.build(report, outcome, progress, challenge, names, 60, 2_500).stream()
+                  .map(ReportLines.Line::text)
+                  .toList();
+          assertTrue(texts.contains(names.texts().format("report.stars", names.stars(3))));
+          for (Goal goal : Goal.values()) {
+            assertTrue(
+                texts.contains(
+                    names.texts().format("report.goal.new", names.goalLine(goal, challenge, true))),
+                texts.toString());
+          }
+
+          MapPanel map = new MapPanel(data, progress, names.texts(), skin, wave -> {});
+          stage.addActor(map);
+          map.act(0);
+          String all = names.texts().get("map.star.on").repeat(3);
+          assertTrue(
+              all(map).stream()
+                  .anyMatch(a -> a instanceof Label l && l.getText().toString().equals(all)),
+              "wave 1 shows its three stars");
         });
   }
 }

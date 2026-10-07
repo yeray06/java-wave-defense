@@ -1,6 +1,7 @@
 package io.github.yeray06.wavedefense.sim.progress;
 
 import io.github.yeray06.wavedefense.sim.data.BalanceConfig;
+import io.github.yeray06.wavedefense.sim.data.Challenge;
 import io.github.yeray06.wavedefense.sim.data.GameData;
 import io.github.yeray06.wavedefense.sim.data.WaveTable;
 import io.github.yeray06.wavedefense.sim.world.WaveReport;
@@ -30,7 +31,8 @@ public final class Progression {
       throw new IllegalArgumentException(
           "report is for wave " + wave + " but the player is at wave " + progress.currentWave);
     }
-    boolean challengeMet = ChallengeJudge.met(waves.wave(wave).challenge(), report, memoryUsed);
+    Challenge challenge = waves.wave(wave).challenge();
+    boolean challengeMet = ChallengeJudge.met(challenge, report, memoryUsed);
     List<Goal> newGoals = new ArrayList<>();
     if (report.won()) {
       earn(progress, wave, Goal.CLEAR, true, newGoals);
@@ -59,6 +61,7 @@ public final class Progression {
         report.won(),
         report.perfect(),
         challengeMet,
+        ChallengeJudge.measure(challenge, report, memoryUsed),
         newGoals,
         trophies,
         progress.currentWave);

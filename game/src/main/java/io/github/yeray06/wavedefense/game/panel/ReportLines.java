@@ -2,8 +2,10 @@ package io.github.yeray06.wavedefense.game.panel;
 
 import io.github.yeray06.wavedefense.game.i18n.ScriptTexts;
 import io.github.yeray06.wavedefense.game.i18n.Texts;
+import io.github.yeray06.wavedefense.sim.data.Challenge;
 import io.github.yeray06.wavedefense.sim.data.EnemyKind;
-import io.github.yeray06.wavedefense.sim.economy.Money;
+import io.github.yeray06.wavedefense.sim.progress.Goal;
+import io.github.yeray06.wavedefense.sim.progress.Progress;
 import io.github.yeray06.wavedefense.sim.progress.WaveOutcome;
 import io.github.yeray06.wavedefense.sim.world.WaveReport;
 import java.util.ArrayList;
@@ -13,9 +15,9 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * The after-wave report as text (plan, "Informe" and "Derrota y reinicio"): money and where it came
- * from, the enemies that got through and by which part of the path, and per turret its shots, the
- * exceptions with their line and how long it hung.
+ * The after-wave report as text (plan, "Informe" and "Derrota y reinicio"): the stars earned and
+ * the wave's three goals (D-57), the enemies that got through and by which part of the path, and
+ * per turret its shots, the exceptions with their line and how long it hung.
  */
 public final class ReportLines {
   /** How a line is shown. */
@@ -45,6 +47,8 @@ public final class ReportLines {
   public static List<Line> build(
       WaveReport report,
       WaveOutcome outcome,
+      Progress progress,
+      Challenge challenge,
       ScriptTexts names,
       int ticksPerSecond,
       double pathLength) {
@@ -57,26 +61,22 @@ public final class ReportLines {
     lines.add(new Line(texts.format(title, report.wave()), Kind.TITLE));
 
     lines.add(
-        new Line(texts.format("report.money", Money.wholeUnits(outcome.totalCents())), Kind.GOOD));
-    lines.add(
-        new Line(
-            texts.format(
-                "report.money.kills", report.kills(), Money.wholeUnits(outcome.killCents())),
-            Kind.TEXT,
-            true));
-    if (outcome.perfectBonusCents() > 0) {
-      lines.add(
-          new Line(
-              texts.format("report.money.perfect", Money.wholeUnits(outcome.perfectBonusCents())),
-              Kind.TEXT,
-              true));
+        outcome.stars() > 0
+            ? new Line(texts.format("report.stars", names.stars(outcome.stars())), Kind.GOOD)
+            : new Line(texts.get("report.stars.none"), Kind.TEXT));
+    for (Goal goal : Goal.values()) {
+      boolean met = progress.met(report.wave(), goal);
+      String text = names.goalLine(goal, challenge, met);
+      if (goal == Goal.CHALLENGE && !outcome.challengeMet()) {
+        text = texts.format("report.challenge.got", text, outcome.challengeValue());
+      }
+      if (outcome.newGoals().contains(goal)) {
+        text = texts.format("report.goal.new", text);
+      }
+      lines.add(new Line(text, met ? Kind.GOOD : Kind.TEXT, true));
     }
-    if (outcome.bossBonusCents() > 0) {
-      lines.add(
-          new Line(
-              texts.format("report.money.boss", Money.wholeUnits(outcome.bossBonusCents())),
-              Kind.TEXT,
-              true));
+    if (outcome.trophies() > 0) {
+      lines.add(new Line(texts.format("report.trophy", progress.trophies()), Kind.GOOD));
     }
     if (!outcome.won()) {
       lines.add(new Line(texts.format("report.next.lost", outcome.nextWave()), Kind.WARNING));

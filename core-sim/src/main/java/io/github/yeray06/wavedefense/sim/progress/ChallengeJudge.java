@@ -12,16 +12,22 @@ public final class ChallengeJudge {
    * @param memoryUsed the most memory lines any turret's code took in the wave
    */
   public static boolean met(Challenge challenge, WaveReport report, int memoryUsed) {
-    if (!report.won()) {
-      return false;
-    }
+    return report.won() && measure(challenge, report, memoryUsed) <= challenge.limit();
+  }
+
+  /**
+   * What the challenge counts in this wave: air shots, exceptions, manual reloads, memory lines,
+   * shots or wasted bullets. It is met when this is at most the challenge's limit (0 for the "no…"
+   * challenges).
+   */
+  public static int measure(Challenge challenge, WaveReport report, int memoryUsed) {
     return switch (challenge.type()) {
-      case NO_AIR_SHOTS -> sum(report, WaveReport.TurretReport::airShots) == 0;
-      case NO_FAULTS -> sum(report, WaveReport.TurretReport::faultCount) == 0;
-      case NO_MANUAL_RELOADS -> sum(report, WaveReport.TurretReport::manualReloads) == 0;
-      case MAX_MEMORY -> memoryUsed <= challenge.limit();
-      case MAX_SHOTS -> sum(report, WaveReport.TurretReport::shots) <= challenge.limit();
-      case NO_WASTED_SHOTS -> sum(report, WaveReport.TurretReport::wastedOnDead) == 0;
+      case NO_AIR_SHOTS -> sum(report, WaveReport.TurretReport::airShots);
+      case NO_FAULTS -> sum(report, WaveReport.TurretReport::faultCount);
+      case NO_MANUAL_RELOADS -> sum(report, WaveReport.TurretReport::manualReloads);
+      case MAX_MEMORY -> memoryUsed;
+      case MAX_SHOTS -> sum(report, WaveReport.TurretReport::shots);
+      case NO_WASTED_SHOTS -> sum(report, WaveReport.TurretReport::wastedOnDead);
     };
   }
 

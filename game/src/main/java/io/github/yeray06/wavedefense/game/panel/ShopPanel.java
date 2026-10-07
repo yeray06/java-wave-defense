@@ -15,7 +15,6 @@ import io.github.yeray06.wavedefense.script.api.Feature;
 import io.github.yeray06.wavedefense.sim.data.GameData;
 import io.github.yeray06.wavedefense.sim.data.HardwareKind;
 import io.github.yeray06.wavedefense.sim.data.ShopConfig;
-import io.github.yeray06.wavedefense.sim.economy.Money;
 import io.github.yeray06.wavedefense.sim.progress.Progress;
 import io.github.yeray06.wavedefense.sim.progress.PurchaseCheck;
 import io.github.yeray06.wavedefense.sim.progress.Shop;
@@ -36,7 +35,7 @@ public final class ShopPanel extends Table {
   private final Texts texts;
   private final Skin skin;
   private final Consumer<Object> onPurchase;
-  private long shownMoney = -1;
+  private long shownWallet = -1;
 
   /**
    * @param onPurchase called after a purchase with the {@link Feature} or {@link HardwareKind}
@@ -56,21 +55,24 @@ public final class ShopPanel extends Table {
   @Override
   public void act(float delta) {
     super.act(delta);
-    if (progress.moneyCents() != shownMoney) {
+    if (wallet() != shownWallet) {
       rebuild();
     }
   }
 
   /** Rebuilds every row: prices, levels and what can be bought now. */
   public void rebuild() {
-    // Rebuilt on every purchase and every coin earned: keep the player where they were reading.
+    // Rebuilt on every purchase and every star earned: keep the player where they were reading.
     ScrollPane scroll = getParent() instanceof ScrollPane pane ? pane : null;
     float scrolledTo = scroll == null ? 0 : scroll.getScrollY();
-    shownMoney = progress.moneyCents();
+    shownWallet = wallet();
     clearChildren();
     top().left();
     add(new Label(
-            texts.format("shop.money", Money.wholeUnits(progress.moneyCents())), skin, "good"))
+            texts.format(
+                "shop.wallet", names.stars(progress.stars()), names.trophies(progress.trophies())),
+            skin,
+            "good"))
         .left()
         .padBottom(8)
         .row();
@@ -81,7 +83,7 @@ public final class ShopPanel extends Table {
       String button =
           progress.owns(feature)
               ? texts.get("shop.owned")
-              : texts.format("shop.buy", Money.wholeUnits(shop.priceCents(feature)));
+              : texts.format("shop.buy", names.stars(shop.price(feature)));
       row(
           names.feature(feature),
           texts.get("shop.relief." + feature.name()),
@@ -110,7 +112,9 @@ public final class ShopPanel extends Table {
       row(
           title,
           texts.format("shop.item." + kind.name() + ".effect", effect(item)),
-          texts.format("shop.buy", Money.wholeUnits(shop.priceCents(progress, kind))),
+          check == PurchaseCheck.MAX_LEVEL
+              ? texts.get("shop.maxed")
+              : texts.format("shop.buy", names.stars(shop.price(progress, kind))),
           check,
           names.check(check, shop, progress, kind),
           () -> {
@@ -119,11 +123,20 @@ public final class ShopPanel extends Table {
             }
           });
     }
+    add(new Label(texts.get("shop.trophies.title"), skin, "title")).left().padTop(10).row();
+    Label trophies = new Label(texts.get("shop.trophies.text"), skin, "small");
+    trophies.setWrap(true);
+    add(trophies).left().width(WIDTH).row();
     if (scroll != null) {
       scroll.layout();
       scroll.setScrollY(scrolledTo);
       scroll.updateVisualScroll();
     }
+  }
+
+  /** Stars and trophies in one number, to notice when either changes. */
+  private long wallet() {
+    return (long) progress.stars() << 32 | progress.trophies();
   }
 
   private void row(
