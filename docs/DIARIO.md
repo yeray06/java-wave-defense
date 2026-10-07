@@ -269,6 +269,8 @@ instalar Java ni Gradle, y dejar escrito cómo llevarlo a Steam.
 - Un botón en GitHub Actions (*Package*) que los genera y los deja para
   descargar, sin gastar minutos en cada commit.
 - `docs/STEAM.md` con los pasos para publicar en Steam y un README al día.
+- `jugar.bat`, pedido por Yeray: doble clic, se actualiza con Git y abre el
+  juego, sin escribir comandos.
 
 ![El juego empaquetado, con su propio Java, arrancando](capturas/fase7-01-zip-linux-arranca.png)
 ![Y jugando la oleada 1](capturas/fase7-02-zip-linux-oleada.png)
@@ -278,4 +280,5 @@ instalar Java ni Gradle, y dejar escrito cómo llevarlo a Steam.
 | Construo baja Java de api.adoptium.net, que la red de la sesión bloquea (403). | Cada sistema apunta a las *releases* de GitHub de Adoptium, que sí se pueden bajar, con su SHA-256 para comprobar que el fichero es el bueno. En GitHub Actions también funciona. |
 | En macOS, `StartupHelper` relanza Java con `-XstartOnFirstThread` usando `java.management`, que no va en el Java recortado: la app de Mac habría fallado al arrancar. | El lanzador de Construo ya arranca en el primer hilo; el paquete pasa `-Dwavedefense.relaunched=true` para que no relance. |
 | ¿Funciona de verdad el Java recortado (solo 4 módulos)? | Probado aquí: el zip de Linux, en una carpeta limpia, arranca, guarda la partida, escribe el log y juega una oleada. |
+| `jugar.bat` hace `git pull`, que puede cambiar el propio `jugar.bat` mientras se ejecuta; Windows lee los `.bat` a trozos y ejecutaría comandos a medias. | El lanzador se copia a la carpeta temporal y sigue desde la copia. |
 | No puedo abrir los de Windows ni macOS. | Se generan y su contenido es el esperado (`.exe`, `.app` con `Info.plist`); probarlos queda en «Pendiente de probar en local». |

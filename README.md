@@ -18,6 +18,12 @@ Arquitectura: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Estado:
 ./gradlew :lwjgl3:run          # Windows: gradlew.bat :lwjgl3:run
 ```
 
+En Windows, con el repo clonado, basta con **doble clic en `jugar.bat`**: baja
+lo último de `main` con Git y abre el juego. Si no hay internet o Git, juega
+con lo que ya hay; si falta Java, dice qué instalar. Para tenerlo en el
+escritorio: clic derecho sobre `jugar.bat` → *Enviar a* → *Escritorio (crear
+acceso directo)*.
+
 En IntelliJ IDEA: abrir la carpeta del repo como proyecto Gradle y ejecutar
 `Lwjgl3Launcher` (módulo `lwjgl3`) con *Working directory* = `assets/`.
 

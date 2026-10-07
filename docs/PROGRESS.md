@@ -514,6 +514,9 @@ deciden con ese dato, no antes.
 
 Fase 7 (Windows, sin usar Gradle):
 
+- [ ] Doble clic en `jugar.bat` (en la carpeta del repo): baja lo último y
+  abre el juego. Probar también sin internet: avisa y juega igual.
+
 - [ ] En GitHub: *Actions* → *Package* → *Run workflow*; al acabar, bajar
   `java-wave-defense-windows` de *Artifacts*.
 - [ ] Descomprimir (dentro hay otro zip; descomprimirlo también) y abrir
