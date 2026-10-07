@@ -27,6 +27,7 @@ import java.util.function.Consumer;
  */
 public final class ShopPanel extends Table {
   private static final float WIDTH = 470;
+  private static final float TEXT_WIDTH = WIDTH - 20;
 
   private final GameData data;
   private final Shop shop;
@@ -154,13 +155,15 @@ public final class ShopPanel extends Table {
     text.add(new Label(title, skin)).left().row();
     Label detailLabel = new Label(detail, skin, "small");
     detailLabel.setWrap(true);
-    text.add(detailLabel).left().width(WIDTH - 190).row();
+    text.add(detailLabel).left().width(TEXT_WIDTH).row();
     if (check != PurchaseCheck.OK && check != PurchaseCheck.ALREADY_OWNED) {
       Label reasonLabel = new Label(reason, skin, "warning");
       reasonLabel.setWrap(true);
-      text.add(reasonLabel).left().width(WIDTH - 190);
+      text.add(reasonLabel).left().width(TEXT_WIDTH);
     }
-    row.add(text).left().expandX().fillX();
+    // The button goes under the text: a price in stars ("Comprar: 2 estrellas") and a long piece
+    // name do not fit side by side.
+    row.add(text).left().expandX().fillX().row();
     TextButton button = new TextButton(buttonText, skin);
     button.pad(4, 10, 4, 10);
     button.setDisabled(check != PurchaseCheck.OK);
@@ -174,7 +177,7 @@ public final class ShopPanel extends Table {
             }
           }
         });
-    row.add(button).right().padLeft(8);
+    row.add(button).right().padTop(4);
     add(row).width(WIDTH).padTop(4).row();
   }
 

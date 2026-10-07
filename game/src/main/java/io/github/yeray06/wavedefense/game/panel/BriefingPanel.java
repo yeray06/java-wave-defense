@@ -74,7 +74,7 @@ public final class BriefingPanel extends Table {
     for (Map.Entry<EnemyKind, Integer> entry : counts.entrySet()) {
       Image swatch = new Image(skin.getDrawable("circle"));
       swatch.setColor(EnemyPalette.color(entry.getKey()));
-      add(swatch).size(SWATCH).padRight(10).top().padTop(3);
+      add(swatch).size(SWATCH).padRight(10).left().top().padTop(3);
       Table text = new Table();
       text.add(
               new Label(
@@ -87,7 +87,7 @@ public final class BriefingPanel extends Table {
       Label info = new Label(names.enemyInfo(entry.getKey()), skin, "small");
       info.setWrap(true);
       text.add(info).left().width(360);
-      add(text).left().padBottom(8).row();
+      add(text).left().expandX().padBottom(8).row();
     }
     add(new Label(
             names.texts().format("briefing.total", total, data.balance().coreLivesPerWave()),
