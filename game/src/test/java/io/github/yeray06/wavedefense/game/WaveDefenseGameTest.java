@@ -37,6 +37,8 @@ class WaveDefenseGameTest {
     try (Stream<Path> logs = Files.list(folder.resolve("logs"))) {
       assertTrue(logs.anyMatch(p -> p.getFileName().toString().startsWith("game-")));
     }
+    // Closed on exit: Windows cannot delete a log the game still holds.
+    assertFalse(Files.exists(folder.resolve("logs").resolve("game-0.log.lck")));
   }
 
   @Test

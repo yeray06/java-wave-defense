@@ -24,19 +24,41 @@ public final class GameLog {
   private static final int FILES = 5;
   private static final String FORMAT = "%1$tF %1$tT %4$s %3$s: %5$s%6$s%n";
 
-  private GameLog() {}
+  private final Logger logger;
+  private final FileHandler file;
+
+  private GameLog(Logger logger, FileHandler file) {
+    this.logger = logger;
+    this.file = file;
+  }
+
+  public Logger logger() {
+    return logger;
+  }
+
+  /**
+   * Closes the file: Windows cannot move or delete a log the game still holds, and the handler
+   * would outlive the game in the shared {@code wave-defense} logger.
+   */
+  public void close() {
+    if (file != null) {
+      logger.removeHandler(file);
+      file.close();
+    }
+  }
 
   /**
    * Opens the log in {@code folder} and catches uncaught exceptions on every thread. If the folder
    * cannot be written the game still runs, logging to the console only.
    */
-  public static Logger install(Path folder) {
+  public static GameLog install(Path folder) {
     Logger logger = Logger.getLogger(NAME);
+    FileHandler file = null;
     try {
       Files.createDirectories(folder);
       String pattern = folder.resolve("game-%g.log").toString().replace("%", "%%");
       pattern = pattern.replace("%%g.log", "%g.log");
-      FileHandler file = new FileHandler(pattern, FILE_BYTES, FILES, true);
+      file = new FileHandler(pattern, FILE_BYTES, FILES, true);
       file.setFormatter(
           new SimpleFormatter() {
             @Override
@@ -63,7 +85,7 @@ public final class GameLog {
             previous.uncaughtException(thread, error);
           }
         });
-    return logger;
+    return new GameLog(logger, file);
   }
 
   /** libGDX's {@code Gdx.app.log} and friends, into the same log. */

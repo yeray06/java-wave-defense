@@ -54,6 +54,7 @@ public final class WaveDefenseGame extends Game implements GameControls {
   private final Clock clock;
   private final Set<String> reportedFailures = new HashSet<>();
 
+  private GameLog gameLog;
   private Logger log;
   private GameData data;
   private Texts texts;
@@ -85,7 +86,8 @@ public final class WaveDefenseGame extends Game implements GameControls {
 
   @Override
   public void create() {
-    log = GameLog.install(userFolder.resolve("logs"));
+    gameLog = GameLog.install(userFolder.resolve("logs"));
+    log = gameLog.logger();
     Gdx.app.setApplicationLogger(GameLog.forLibgdx(log));
     data = GameData.load(file -> Gdx.files.internal(file).readString("UTF-8"));
     texts = Texts.load(Gdx.files.internal("i18n/messages"));
@@ -173,6 +175,9 @@ public final class WaveDefenseGame extends Game implements GameControls {
     }
     if (skin != null) {
       skin.dispose();
+    }
+    if (gameLog != null) {
+      gameLog.close();
     }
   }
 

@@ -183,6 +183,7 @@ nueva partida.
 | Cambiar un tamaño rehace toda la pantalla, y el editor guardaba el texto dentro de la pantalla. | Los borradores viven en `WaveLoop` (también se guardan), así que el código sobrevive. |
 | Rehacer la pantalla desde un clic de esa misma pantalla la destruía mientras se usaba. | El cambio se hace en el frame siguiente. |
 | En los tests no hay portapapeles ni ventana. | Las dependencias entran por constructor (`GameControls`, carpeta y reloj). |
+| En Windows (CI) fallaban los tests del juego entero: el log se quedaba abierto y Windows no deja borrar un fichero en uso. | El log se cierra al cerrar el juego; un test comprueba que no queda su `.lck`. |
 | Mi primera prueba seguía al 150 %: un reemplazo de texto en el código no se había aplicado. | Lo detectó la línea nueva del log («Interface at 100 % (asked 150 %)»); arreglado y comprobado. |
 
 ![Interfaz al 150 % sin límite (el problema)](capturas/fase6-03-interfaz-al-150-sin-limite-problema.png)
