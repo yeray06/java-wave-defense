@@ -228,12 +228,25 @@ public final class WaveDefenseGame extends Game implements GameControls {
   private void buildScreen() {
     Skin previousSkin = skin;
     BattleScreen previousScreen = battle;
+    int width = Gdx.graphics.getWidth();
+    int height = Gdx.graphics.getHeight();
+    skinScale = effectiveScale(width, height);
+    log.info(
+        "Interface at "
+            + Math.round(skinScale * 100)
+            + " % (asked "
+            + settings.uiScalePercent()
+            + " %) for a "
+            + width
+            + "x"
+            + height
+            + " window");
     skin =
         UiSkin.create(
             Gdx.files.internal("fonts/JetBrainsMono-Regular.ttf"),
-            settings.uiScale(),
+            skinScale,
             settings.codeFontSize());
-    battle = new BattleScreen(data, texts, skin, loop, world, reactions, this, settings.uiScale());
+    battle = new BattleScreen(data, texts, skin, loop, world, reactions, this, skinScale);
     setScreen(battle);
     battle.resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
     if (settingsOpenAfterRebuild) {
