@@ -105,4 +105,17 @@ class WaveDefenseGameTest {
     String save = Files.readString(folder.resolve(GameStore.SAVE));
     assertFalse(save.contains("recargar();"), "the new game replaced the code");
   }
+
+  /**
+   * On Windows, showing the window fires a window-moved event, and the launcher draws a frame on
+   * those (D-48), before {@code create()} has run.
+   */
+  @Test
+  void aFrameBeforeCreateDoesNothing() {
+    WaveDefenseGame game = new WaveDefenseGame(new NoOpPlatformServices(), folder, CLOCK);
+    game.render();
+    game.resize(1280, 720);
+    game.pause();
+    game.dispose();
+  }
 }

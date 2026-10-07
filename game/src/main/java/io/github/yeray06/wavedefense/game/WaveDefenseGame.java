@@ -124,6 +124,11 @@ public final class WaveDefenseGame extends Game implements GameControls {
    */
   @Override
   public void render() {
+    if (battle == null) {
+      // On Windows, showing the window reports a move, and the launcher draws on moves (D-48),
+      // before create() has run: there is nothing to draw yet.
+      return;
+    }
     float delta = frames.next();
     if (rebuildPending) {
       rebuildPending = false;
