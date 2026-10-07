@@ -3,11 +3,12 @@ package io.github.yeray06.wavedefense.game.i18n;
 import io.github.yeray06.wavedefense.script.api.Feature;
 import io.github.yeray06.wavedefense.script.diag.CompileError;
 import io.github.yeray06.wavedefense.script.diag.FaultType;
+import io.github.yeray06.wavedefense.sim.data.Challenge;
 import io.github.yeray06.wavedefense.sim.data.EnemyCatalog;
 import io.github.yeray06.wavedefense.sim.data.EnemyKind;
 import io.github.yeray06.wavedefense.sim.data.GameData;
 import io.github.yeray06.wavedefense.sim.data.HardwareKind;
-import io.github.yeray06.wavedefense.sim.economy.Money;
+import io.github.yeray06.wavedefense.sim.progress.Goal;
 import io.github.yeray06.wavedefense.sim.progress.Progress;
 import io.github.yeray06.wavedefense.sim.progress.PurchaseCheck;
 import io.github.yeray06.wavedefense.sim.progress.Shop;
@@ -76,12 +77,39 @@ public final class ScriptTexts {
     return texts.format("enemy." + kind.name() + ".info", argument);
   }
 
+  /** "1 estrella", "3 estrellas". */
+  public String stars(int count) {
+    return texts.format(count == 1 ? "stars.one" : "stars.many", count);
+  }
+
+  /** "1 trofeo", "2 trofeos". */
+  public String trophies(int count) {
+    return texts.format(count == 1 ? "trophies.one" : "trophies.many", count);
+  }
+
+  /** What a wave's code challenge asks, e.g. "52 disparos como mucho…". */
+  public String challenge(Challenge challenge) {
+    return texts.format("challenge." + challenge.type().name(), challenge.limit());
+  }
+
+  /** One of a wave's three stars, e.g. "Reto: ningún disparo al aire". */
+  public String goal(Goal goal, Challenge challenge) {
+    return goal == Goal.CHALLENGE
+        ? texts.format("goal.CHALLENGE", challenge(challenge))
+        : texts.get("goal." + goal.name());
+  }
+
+  /** A goal with its mark: "✓ …" once earned, "○ …" while missing. */
+  public String goalLine(Goal goal, Challenge challenge, boolean met) {
+    return texts.format(met ? "goal.met" : "goal.missing", goal(goal, challenge));
+  }
+
   /** Why a syntax piece cannot be bought now. */
   public String check(PurchaseCheck check, Shop shop, Feature feature) {
     return switch (check) {
       case OK -> "";
-      case NOT_ENOUGH_MONEY ->
-          texts.format("shop.check.NOT_ENOUGH_MONEY", Money.wholeUnits(shop.priceCents(feature)));
+      case NOT_ENOUGH_STARS ->
+          texts.format("shop.check.NOT_ENOUGH_STARS", stars(shop.price(feature)));
       case MISSING_REQUIREMENT ->
           texts.format(
               "shop.check.MISSING_REQUIREMENT", feature(data.shop().syntax(feature).requires()));
@@ -93,9 +121,8 @@ public final class ScriptTexts {
   public String check(PurchaseCheck check, Shop shop, Progress progress, HardwareKind kind) {
     return switch (check) {
       case OK -> "";
-      case NOT_ENOUGH_MONEY ->
-          texts.format(
-              "shop.check.NOT_ENOUGH_MONEY", Money.wholeUnits(shop.priceCents(progress, kind)));
+      case NOT_ENOUGH_STARS ->
+          texts.format("shop.check.NOT_ENOUGH_STARS", stars(shop.price(progress, kind)));
       case NEEDS_SYNTAX ->
           texts.format(
               "shop.check.NEEDS_SYNTAX",

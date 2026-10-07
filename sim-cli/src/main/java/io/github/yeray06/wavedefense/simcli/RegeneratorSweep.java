@@ -107,9 +107,9 @@ final class RegeneratorSweep {
     int earlyPasses = 0;
     for (ProgressionRun.Wall wall : run.walls()) {
       walls.append(walls.isEmpty() ? "" : ", ").append(wall.wave()).append(" (");
-      walls.append(wall.farmedWaves()).append(')');
+      walls.append(wall.passes()).append(')');
       if (wall.wave() == 4 || wall.wave() == 5) {
-        earlyPasses = Math.max(earlyPasses, wall.farmedWaves());
+        earlyPasses = Math.max(earlyPasses, wall.passes());
       }
     }
     return new Result(
@@ -138,7 +138,8 @@ final class RegeneratorSweep {
     md.append("  vida máxima por segundo. **Vida**: respecto al Básico. **Separación**: hueco\n");
     md.append("  tras cada Regenerador al salir, respecto al reparto uniforme (1).\n");
     md.append("- **k**: mayor multiplicador de vida con el que la oleada sale sin fugas. Con\n");
-    md.append("  Variables / sin nada / sin Variables y con el mejor hardware del mismo dinero.\n");
+    md.append(
+        "  Variables / sin nada / sin Variables y con el mejor hardware de las mismas estrellas.\n");
     md.append("- **Ratio**: k con Variables entre k con hardware (con topes; entre paréntesis,\n");
     md.append("  sin topes). Cumple la regla del doble si es ≥ 2.\n\n");
     md.append("| Espera | Curación | Vida | Separación | k Variables | k nada | k hardware |");
@@ -202,7 +203,7 @@ final class RegeneratorSweep {
       if (row.wave() >= 4) {
         break;
       }
-      early.append(row.wave()).append(row.won()).append(row.leaks()).append(row.paidCents());
+      early.append(row.wave()).append(row.won()).append(row.leaks()).append(row.earned());
       early.append(';');
     }
     return early.toString();

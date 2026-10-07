@@ -10,14 +10,17 @@ import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import io.github.yeray06.wavedefense.game.i18n.Texts;
+import io.github.yeray06.wavedefense.game.ui.UiSkin;
 import io.github.yeray06.wavedefense.sim.data.GameData;
+import io.github.yeray06.wavedefense.sim.progress.Goal;
 import io.github.yeray06.wavedefense.sim.progress.Progress;
 import java.util.function.IntConsumer;
 
 /**
  * The wave map (D-49), in the style of a level map: the waves as points along a winding road from
  * the bottom up. Reached waves can be chosen; the others carry a padlock; a red flag marks the
- * current one; the boss wave is a bigger red point. One map per act: the MVP has act 1.
+ * current one; the boss wave is a bigger red point. Under each reached wave, its stars (D-57). One
+ * map per act: the MVP has act 1.
  */
 public final class MapPanel extends Table {
   private static final float MAP_WIDTH = 460;
@@ -43,6 +46,7 @@ public final class MapPanel extends Table {
   private final Label hint;
   private int shownCurrent = -1;
   private int shownHighest = -1;
+  private int shownStars = -1;
 
   /**
    * @param onChoose called with a reached wave the player clicked
@@ -64,7 +68,9 @@ public final class MapPanel extends Table {
   @Override
   public void act(float delta) {
     super.act(delta);
-    if (progress.currentWave() != shownCurrent || progress.highestWaveReached() != shownHighest) {
+    if (progress.currentWave() != shownCurrent
+        || progress.highestWaveReached() != shownHighest
+        || progress.starsEarned() != shownStars) {
       rebuild();
     }
   }
@@ -82,6 +88,7 @@ public final class MapPanel extends Table {
   private void rebuild() {
     shownCurrent = progress.currentWave();
     shownHighest = progress.highestWaveReached();
+    shownStars = progress.starsEarned();
     map.clearChildren();
     int last = data.balance().lastWave();
     for (int wave = 1; wave < last; wave++) {
@@ -104,6 +111,14 @@ public final class MapPanel extends Table {
       map.addActor(node(wave));
     }
     hint.setText(texts.format("map.current", shownCurrent));
+  }
+
+  private int starsOf(int wave) {
+    int stars = 0;
+    for (Goal goal : Goal.values()) {
+      stars += progress.met(wave, goal) ? 1 : 0;
+    }
+    return stars;
   }
 
   private Group node(int wave) {
@@ -140,6 +155,17 @@ public final class MapPanel extends Table {
     label.pack();
     label.setPosition(size + 6, (size - label.getHeight()) / 2);
     node.addActor(label);
+    if (reached) {
+      StringBuilder dots = new StringBuilder();
+      for (Goal goal : Goal.values()) {
+        dots.append(texts.get(progress.met(wave, goal) ? "map.star.on" : "map.star.off"));
+      }
+      Label stars = new Label(dots, skin, "small");
+      stars.setColor(UiSkin.GOOD);
+      stars.pack();
+      stars.setPosition(size + 6, label.getY() - stars.getHeight() + 4);
+      node.addActor(stars);
+    }
     node.setTouchable(Touchable.enabled);
     node.addListener(
         new ClickListener() {
@@ -158,7 +184,8 @@ public final class MapPanel extends Table {
               int pointer,
               com.badlogic.gdx.scenes.scene2d.Actor fromActor) {
             super.enter(event, x, y, pointer, fromActor);
-            hint.setText(reached ? texts.format("map.go", wave) : texts.get("map.locked"));
+            hint.setText(
+                reached ? texts.format("map.go", wave, starsOf(wave)) : texts.get("map.locked"));
           }
         });
     return node;

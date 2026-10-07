@@ -21,7 +21,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
  */
 public final class UiSkin {
   /** Characters the Spanish texts use beyond ASCII. */
-  private static final String EXTRA_CHARS = "áéíóúÁÉÍÓÚüÜñÑ¿¡«»×…·–—";
+  private static final String EXTRA_CHARS = "áéíóúÁÉÍÓÚüÜñÑ¿¡«»×…·–—✓●○";
 
   private static final int FONT_SIZE = 18;
   private static final int SMALL_FONT_SIZE = 14;

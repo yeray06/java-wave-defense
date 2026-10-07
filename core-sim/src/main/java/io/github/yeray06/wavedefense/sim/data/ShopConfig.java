@@ -17,6 +17,7 @@ public record ShopConfig(
 
   /**
    * @param requires piece that must be owned first, or {@code null} for the first one
+   * @param price in stars (D-57)
    * @param arrivesAroundWave first wave of the plan's "Llega hacia la oleada" range
    * @param inMvp whether the MVP sells it (the others are shown, locked)
    * @param example the purchase card's example (plan: five lines that work as they are); {@code
@@ -24,7 +25,7 @@ public record ShopConfig(
    */
   public record SyntaxItem(
       Feature feature,
-      double price,
+      int price,
       Feature requires,
       int arrivesAroundWave,
       boolean inMvp,
@@ -37,28 +38,34 @@ public record ShopConfig(
   }
 
   /**
-   * @param firstCost cost of level 1; each next level costs {@code costGrowth} times more
+   * @param prices stars for each level in order; their count is the item's highest level (D-57)
    * @param effectPerLevel added per level (damage: fraction of the base)
    * @param caps level limits that last until a syntax piece is bought; empty = no limit
    */
   public record HardwareItem(
       HardwareKind kind,
-      double firstCost,
-      double costGrowth,
+      List<Integer> prices,
       double effectPerLevel,
       boolean inMvp,
       List<LevelCap> caps) {
     public HardwareItem {
       Check.present("kind", kind);
-      Check.positive("firstCost", firstCost);
-      Check.positive("costGrowth", costGrowth);
+      prices = List.copyOf(Check.notEmpty("prices of " + kind, prices));
+      for (int price : prices) {
+        Check.positive("price of " + kind, price);
+      }
       Check.positive("effectPerLevel", effectPerLevel);
       caps = List.copyOf(Check.present("caps", caps));
     }
 
+    /** Highest level that can be bought. */
+    public int maxLevel() {
+      return prices.size();
+    }
+
     /** The same item with no syntax caps: for balance comparisons. */
     public HardwareItem withoutCaps() {
-      return new HardwareItem(kind, firstCost, costGrowth, effectPerLevel, inMvp, List.of());
+      return new HardwareItem(kind, prices, effectPerLevel, inMvp, List.of());
     }
   }
 

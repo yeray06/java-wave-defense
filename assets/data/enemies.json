@@ -6,10 +6,8 @@
     "types.ARMORED.speed",
     "types.SWARM.speed",
     "types.SWARM.healthMultiplier",
-    "types.SWARM.rewardMultiplier",
     "types.SWARM.groupSpacingUnits",
     "types.BOSS.speed",
-    "types.BOSS.rewardMultiplier",
     "types.BOSS.startsArmored",
     "types.REGENERATOR.healthMultiplier",
     "types.ARMORED.healthMultiplier",
@@ -24,7 +22,6 @@
     "BASIC": {
       "speed": 100,
       "healthMultiplier": 1,
-      "rewardMultiplier": 1,
       "armored": false,
       "regenDelaySeconds": 0,
       "regenFractionPerSecond": 0,
@@ -37,7 +34,6 @@
     "REGENERATOR": {
       "speed": 100,
       "healthMultiplier": 2,
-      "rewardMultiplier": 1,
       "armored": false,
       "regenDelaySeconds": 1,
       "regenFractionPerSecond": 0.5,
@@ -50,7 +46,6 @@
     "ARMORED": {
       "speed": 80,
       "healthMultiplier": 2,
-      "rewardMultiplier": 1,
       "armored": true,
       "regenDelaySeconds": 0,
       "regenFractionPerSecond": 0,
@@ -63,7 +58,6 @@
     "SWARM": {
       "speed": 200,
       "healthMultiplier": 0.3,
-      "rewardMultiplier": 0.3,
       "armored": false,
       "regenDelaySeconds": 0,
       "regenFractionPerSecond": 0,
@@ -76,7 +70,6 @@
     "BOSS": {
       "speed": 50,
       "healthMultiplier": 20,
-      "rewardMultiplier": 0,
       "armored": false,
       "regenDelaySeconds": 0,
       "regenFractionPerSecond": 0,

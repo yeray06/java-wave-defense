@@ -3,10 +3,13 @@ package io.github.yeray06.wavedefense.simcli;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.yeray06.wavedefense.script.api.Feature;
+import io.github.yeray06.wavedefense.sim.data.Challenge;
 import io.github.yeray06.wavedefense.sim.data.GameData;
 import io.github.yeray06.wavedefense.sim.data.ShopConfig;
+import io.github.yeray06.wavedefense.sim.data.WaveTable;
 import io.github.yeray06.wavedefense.sim.economy.Formulas;
-import io.github.yeray06.wavedefense.sim.economy.Money;
+import io.github.yeray06.wavedefense.sim.progress.Goal;
+import io.github.yeray06.wavedefense.sim.progress.Progress;
 import io.github.yeray06.wavedefense.sim.progress.Shop;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -61,6 +64,7 @@ final class BalanceReport {
 
   String render(
       ProgressionRun.Result run,
+      ProgressionRun.Result withoutChallenges,
       List<DoubleRule.Entry> doubleRule,
       List<DoubleRule.Entry> doubleRuleWithoutCaps) {
     line("# Balance del MVP (oleadas 1–10)");
@@ -74,6 +78,8 @@ final class BalanceReport {
     notFromPlan();
     referencePlayer(run);
     progression(run);
+    stars(run);
+    withoutChallenges(withoutChallenges);
     walls(run);
     playTime(run);
     rhythm(run);
@@ -87,23 +93,49 @@ final class BalanceReport {
 
   private void economy() {
     Formulas formulas = new Formulas(data.balance());
-    line("## 1. Economía: tabla del plan");
+    line("## 1. Enemigos y estrellas");
     line("");
-    line("Calculada con las fórmulas de `balance.json`. Coincide con la tabla del plan");
-    line("(lo comprueba `FormulasTest`).");
+    line("Enemigos y vida, calculados con las fórmulas de `balance.json`. Coinciden con la tabla");
+    line("del plan (lo comprueba `FormulasTest`).");
     line("");
-    line("| Oleada | Enemigos | Vida por enemigo | Dinero por enemigo | Dinero por oleada |");
-    line("|---|---|---|---|---|");
+    line("| Oleada | Enemigos | Vida por enemigo |");
+    line("|---|---|---|");
     for (int wave : new int[] {1, 5, 10, 20, 30}) {
       line(
-          "| %d | %d | %s | %s | %s |",
-          wave,
-          formulas.enemyCount(wave),
-          decimal(formulas.enemyHealth(wave)),
-          decimal(Money.units(formulas.rewardPerEnemyCents(wave))),
-          decimal(Money.units(formulas.waveRewardCents(wave))));
+          "| %d | %d | %s |", wave, formulas.enemyCount(wave), decimal(formulas.enemyHealth(wave)));
     }
     line("");
+    int lastWave = data.balance().lastWave();
+    int syntax =
+        data.shop().syntax().stream()
+            .filter(ShopConfig.SyntaxItem::inMvp)
+            .mapToInt(ShopConfig.SyntaxItem::price)
+            .sum();
+    int hardware =
+        data.shop().hardware().stream()
+            .filter(ShopConfig.HardwareItem::inMvp)
+            .flatMap(h -> h.prices().stream())
+            .mapToInt(Integer::intValue)
+            .sum();
+    line("Economía de estrellas (D-57, sustituye al «Farmeo» del plan): cada oleada da hasta 3");
+    line("estrellas y cada una se cobra una sola vez (superarla, sin fugas y su reto). Repetir no");
+    line("paga. Cada jefe da un trofeo la primera vez que cae.");
+    line("");
+    line("| Concepto | Estrellas |");
+    line("|---|---|");
+    line("| Al empezar | %d |", data.balance().startingStars());
+    line("| Máximo en las oleadas 1–%d | %d |", lastWave, 3 * lastWave);
+    line("| Toda la sintaxis del MVP | %d |", syntax);
+    line("| Todo el hardware del MVP | %d |", hardware);
+    line("");
+    if (syntax > data.balance().startingStars() + 3 * lastWave) {
+      contradictions.add(
+          "La sintaxis del MVP cuesta "
+              + syntax
+              + " estrellas y solo se pueden ganar "
+              + (data.balance().startingStars() + 3 * lastWave)
+              + ".");
+    }
   }
 
   private void notFromPlan() {
@@ -145,9 +177,15 @@ final class BalanceReport {
         "- Recarga a mano una torreta vacía %s s después de que se quede sin balas, también si",
         decimal(config.manualReloadReactionSeconds()));
     line("  está colgada (D-03b).");
-    line("- Compra la siguiente pieza de sintaxis en cuanto puede pagarla. Atascado tras una");
-    line("  derrota, compra lo que pueda tras cada oleada farmeada: sintaxis; si no, la torreta");
-    line("  extra; si no, el hardware más barato. Con toda la sintaxis, gasta en hardware igual.");
+    line("- Si supera una oleada sin cumplir su reto y alguno de los scripts que sabe escribir");
+    line("  la supera cumpliéndolo, la repite con ese script. Sabe de antemano qué script cumple:");
+    line("  es la cota alta de alguien que lee el reto y lo intenta.");
+    line("- Compra la siguiente pieza de sintaxis en cuanto puede pagarla; con toda la sintaxis,");
+    line("  gasta en hardware. Atascado tras una derrota: sintaxis si llega; si no, la torreta");
+    line("  extra; si no, el hardware más barato, y vuelve a intentarlo. Sin nada que comprar,");
+    line("  repite la primera oleada anterior que aún le dé una estrella (sin fugas o su reto).");
+    line("  Si no queda ninguna, prueba a devolver un nivel de mejora y comprar otro (D-59);");
+    line("  si tampoco le hace más fuerte, la partida está **bloqueada**.");
     line(
         "- Usa ×3 en las oleadas que ya superó sin fugas. El tiempo de escribir código no cuenta.");
     line("");
@@ -192,6 +230,15 @@ final class BalanceReport {
       line(
           "El jugador de referencia derrota al Jefe 1 tras **%d oleadas jugadas**.",
           run.rows().size());
+    } else if (run.lockedAt() != null) {
+      line(
+          "La partida queda **bloqueada** en la oleada %d: no puede comprar nada ni ganar más"
+              + " estrellas.",
+          run.lockedAt());
+      contradictions.add(
+          "Partida bloqueada en la oleada "
+              + run.lockedAt()
+              + ": sin estrellas para comprar y ninguna oleada anterior que dé más.");
     } else {
       line(
           "El jugador de referencia **no derrota al Jefe 1** en %d oleadas jugadas.",
@@ -202,19 +249,24 @@ final class BalanceReport {
               + " oleadas.");
     }
     line("");
+    line("Para: avance, reto (repite por el reto), muro (reintento) o repaso (atascado, a por");
+    line("una estrella que falta).");
+    line("");
     line(
-        "| # | Oleada | Resultado | Fugas | Cobrado | Dinero | Script | Torretas | Compra | Excepciones |");
-    line("|---|---|---|---|---|---|---|---|---|---|");
+        "| # | Oleada | Para | Resultado | Fugas | Gana | Estrellas | Script | Torretas | Compra |"
+            + " Excepciones |");
+    line("|---|---|---|---|---|---|---|---|---|---|---|");
     for (ProgressionRun.Row row : run.rows()) {
       line(
-          "| %d | %d%s | %s | %d | %s | %s | %s | %d | %s | %d |",
+          "| %d | %d%s | %s | %s | %d | %s | %d | %s | %d | %s | %d |",
           row.number(),
           row.wave(),
           row.speedUp() ? " (×3)" : "",
+          purpose(row.purpose()),
           row.won() ? (row.leaks() == 0 ? "perfecta" : "superada") : "**derrota**",
           row.leaks(),
-          decimal(Money.units(row.paidCents())),
-          decimal(Money.units(row.moneyAfterCents())),
+          goals(row.earned()),
+          row.starsAfter(),
           row.script(),
           row.turrets(),
           row.bought().isEmpty() ? "" : String.join(", ", row.bought()),
@@ -223,11 +275,116 @@ final class BalanceReport {
     line("");
   }
 
+  private static String purpose(ProgressionRun.Purpose purpose) {
+    return switch (purpose) {
+      case ADVANCE -> "avance";
+      case CHALLENGE -> "reto";
+      case WALL -> "muro";
+      case REVISIT -> "repaso";
+    };
+  }
+
+  private static String goals(List<Goal> goals) {
+    List<String> names = new ArrayList<>();
+    for (Goal goal : goals) {
+      names.add(
+          switch (goal) {
+            case CLEAR -> "superada";
+            case PERFECT -> "sin fugas";
+            case CHALLENGE -> "reto";
+          });
+    }
+    return String.join(", ", names);
+  }
+
+  private void stars(ProgressionRun.Result run) {
+    line("## 4.1 Estrellas por oleada");
+    line("");
+    line("Lo conseguido al acabar la partida simulada. «Script que cumple el reto» es el primero");
+    line("que lo cumple con lo que tenía comprado al final (vacío: ninguno de referencia).");
+    line("");
+    line("| Oleada | Reto | Superada | Sin fugas | Reto cumplido | Script que cumple el reto |");
+    line("|---|---|---|---|---|---|");
+    Progress end = run.finalProgress();
+    for (WaveTable.WaveSpec spec : data.waves().waves()) {
+      int wave = spec.wave();
+      String script = run.challengeAtTheEnd().getOrDefault(wave, "");
+      line(
+          "| %d | %s | %s | %s | %s | %s |",
+          wave,
+          describe(spec.challenge()),
+          end.met(wave, Goal.CLEAR) ? "★" : "—",
+          end.met(wave, Goal.PERFECT) ? "★" : "—",
+          end.met(wave, Goal.CHALLENGE) ? "★" : "—",
+          script.isEmpty() ? "—" : "`" + script + "`");
+      if (script.isEmpty()) {
+        warnings.add(
+            "El reto de la oleada "
+                + wave
+                + " («"
+                + describe(spec.challenge())
+                + "») no lo cumple ningún script de referencia: o es muy difícil o el jugador de"
+                + " referencia no sabe hacerlo.");
+      }
+    }
+    line("");
+    line(
+        "Estrellas ganadas: **%d de %d**; sin gastar al final: %d. Trofeos: %d.",
+        end.starsEarned(), 3 * data.balance().lastWave(), end.stars(), end.trophies());
+    line("");
+    if (run.bossDefeated()) {
+      int before = 3 * (data.balance().lastWave() - 1);
+      line(
+          "Antes de vencer al Jefe 1 gastó **%d estrellas** de las %d que dan las oleadas 1–%d:"
+              + " margen de %d para quien no las consiga todas.",
+          run.starsSpentBeforeTheBoss(),
+          before,
+          data.balance().lastWave() - 1,
+          before - run.starsSpentBeforeTheBoss());
+      line("");
+    }
+  }
+
+  private void withoutChallenges(ProgressionRun.Result run) {
+    line("## 4.2 Sin hacer ningún reto");
+    line("");
+    line("El mismo jugador, pero sin intentar nunca los retos de código: solo superar oleadas y");
+    line("repetirlas sin fugas. Mide si los retos hacen falta para llegar al jefe.");
+    line("");
+    if (run.bossDefeated()) {
+      line(
+          "Derrota al Jefe 1 tras %d oleadas jugadas, con %d estrellas ganadas.",
+          run.rows().size(), run.finalProgress().starsEarned());
+    } else if (run.lockedAt() != null) {
+      line(
+          "Queda **bloqueado** en la oleada %d con %d estrellas ganadas: sin retos no se llega"
+              + " al jefe.",
+          run.lockedAt(), run.finalProgress().starsEarned());
+    } else {
+      line(
+          "No derrota al Jefe 1 en %d oleadas jugadas (%d estrellas).",
+          run.rows().size(), run.finalProgress().starsEarned());
+    }
+    line("");
+  }
+
+  static String describe(Challenge challenge) {
+    return switch (challenge.type()) {
+      case NO_AIR_SHOTS -> "ningún disparo al aire";
+      case NO_FAULTS -> "ninguna excepción";
+      case NO_MANUAL_RELOADS -> "sin recargar a mano";
+      case MAX_MEMORY -> "como mucho " + challenge.limit() + " líneas de memoria";
+      case MAX_SHOTS -> "como mucho " + challenge.limit() + " disparos";
+      case NO_WASTED_SHOTS -> "ningún disparo a enemigos ya muertos";
+    };
+  }
+
   private void walls(ProgressionRun.Result run) {
     line("## 5. Pasadas por muro");
     line("");
     line("Un muro es una oleada perdida antes de superarla por primera vez. «Pasadas» son las");
-    line("oleadas anteriores repetidas mientras tanto. Regla del plan: como mucho %d.", MAX_PASSES);
+    line("oleadas anteriores repetidas mientras tanto para ganar estrellas que faltaban. Regla");
+    line("del plan: como mucho %d.", MAX_PASSES);
     line("");
     if (run.walls().isEmpty()) {
       line("No hubo muros: el jugador de referencia no perdió ninguna oleada nueva.");
@@ -237,12 +394,12 @@ final class BalanceReport {
     line("| Muro (oleada) | Intentos | Pasadas | Superado | Regla de 5 |");
     line("|---|---|---|---|---|");
     for (ProgressionRun.Wall wall : run.walls()) {
-      boolean ok = wall.beaten() && wall.farmedWaves() <= MAX_PASSES;
+      boolean ok = wall.beaten() && wall.passes() <= MAX_PASSES;
       line(
           "| %d | %d | %d | %s | %s |",
           wall.wave(),
           wall.attempts(),
-          wall.farmedWaves(),
+          wall.passes(),
           wall.beaten() ? "sí" : "no",
           ok ? "cumple" : "**no cumple**");
       if (!ok) {
@@ -250,7 +407,7 @@ final class BalanceReport {
             "Muro en la oleada "
                 + wall.wave()
                 + ": "
-                + wall.farmedWaves()
+                + wall.passes()
                 + " pasadas"
                 + (wall.beaten() ? "" : " sin llegar a superarlo")
                 + " (el plan pide como mucho "
@@ -271,6 +428,14 @@ final class BalanceReport {
     line("el tiempo de escribir código). El plan apunta a 20–30 min «por comprobar con");
     line("jugadores», incluido el tiempo de escribir, así que este valor es un mínimo.");
     line("");
+    if (run.bossDefeated() && minutes < TARGET_MIN_MINUTES) {
+      warnings.add(
+          "Llegar al Jefe 1 lleva "
+              + decimal(minutes)
+              + " min de juego sin contar el tiempo de escribir código; el plan apunta a 20–30 min"
+              + " en total. Sin farmeo (D-57), el resto lo pone escribir y probar el código de los"
+              + " retos: hay que medirlo con jugadores.");
+    }
     if (run.bossDefeated() && minutes > TARGET_MAX_MINUTES) {
       contradictions.add(
           "Llegar al Jefe 1 lleva "
@@ -285,7 +450,8 @@ final class BalanceReport {
     line("Oleada en la que el jugador de referencia compra cada pieza frente a la oleada en la");
     line("que el plan dice que llega («Llega hacia la oleada»).");
     line("");
-    line("| Pieza | Precio | Llega (plan) | Comprada en la oleada | Nº de oleada jugada |");
+    line(
+        "| Pieza | Precio (estrellas) | Llega (plan) | Comprada en la oleada | Nº de oleada jugada |");
     line("|---|---|---|---|---|");
     Shop shop = new Shop(data);
     for (ShopConfig.SyntaxItem item : data.shop().syntax()) {
@@ -298,9 +464,9 @@ final class BalanceReport {
               .findFirst()
               .orElse(null);
       line(
-          "| %s | %s | %s | %s | %s |",
+          "| %s | %d | %s | %s | %s |",
           item.feature(),
-          decimal(Money.units(shop.priceCents(item.feature()))),
+          shop.price(item.feature()),
           planRange(item),
           bought == null ? "nunca" : Integer.toString(bought.wave()),
           bought == null ? "—" : Integer.toString(bought.number()));
@@ -323,7 +489,7 @@ final class BalanceReport {
     line("Sin fugas y no solo «superada»: si una oleada trae menos enemigos que vidas tiene el");
     line("núcleo, no se puede perder y la medida se saturaría.");
     line("Se parte del estado justo antes de comprar la pieza y se compara la pieza con su");
-    line("script frente al mejor hardware que se compra con el mismo dinero. En cada lado se");
+    line("script frente al mejor hardware que se compra con las mismas estrellas. En cada lado se");
     line("prueban todas las variantes de script que caben en memoria y se toma la mejor.");
     line("Cumple si la proporción es ≥ 2.");
     line("");
@@ -427,8 +593,8 @@ final class BalanceReport {
                   ? "la oleada " + waves.get(0) + " trae"
                   : "las oleadas " + waves.get(0) + "–" + waves.get(waves.size() - 1) + " traen")
               + " menos enemigos que vidas y no se pueden perder aunque ninguna torreta"
-              + " dispare: ahí no puede haber muros y la presión es solo de dinero (menos cobro y"
-              + " sin oleada perfecta ni ×3).");
+              + " dispare: ahí no puede haber muros y solo está en juego la estrella sin fugas"
+              + " (y el reto).");
     }
   }
 

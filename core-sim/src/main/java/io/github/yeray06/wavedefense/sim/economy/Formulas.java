@@ -1,9 +1,11 @@
 package io.github.yeray06.wavedefense.sim.economy;
 
 import io.github.yeray06.wavedefense.sim.data.BalanceConfig;
-import io.github.yeray06.wavedefense.sim.data.ShopConfig;
 
-/** The plan's formulas ("Economía y farmeo"), with every constant taken from data. */
+/**
+ * The plan's wave formulas ("Economía y farmeo"), with every constant taken from data. Its money
+ * formulas are gone with the money (D-57).
+ */
 public final class Formulas {
   private final BalanceConfig balance;
 
@@ -16,25 +18,10 @@ public final class Formulas {
     return grow(balance.enemyHealth(), wave);
   }
 
-  /** {@code dinero por enemigo(n) = 2 · 1,15^(n−1)}, in cents. */
-  public long rewardPerEnemyCents(int wave) {
-    return Money.cents(grow(balance.rewardPerEnemy(), wave));
-  }
-
   /** {@code enemigos(n) = min(6 + 2n, 60)}. */
   public int enemyCount(int wave) {
     BalanceConfig.CountRule rule = balance.enemyCount();
     return Math.min(rule.base() + rule.perWave() * wave, rule.max());
-  }
-
-  /** The plan's "dinero por oleada": every normal enemy killed, without bonuses. */
-  public long waveRewardCents(int wave) {
-    return enemyCount(wave) * rewardPerEnemyCents(wave);
-  }
-
-  /** Cost of buying the next level when {@code ownedLevels} are already bought. */
-  public static long hardwareCostCents(ShopConfig.HardwareItem item, int ownedLevels) {
-    return Money.cents(item.firstCost() * StrictMath.pow(item.costGrowth(), ownedLevels));
   }
 
   private static double grow(BalanceConfig.Growth growth, int wave) {

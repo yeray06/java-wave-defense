@@ -21,9 +21,11 @@ cada decisión técnica en una línea. Di sin rodeos cuándo algo es mala idea.
   y topes de hardware según la sintaxis comprada (D-34, en `shop.json`).
 - Excepción aceptada a la regla del doble: Variables (D-39). Se revisa con el
   playtest («A observar en el playtest», `docs/PROGRESS.md`).
-- Economía nueva decidida por Yeray (D-57, cambia el «Farmeo» del plan):
-  estrellas por oleada que se cobran una sola vez y una moneda de jefes. Se
-  implementa en la fase 6c; hasta entonces sigue el dinero del plan.
+- Economía de Yeray (D-57, cambia el «Farmeo» del plan): 3 estrellas por
+  oleada que se cobran una sola vez (superarla, sin fugas, su reto de código)
+  y un trofeo por jefe. Nada de dinero ni de pagar por repetir. Precios y
+  retos en `shop.json` y `waves.json`; `sim-cli` avisa si una partida queda
+  bloqueada. Las mejoras se devuelven por lo que costaron (D-59).
 - El manual es para quien nunca ha programado: frases cortas, cada símbolo
   explicado y ejemplos comentados (D-58).
 - FUERA: for, métodos, try/catch, clases, contratos, modificadores, Nueva

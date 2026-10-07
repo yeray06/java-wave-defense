@@ -23,7 +23,7 @@ import java.util.Set;
  * without leaks. Merely winning is no measure there: with 20 core lives, waves of fewer than 20
  * enemies (1–6) cannot be lost at all. Starting from the player's state just before buying the
  * piece, it compares (a) the piece and its script against (b) no piece and the best hardware the
- * same money buys.
+ * same stars buy.
  */
 final class DoubleRule {
   private static final HardwareKind[] HARDWARE = {
@@ -33,7 +33,7 @@ final class DoubleRule {
   record Entry(
       Feature feature,
       int wave,
-      long priceCents,
+      int price,
       String scriptWith,
       double kWith,
       String scriptWithout,
@@ -70,7 +70,7 @@ final class DoubleRule {
         continue;
       }
       Progress base = beforeBuying.get(item.feature());
-      long price = shop.priceCents(item.feature());
+      int price = shop.price(item.feature());
       if (base == null) {
         entries.add(
             new Entry(item.feature(), item.arrivesAroundWave(), price, "", 0, "", "", 0, 0, false));
@@ -89,7 +89,7 @@ final class DoubleRule {
       Best neither = bestK(wave, unlocksWithout, base);
       Best withoutPiece = null;
       String bestHardware = "";
-      for (Progress option : hardwareOptions(base.copyWithMoney(price))) {
+      for (Progress option : hardwareOptions(base.copyWithStars(price))) {
         Best best = bestK(wave, unlocksWithout, option);
         if (withoutPiece == null || best.k() > withoutPiece.k()) {
           withoutPiece = best;
@@ -112,7 +112,7 @@ final class DoubleRule {
     return entries;
   }
 
-  /** Every way to spend the money {@code budget} holds on MVP hardware. */
+  /** Every way to spend the stars {@code budget} holds on MVP hardware. */
   private List<Progress> hardwareOptions(Progress budget) {
     List<Progress> options = new ArrayList<>();
     collect(budget, 0, options);

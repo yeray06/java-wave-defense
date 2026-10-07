@@ -19,7 +19,6 @@ public final class Enemy {
   boolean armored;
   int spawnTick;
   int lastDamageTick;
-  long rewardCents;
   double x;
   double y;
 

@@ -15,7 +15,6 @@ import io.github.yeray06.wavedefense.script.api.Feature;
 import io.github.yeray06.wavedefense.sim.data.GameData;
 import io.github.yeray06.wavedefense.sim.data.HardwareKind;
 import io.github.yeray06.wavedefense.sim.data.ShopConfig;
-import io.github.yeray06.wavedefense.sim.economy.Money;
 import io.github.yeray06.wavedefense.sim.progress.Progress;
 import io.github.yeray06.wavedefense.sim.progress.PurchaseCheck;
 import io.github.yeray06.wavedefense.sim.progress.Shop;
@@ -28,6 +27,7 @@ import java.util.function.Consumer;
  */
 public final class ShopPanel extends Table {
   private static final float WIDTH = 470;
+  private static final float TEXT_WIDTH = WIDTH - 20;
 
   private final GameData data;
   private final Shop shop;
@@ -36,10 +36,11 @@ public final class ShopPanel extends Table {
   private final Texts texts;
   private final Skin skin;
   private final Consumer<Object> onPurchase;
-  private long shownMoney = -1;
+  private long shownWallet = -1;
 
   /**
-   * @param onPurchase called after a purchase with the {@link Feature} or {@link HardwareKind}
+   * @param onPurchase called after a purchase or a refund (D-59) with the {@link Feature} or {@link
+   *     HardwareKind}
    */
   public ShopPanel(
       GameData data, Progress progress, ScriptTexts names, Skin skin, Consumer<Object> onPurchase) {
@@ -56,21 +57,24 @@ public final class ShopPanel extends Table {
   @Override
   public void act(float delta) {
     super.act(delta);
-    if (progress.moneyCents() != shownMoney) {
+    if (wallet() != shownWallet) {
       rebuild();
     }
   }
 
   /** Rebuilds every row: prices, levels and what can be bought now. */
   public void rebuild() {
-    // Rebuilt on every purchase and every coin earned: keep the player where they were reading.
+    // Rebuilt on every purchase and every star earned: keep the player where they were reading.
     ScrollPane scroll = getParent() instanceof ScrollPane pane ? pane : null;
     float scrolledTo = scroll == null ? 0 : scroll.getScrollY();
-    shownMoney = progress.moneyCents();
+    shownWallet = wallet();
     clearChildren();
     top().left();
     add(new Label(
-            texts.format("shop.money", Money.wholeUnits(progress.moneyCents())), skin, "good"))
+            texts.format(
+                "shop.wallet", names.stars(progress.stars()), names.trophies(progress.trophies())),
+            skin,
+            "good"))
         .left()
         .padBottom(8)
         .row();
@@ -81,7 +85,7 @@ public final class ShopPanel extends Table {
       String button =
           progress.owns(feature)
               ? texts.get("shop.owned")
-              : texts.format("shop.buy", Money.wholeUnits(shop.priceCents(feature)));
+              : texts.format("shop.buy", names.stars(shop.price(feature)));
       row(
           names.feature(feature),
           texts.get("shop.relief." + feature.name()),
@@ -93,7 +97,9 @@ public final class ShopPanel extends Table {
               onPurchase.accept(feature);
               showCard(feature);
             }
-          });
+          },
+          null,
+          null);
     }
     add(new Label(texts.get("shop.hardwareTitle"), skin, "title")).left().padTop(10).row();
     for (ShopConfig.HardwareItem item : data.shop().hardware()) {
@@ -110,20 +116,39 @@ public final class ShopPanel extends Table {
       row(
           title,
           texts.format("shop.item." + kind.name() + ".effect", effect(item)),
-          texts.format("shop.buy", Money.wholeUnits(shop.priceCents(progress, kind))),
+          check == PurchaseCheck.MAX_LEVEL
+              ? texts.get("shop.maxed")
+              : texts.format("shop.buy", names.stars(shop.price(progress, kind))),
           check,
           names.check(check, shop, progress, kind),
           () -> {
             if (shop.buy(progress, kind) == PurchaseCheck.OK) {
               onPurchase.accept(kind);
             }
-          });
+          },
+          texts.format("shop.refund", shop.refundValue(progress, kind)),
+          shop.canRefund(progress, kind)
+              ? () -> {
+                if (shop.refund(progress, kind)) {
+                  onPurchase.accept(kind);
+                }
+              }
+              : null);
     }
+    add(new Label(texts.get("shop.trophies.title"), skin, "title")).left().padTop(10).row();
+    Label trophies = new Label(texts.get("shop.trophies.text"), skin, "small");
+    trophies.setWrap(true);
+    add(trophies).left().width(WIDTH).row();
     if (scroll != null) {
       scroll.layout();
       scroll.setScrollY(scrolledTo);
       scroll.updateVisualScroll();
     }
+  }
+
+  /** Stars and trophies in one number, to notice when either changes. */
+  private long wallet() {
+    return (long) progress.stars() << 32 | progress.trophies();
   }
 
   private void row(
@@ -132,7 +157,9 @@ public final class ShopPanel extends Table {
       String buttonText,
       PurchaseCheck check,
       String reason,
-      Runnable buy) {
+      Runnable buy,
+      String refundText,
+      Runnable refund) {
     Table row = new Table();
     row.setBackground(skin.getDrawable("row"));
     row.pad(6, 8, 6, 8);
@@ -141,13 +168,15 @@ public final class ShopPanel extends Table {
     text.add(new Label(title, skin)).left().row();
     Label detailLabel = new Label(detail, skin, "small");
     detailLabel.setWrap(true);
-    text.add(detailLabel).left().width(WIDTH - 190).row();
+    text.add(detailLabel).left().width(TEXT_WIDTH).row();
     if (check != PurchaseCheck.OK && check != PurchaseCheck.ALREADY_OWNED) {
       Label reasonLabel = new Label(reason, skin, "warning");
       reasonLabel.setWrap(true);
-      text.add(reasonLabel).left().width(WIDTH - 190);
+      text.add(reasonLabel).left().width(TEXT_WIDTH);
     }
-    row.add(text).left().expandX().fillX();
+    // The button goes under the text: a price in stars ("Comprar: 2 estrellas") and a long piece
+    // name do not fit side by side.
+    row.add(text).left().expandX().fillX().row();
     TextButton button = new TextButton(buttonText, skin);
     button.pad(4, 10, 4, 10);
     button.setDisabled(check != PurchaseCheck.OK);
@@ -161,7 +190,22 @@ public final class ShopPanel extends Table {
             }
           }
         });
-    row.add(button).right().padLeft(8);
+    Table buttons = new Table();
+    if (refund != null) {
+      TextButton back = new TextButton(refundText, skin);
+      back.pad(4, 10, 4, 10);
+      back.addListener(
+          new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+              refund.run();
+              rebuild();
+            }
+          });
+      buttons.add(back).padRight(8);
+    }
+    buttons.add(button);
+    row.add(buttons).right().padTop(4);
     add(row).width(WIDTH).padTop(4).row();
   }
 

@@ -35,7 +35,6 @@ import io.github.yeray06.wavedefense.game.playtest.ReloadReactionLog;
 import io.github.yeray06.wavedefense.game.render.WorldRenderer;
 import io.github.yeray06.wavedefense.game.ui.SpeedSelector;
 import io.github.yeray06.wavedefense.sim.data.GameData;
-import io.github.yeray06.wavedefense.sim.economy.Money;
 import io.github.yeray06.wavedefense.sim.progress.Progress;
 import io.github.yeray06.wavedefense.sim.progress.WaveLoop;
 import io.github.yeray06.wavedefense.sim.progress.WaveOutcome;
@@ -47,9 +46,9 @@ import io.github.yeray06.wavedefense.sim.world.Turret;
  * The battlefield: runs the wave loop on a fixed step, draws the world through {@link
  * WorldRenderer} and lays a scene2d HUD on top. Clicking a turret reloads it by hand (D-03).
  *
- * <p>The HUD shows the wave, the core, the money, the speed and auto-advance switches and a
- * one-line result of the last wave. A waiting wave shows its briefing; the toolbar opens the code,
- * shop, map, report and manual panels on the right.
+ * <p>The HUD shows the wave, the core, the stars and trophies, the speed and auto-advance switches
+ * and a one-line result of the last wave. A waiting wave shows its briefing; the toolbar opens the
+ * code, shop, map, report and manual panels on the right.
  */
 public final class BattleScreen extends ScreenAdapter {
   private static final Color BACKGROUND = new Color(0.07f, 0.08f, 0.10f, 1f);
@@ -74,7 +73,7 @@ public final class BattleScreen extends ScreenAdapter {
 
   private final Label waveLabel;
   private final Label coreLabel;
-  private final Label moneyLabel;
+  private final Label starsLabel;
   private final Label resultLabel;
   private final SpeedSelector speedSelector;
   private final TextButton autoButton;
@@ -102,7 +101,7 @@ public final class BattleScreen extends ScreenAdapter {
   private int shownFinished = -1;
   private int shownWave = -1;
   private int shownLives = -1;
-  private long shownMoney = -1;
+  private long shownStars = -1;
   private int shownAuto = -1;
   private int shownBriefing = -1;
   private double seconds;
@@ -131,7 +130,7 @@ public final class BattleScreen extends ScreenAdapter {
 
     waveLabel = new Label("", skin);
     coreLabel = new Label("", skin);
-    moneyLabel = new Label("", skin);
+    starsLabel = new Label("", skin);
     resultLabel = new Label("", skin, "small");
     autoButton = new TextButton("", skin);
     Label hint = new Label(texts.get("hud.hint.reload"), skin, "small");
@@ -140,7 +139,7 @@ public final class BattleScreen extends ScreenAdapter {
             data.balance().speeds(), skin, speed -> texts.format("hud.speed", speed), BUTTON_PAD);
     autoButton.pad(4, BUTTON_PAD, 4, BUTTON_PAD);
     int slots = data.map().turretSlots().size();
-    briefing = new BriefingPanel(data, names, skin, loop::deploy);
+    briefing = new BriefingPanel(data, loop.progress(), names, skin, loop::deploy);
     editorPanel = new EditorPanel(loop, names, skin, slots);
     shopPanel = new ShopPanel(data, loop.progress(), names, skin, this::purchased);
     mapPanel = new MapPanel(data, loop.progress(), texts, skin, this::chooseWave);
@@ -169,7 +168,7 @@ public final class BattleScreen extends ScreenAdapter {
     top.top().pad(PAD);
     top.add(waveLabel).left().padRight(30);
     top.add(coreLabel).left().padRight(30);
-    top.add(moneyLabel).left().expandX();
+    top.add(starsLabel).left().expandX();
     top.add(speedSelector).right().padRight(PAD);
     top.add(autoButton).right();
     top.row();
@@ -318,6 +317,8 @@ public final class BattleScreen extends ScreenAdapter {
         ReportLines.build(
             loop.lastReport(),
             loop.lastOutcome(),
+            loop.progress(),
+            data.waves().wave(loop.lastReport().wave()).challenge(),
             names,
             data.balance().ticksPerSecond(),
             pathLength));
@@ -399,10 +400,11 @@ public final class BattleScreen extends ScreenAdapter {
       coreLabel.setText(
           texts.format("hud.core", Math.max(0, shownLives), data.balance().coreLivesPerWave()));
     }
-    long money = Money.wholeUnits(progress.moneyCents());
-    if (money != shownMoney) {
-      shownMoney = money;
-      moneyLabel.setText(texts.format("hud.money", money));
+    // Both counters in one number, to rebuild the text only when one of them changes.
+    long stars = (long) progress.stars() << 32 | progress.trophies();
+    if (stars != shownStars) {
+      shownStars = stars;
+      starsLabel.setText(texts.format("hud.stars", progress.stars(), progress.trophies()));
     }
     int auto = progress.autoAdvance() ? 1 : 0;
     if (auto != shownAuto) {
@@ -433,12 +435,15 @@ public final class BattleScreen extends ScreenAdapter {
     if (outcome == null) {
       return "";
     }
-    long paid = Money.wholeUnits(outcome.totalCents());
     if (!outcome.won()) {
-      return texts.format("hud.result.lost", outcome.wave(), outcome.nextWave(), paid);
+      return texts.format("hud.result.lost", outcome.wave(), outcome.nextWave());
     }
+    String earned =
+        outcome.stars() > 0
+            ? texts.format("hud.result.earned", names.stars(outcome.stars()))
+            : texts.get("hud.result.nothingNew");
     return texts.format(
-        outcome.perfect() ? "hud.result.perfect" : "hud.result.won", outcome.wave(), paid);
+        outcome.perfect() ? "hud.result.perfect" : "hud.result.won", outcome.wave(), earned);
   }
 
   /** Text above a turret: the exception that hung it, a reload, or an empty magazine. */

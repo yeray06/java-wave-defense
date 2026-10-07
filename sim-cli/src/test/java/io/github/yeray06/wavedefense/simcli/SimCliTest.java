@@ -83,7 +83,12 @@ class SimCliTest {
     List<DoubleRule.Entry> withoutCaps =
         new DoubleRule(data.withoutHardwareCaps(), player, config).evaluate(run.beforeBuying());
     String markdown =
-        new BalanceReport(data, ASSETS, config, player).render(run, doubleRule, withoutCaps);
+        new BalanceReport(data, ASSETS, config, player)
+            .render(
+                run,
+                new ProgressionRun(data, player, config, false).run(),
+                doubleRule,
+                withoutCaps);
     assertEquals(
         Files.readString(Path.of("docs/BALANCE.md")),
         markdown,

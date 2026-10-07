@@ -58,7 +58,7 @@ class WaveLoopTest {
     assertEquals(1, loop.lastReport().wave());
     assertEquals(2, loop.battle().wave());
     assertEquals(WaveLoop.State.AWAITING_DEPLOY, loop.state());
-    assertTrue(loop.progress().moneyCents() > 0);
+    assertTrue(loop.progress().stars() > 0, "wave 1 paid at least its first star");
   }
 
   @Test
@@ -158,7 +158,7 @@ class WaveLoopTest {
 
   @Test
   void aPurchaseRebuildsTheWaitingWave() {
-    Progress progress = Progress.newGame(data()).copyWithMoney(1_000_000);
+    Progress progress = Progress.newGame(data()).copyWithStars(1_000);
     WaveLoop loop = new WaveLoop(data(), progress);
     Shop shop = new Shop(data().withoutHardwareCaps());
     assertEquals(
@@ -171,7 +171,7 @@ class WaveLoopTest {
   @Test
   void theRevisionGrowsWithEverythingWorthSaving() {
     GameData data = data();
-    Progress progress = Progress.newGame(data).copyWithMoney(100_00);
+    Progress progress = Progress.newGame(data).copyWithStars(100);
     WaveLoop loop = new WaveLoop(data, progress);
     long start = loop.revision();
     loop.setScript(0, "disparar();");

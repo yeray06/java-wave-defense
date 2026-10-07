@@ -4,7 +4,6 @@ import io.github.yeray06.wavedefense.script.api.Feature;
 import io.github.yeray06.wavedefense.script.api.Unlocks;
 import io.github.yeray06.wavedefense.sim.data.GameData;
 import io.github.yeray06.wavedefense.sim.data.HardwareKind;
-import io.github.yeray06.wavedefense.sim.economy.Money;
 import io.github.yeray06.wavedefense.sim.world.Loadout;
 import java.util.BitSet;
 import java.util.EnumMap;
@@ -14,11 +13,17 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * The player's progress: what survives a defeat (plan, "Derrota y reinicio": money, syntax and
- * hardware) plus where they are. Changed only through {@link Shop} and {@link Progression}.
+ * The player's progress: what survives a defeat (stars, trophies, syntax and hardware) plus where
+ * they are and which of each wave's goals they have met (D-57). Changed only through {@link Shop}
+ * and {@link Progression}.
  */
 public final class Progress {
-  long moneyCents;
+  /** Stars to spend: every goal met adds one, every purchase takes its price (D-57). */
+  int stars;
+
+  /** Boss trophies to spend: one per boss killed for the first time (D-57). */
+  int trophies;
+
   final EnumSet<Feature> features = EnumSet.noneOf(Feature.class);
   final EnumMap<HardwareKind, Integer> levels = new EnumMap<>(HardwareKind.class);
   int currentWave = 1;
@@ -26,32 +31,36 @@ public final class Progress {
   boolean autoAdvance = true;
   final BitSet beatenWaves = new BitSet();
   final BitSet perfectWaves = new BitSet();
+  final BitSet challengeWaves = new BitSet();
   final BitSet bossesKilled = new BitSet();
   private final int startingTurrets;
 
-  private Progress(long moneyCents, int startingTurrets) {
-    this.moneyCents = moneyCents;
+  private Progress(int stars, int startingTurrets) {
+    this.stars = stars;
     this.startingTurrets = startingTurrets;
     for (HardwareKind kind : HardwareKind.values()) {
       levels.put(kind, 0);
     }
   }
 
-  /** A new game: plan's starting turret, money from data, auto-advance on (D-02). */
+  /** A new game: plan's starting turret, stars from data, auto-advance on (D-02). */
   public static Progress newGame(GameData data) {
-    return new Progress(
-        Money.cents(data.balance().startingMoney()), data.balance().startingTurrets());
+    return new Progress(data.balance().startingStars(), data.balance().startingTurrets());
   }
 
   /**
    * Everything a saved game keeps of the progress, as plain values.
    *
-   * @param beatenWaves waves beaten at least once
-   * @param perfectWaves waves beaten without leaks (speed-up allowed)
-   * @param bossesKilled boss waves whose boss was killed (first-kill pay is spent)
+   * @param stars stars not spent yet
+   * @param trophies boss trophies not spent yet
+   * @param beatenWaves waves beaten at least once: their first star
+   * @param perfectWaves waves beaten without leaks: their second star (and speed-up allowed)
+   * @param challengeWaves waves whose code challenge was met: their third star
+   * @param bossesKilled boss waves whose boss was killed: their trophy
    */
   public record Snapshot(
-      long moneyCents,
+      int stars,
+      int trophies,
       Set<Feature> features,
       Map<HardwareKind, Integer> levels,
       int currentWave,
@@ -59,19 +68,22 @@ public final class Progress {
       boolean autoAdvance,
       Set<Integer> beatenWaves,
       Set<Integer> perfectWaves,
+      Set<Integer> challengeWaves,
       Set<Integer> bossesKilled) {
     public Snapshot {
       features = Set.copyOf(features);
       levels = Map.copyOf(levels);
       beatenWaves = Set.copyOf(beatenWaves);
       perfectWaves = Set.copyOf(perfectWaves);
+      challengeWaves = Set.copyOf(challengeWaves);
       bossesKilled = Set.copyOf(bossesKilled);
     }
   }
 
   public Snapshot snapshot() {
     return new Snapshot(
-        moneyCents,
+        stars,
+        trophies,
         features,
         levels,
         currentWave,
@@ -79,6 +91,7 @@ public final class Progress {
         autoAdvance,
         waves(beatenWaves),
         waves(perfectWaves),
+        waves(challengeWaves),
         waves(bossesKilled));
   }
 
@@ -90,7 +103,8 @@ public final class Progress {
    */
   public static Progress restore(GameData data, Snapshot saved) {
     int lastWave = data.balance().lastWave();
-    require(saved.moneyCents() >= 0, "money must not be negative");
+    require(saved.stars() >= 0, "stars must not be negative");
+    require(saved.trophies() >= 0, "trophies must not be negative");
     require(
         saved.highestWaveReached() >= 1 && saved.highestWaveReached() <= lastWave,
         "highest wave out of range: " + saved.highestWaveReached());
@@ -105,13 +119,15 @@ public final class Progress {
           feature + " without " + item.requires());
     }
     Progress progress = newGame(data);
-    progress.moneyCents = saved.moneyCents();
+    progress.stars = saved.stars();
+    progress.trophies = saved.trophies();
     progress.features.addAll(saved.features());
     for (var level : saved.levels().entrySet()) {
       require(level.getValue() >= 0, "negative level for " + level.getKey());
       var item = data.shop().hardware(level.getKey());
       require(level.getValue() == 0 || item.inMvp(), level.getKey() + " is not sold");
-      progress.levels.put(level.getKey(), level.getValue());
+      // A level above the highest one (an old save, or data that lowered it) keeps the highest.
+      progress.levels.put(level.getKey(), Math.min(level.getValue(), item.maxLevel()));
     }
     require(
         progress.turretCount() <= data.map().turretSlots().size(),
@@ -121,6 +137,7 @@ public final class Progress {
     progress.autoAdvance = saved.autoAdvance();
     fill(progress.beatenWaves, saved.beatenWaves(), lastWave);
     fill(progress.perfectWaves, saved.perfectWaves(), lastWave);
+    fill(progress.challengeWaves, saved.challengeWaves(), lastWave);
     fill(progress.bossesKilled, saved.bossesKilled(), lastWave);
     return progress;
   }
@@ -144,7 +161,8 @@ public final class Progress {
 
   /** An independent copy, for what-if simulations. */
   public Progress copy() {
-    Progress copy = new Progress(moneyCents, startingTurrets);
+    Progress copy = new Progress(stars, startingTurrets);
+    copy.trophies = trophies;
     copy.features.addAll(features);
     copy.levels.putAll(levels);
     copy.currentWave = currentWave;
@@ -152,19 +170,40 @@ public final class Progress {
     copy.autoAdvance = autoAdvance;
     copy.beatenWaves.or(beatenWaves);
     copy.perfectWaves.or(perfectWaves);
+    copy.challengeWaves.or(challengeWaves);
     copy.bossesKilled.or(bossesKilled);
     return copy;
   }
 
-  /** A copy holding {@code cents} instead of its money, for "what if I spent this" questions. */
-  public Progress copyWithMoney(long cents) {
+  /** A copy holding {@code stars} instead of its own, for "what if I spent this" questions. */
+  public Progress copyWithStars(int stars) {
     Progress copy = copy();
-    copy.moneyCents = cents;
+    copy.stars = stars;
     return copy;
   }
 
-  public long moneyCents() {
-    return moneyCents;
+  /** Stars not spent yet. */
+  public int stars() {
+    return stars;
+  }
+
+  /** Boss trophies not spent yet. */
+  public int trophies() {
+    return trophies;
+  }
+
+  /** Whether a wave's goal is met: each one paid its star once (D-57). */
+  public boolean met(int wave, Goal goal) {
+    return switch (goal) {
+      case CLEAR -> beatenWaves.get(wave);
+      case PERFECT -> perfectWaves.get(wave);
+      case CHALLENGE -> challengeWaves.get(wave);
+    };
+  }
+
+  /** Stars earned in the whole game, spent or not: one per goal met. */
+  public int starsEarned() {
+    return beatenWaves.cardinality() + perfectWaves.cardinality() + challengeWaves.cardinality();
   }
 
   public Set<Feature> features() {
@@ -185,6 +224,19 @@ public final class Progress {
 
   public int currentWave() {
     return currentWave;
+  }
+
+  /**
+   * Goes to a wave already reached, as the wave map does (D-49).
+   *
+   * @return false for a wave not reached yet
+   */
+  public boolean goTo(int wave) {
+    if (wave < 1 || wave > highestWaveReached) {
+      return false;
+    }
+    currentWave = wave;
+    return true;
   }
 
   public int highestWaveReached() {

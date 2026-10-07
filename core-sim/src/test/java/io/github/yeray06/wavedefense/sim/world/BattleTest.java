@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.github.yeray06.wavedefense.script.diag.FaultType;
 import io.github.yeray06.wavedefense.script.runtime.CompiledScript;
 import io.github.yeray06.wavedefense.sim.TestData;
+import io.github.yeray06.wavedefense.sim.data.Challenge;
 import io.github.yeray06.wavedefense.sim.data.EnemyKind;
 import io.github.yeray06.wavedefense.sim.data.GameData;
 import io.github.yeray06.wavedefense.sim.data.WaveTable;
@@ -32,7 +33,9 @@ class BattleTest {
         new WaveTable(
             List.of(),
             d.waves().spawnWindowSeconds(),
-            List.of(new WaveTable.WaveSpec(1, List.of(groups))));
+            List.of(
+                new WaveTable.WaveSpec(
+                    1, List.of(groups), new Challenge(Challenge.Type.NO_FAULTS, 0))));
     return new GameData(
         d.balance(), d.turret(), d.enemies(), waves, d.shop(), d.map(), d.scriptApi(), d.manual());
   }
@@ -67,7 +70,6 @@ class BattleTest {
     assertTrue(report.won());
     assertTrue(report.perfect());
     assertEquals(8, report.kills());
-    assertEquals(8 * 200, report.earnedCents());
   }
 
   @Test

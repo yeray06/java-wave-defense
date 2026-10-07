@@ -58,6 +58,9 @@
           "id": "START_GAME"
         },
         {
+          "id": "START_STARS"
+        },
+        {
           "id": "START_SHOP"
         }
       ]

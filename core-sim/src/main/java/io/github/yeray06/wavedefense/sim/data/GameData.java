@@ -141,6 +141,12 @@ public record GameData(
         throw new DataException(
             WAVES, "wave " + wave.wave() + " must have " + (bossWave ? "one boss" : "no boss"));
       }
+      Challenge challenge = wave.challenge();
+      if (challenge.type() == Challenge.Type.MAX_MEMORY
+          && challenge.limit() > turret.memoryLines()) {
+        throw new DataException(
+            WAVES, "wave " + wave.wave() + ": a memory challenge above the turret's memory");
+      }
       for (WaveTable.Group group : wave.groups()) {
         int size = enemies.type(group.type()).groupSize();
         if (group.count() % size != 0) {

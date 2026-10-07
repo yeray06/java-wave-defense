@@ -72,7 +72,6 @@ public final class Battle {
   private final int[] heatPerShot;
 
   private final double baseHealth;
-  private final long baseRewardCents;
   private final double healthScale;
 
   private int tick;
@@ -82,7 +81,6 @@ public final class Battle {
   private boolean bossKilled;
   private boolean bossLeaked;
   private int kills;
-  private long earnedCents;
   private final WaveReport.Leak[] leaks;
   private int leakCount;
 
@@ -121,7 +119,6 @@ public final class Battle {
       heatPerShot[type.ordinal()] = turret.heatPerShot().get(type);
     }
     baseHealth = formulas.enemyHealth(wave);
-    baseRewardCents = formulas.rewardPerEnemyCents(wave);
     healthScale = setup.healthScale();
     coreLives = data.balance().coreLivesPerWave();
     defaultTarget = turret.defaultTarget();
@@ -222,7 +219,6 @@ public final class Battle {
       enemy.armored = type.togglesArmor() ? type.startsArmored() : type.armored();
       enemy.spawnTick = tick;
       enemy.lastDamageTick = tick;
-      enemy.rewardCents = Math.round(baseRewardCents * type.rewardMultiplier());
       enemy.lastInRangeDistance = -1;
       enemy.x = path.x(0);
       enemy.y = path.y(0);
@@ -276,6 +272,9 @@ public final class Battle {
   private void startReload(Turret turret, boolean manual) {
     events.add(BattleEventType.RELOAD, tick, turret.index, manual ? 1 : 0, turret.x, turret.y);
     turret.reloads++;
+    if (manual) {
+      turret.manualReloads++;
+    }
     turret.reloadCyclesLeft = data.turret().reloadCycles();
     if (turret.reloadCyclesLeft == 0) {
       turret.ammo = magazine;
@@ -321,7 +320,6 @@ public final class Battle {
     if (enemy.health <= DEAD) {
       events.add(BattleEventType.KILL, tick, enemy.kind.ordinal(), 0, enemy.x, enemy.y);
       kills++;
-      earnedCents += enemy.rewardCents;
       if (enemy.kind == EnemyKind.BOSS) {
         bossKilled = true;
       }
@@ -477,7 +475,6 @@ public final class Battle {
         leakList,
         bossKilled,
         bossLeaked,
-        earnedCents,
         tick,
         turretReports);
   }

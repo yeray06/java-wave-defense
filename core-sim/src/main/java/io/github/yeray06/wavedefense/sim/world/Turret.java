@@ -30,6 +30,7 @@ public final class Turret {
   int airShots;
   int wastedOnDead;
   int reloads;
+  int manualReloads;
   int hungTicks;
 
   Turret(int index, double x, double y, CompiledScript script, int magazine) {
@@ -88,6 +89,6 @@ public final class Turret {
 
   WaveReport.TurretReport report() {
     return new WaveReport.TurretReport(
-        shots, airShots, wastedOnDead, reloads, hungTicks, faults.snapshot());
+        shots, airShots, wastedOnDead, reloads, manualReloads, hungTicks, faults.snapshot());
   }
 }
