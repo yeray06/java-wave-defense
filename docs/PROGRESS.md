@@ -15,12 +15,12 @@ capturas está en [`DIARIO.md`](DIARIO.md).
 | 3c. Barrido del Regenerador | ✅ Fusionada | `phase-3c-regenerador` |
 | 3d. Camino a un render 3D (D-40) | ✅ Fusionada | `phase-3d-render-3d` |
 | 4. Juego: camino, torretas, enemigos, bucle | ✅ Fusionada | `phase-4-juego` |
-| 5. Editor, tienda, parte de oleada, informe, mapa | ✅ Hecha, en PR | `phase-5-interfaz` |
-| 5b. Manual del jugador | ✅ Hecha, en PR | `phase-5b-manual` |
-| 6. Guardado, ajustes, robustez | ✅ Hecha, en PR | `phase-6-guardado` |
-| 6b. Manual para principiantes y nombres | ✅ Hecha, en PR | `phase-6b-manual-sencillo` |
-| 6c. Economía de estrellas y retos (D-57) | ✅ Hecha, en PR | `phase-6c-estrellas` |
-| 7. Empaquetado y documentación | Solo con Yeray en casa | — |
+| 5. Editor, tienda, parte de oleada, informe, mapa | ✅ Fusionada | `phase-5-interfaz` |
+| 5b. Manual del jugador | ✅ Fusionada | `phase-5b-manual` |
+| 6. Guardado, ajustes, robustez | ✅ Fusionada | `phase-6-guardado` |
+| 6b. Manual para principiantes y nombres | ✅ Fusionada | `phase-6b-manual-sencillo` |
+| 6c. Economía de estrellas y retos (D-57) | ✅ Fusionada | `phase-6c-estrellas` |
+| 7. Empaquetado y documentación | ✅ Hecha, en PR | `phase-7-empaquetado` |
 
 ## Fase 0 (hecha)
 
@@ -402,9 +402,26 @@ Resultado del simulador (`docs/BALANCE.md`):
   while sale peor (0,20) porque ahora se compra en la oleada 4 y se mide en
   la 8.
 
+## Fase 7: empaquetado y documentación (hecha)
+
+- Construo 2.2.2 en `lwjgl3`: un zip por sistema con el juego y su propio Java
+  21 (Temurin recortado con jlink, unos 45 MB). Se genera desde cualquier
+  sistema: `./gradlew :lwjgl3:packageWinX64` (y `LinuxX64`, `MacM1`, `MacX64`).
+- Workflow `Package` en GitHub Actions, solo a mano o con una etiqueta `v*`:
+  deja los cuatro zips para descargar 14 días.
+- `docs/STEAM.md`: cómo publicar en Steam (depots, Auto-Cloud por sistema,
+  steamworks4j a través de `PlatformServices`, SteamPipe y lo que falta antes
+  de vender: firmas, icono, Steam Deck).
+- README con empaquetar, jugar el zip y regenerar el balance.
+
+Comprobado aquí: el zip de Linux, descomprimido en una carpeta limpia, arranca
+con su propio Java, guarda la partida y juega una oleada. Los de Windows y
+macOS se generan bien, pero no se pueden abrir en este contenedor.
+
 ## Siguiente
 
-La fase 7 (empaquetado), cuando Yeray lo diga.
+El MVP está completo. Lo siguiente lo decide Yeray tras jugar el zip de
+Windows: ajustes de balance con lo que salga del playtest, o el acto 2.
 
 ## Decisiones por revisar
 
@@ -494,6 +511,20 @@ deciden con ese dato, no antes.
   así: empujan a programar «dispara solo si hay enemigos». D-05 cerrada.
 
 ## Pendiente de probar en local
+
+Fase 7 (Windows, sin usar Gradle):
+
+- [ ] Doble clic en `jugar.bat` (en la carpeta del repo): baja lo último y
+  abre el juego. Probar también sin internet: avisa y juega igual.
+
+- [ ] En GitHub: *Actions* → *Package* → *Run workflow*; al acabar, bajar
+  `java-wave-defense-windows` de *Artifacts*.
+- [ ] Descomprimir (dentro hay otro zip; descomprimirlo también) y abrir
+  `java-wave-defense.exe`: arranca sin tener Java instalado.
+- [ ] La partida de antes sigue ahí (`%APPDATA%\JavaWaveDefense`), porque el
+  zip usa la misma carpeta que `gradlew.bat :lwjgl3:run`.
+- [ ] SmartScreen puede avisar («Windows protegió su PC») porque el `.exe` no
+  está firmado: «Más información» → «Ejecutar de todas formas».
 
 Fase 6c (`gradlew.bat :lwjgl3:run`):
 

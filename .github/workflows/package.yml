@@ -1,0 +1,61 @@
+name: Package
+
+# Builds the game with its own Java runtime for Windows, Linux and macOS (Construo, from Linux).
+# Only by hand (Actions > Package > Run workflow) or with a version tag: never on every commit,
+# Actions minutes are limited.
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Package
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up JDK (version from .java-version)
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version-file: .java-version
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Test before packaging
+        run: ./gradlew build --stacktrace
+
+      - name: Package every target
+        run: >-
+          ./gradlew --stacktrace
+          :lwjgl3:packageWinX64 :lwjgl3:packageLinuxX64
+          :lwjgl3:packageMacM1 :lwjgl3:packageMacX64
+
+      - name: Upload Windows
+        uses: actions/upload-artifact@v5
+        with:
+          name: java-wave-defense-windows
+          path: build/dist/java-wave-defense-winX64.zip
+          retention-days: 14
+
+      - name: Upload Linux
+        uses: actions/upload-artifact@v5
+        with:
+          name: java-wave-defense-linux
+          path: build/dist/java-wave-defense-linuxX64.zip
+          retention-days: 14
+
+      - name: Upload macOS
+        uses: actions/upload-artifact@v5
+        with:
+          name: java-wave-defense-macos
+          path: |
+            build/dist/java-wave-defense-macM1.zip
+            build/dist/java-wave-defense-macX64.zip
+          retention-days: 14

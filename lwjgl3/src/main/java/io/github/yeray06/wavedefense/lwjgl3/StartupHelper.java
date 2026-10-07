@@ -27,7 +27,8 @@ final class StartupHelper {
     if (OsFamily.current() != OsFamily.MACOS) {
       return false;
     }
-    // Never relaunch twice, even if the variable below is missing for some reason.
+    // Never relaunch twice, even if the variable below is missing for some reason. The packaged
+    // game (Construo) sets it too: its launcher already starts on the first thread.
     if (Boolean.getBoolean(RELAUNCHED_PROPERTY)) {
       return false;
     }
