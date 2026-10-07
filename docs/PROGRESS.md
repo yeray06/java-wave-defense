@@ -454,6 +454,12 @@ deciden con ese dato, no antes.
 
 ## Pendiente de probar en local
 
+Arreglo de los botones desplazados:
+
+- [ ] Con la ventana maximizada o estirada a otra forma, cada botón responde
+  justo donde se ve (Código, Tienda, Mapa…, la velocidad y los de los
+  paneles).
+
 Fase 6b:
 
 - [ ] Leer el manual como alguien que no ha programado nunca: ¿se entiende

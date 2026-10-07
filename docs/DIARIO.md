@@ -215,3 +215,9 @@ nueva partida.
 | Cambiar los nombres rompía textos del plan y de D-34 que tienen test («Aún no has desbloqueado while»). | Los tests se actualizan a propósito, con el nombre entre comillas: «Aún no has desbloqueado «Repetir (while)»». |
 | El símbolo || no es fácil de encontrar en el teclado. | El manual dice cómo escribirlo en un teclado español (AltGr + 1). |
 
+## Arreglo · 7 de octubre · Botones desplazados al cambiar la ventana
+
+| Problema | Solución |
+|---|---|
+| Yeray: con la ventana grande o con otra forma, al hacer clic en la parte izquierda de un botón se pulsaba el de su izquierda. El mapa se dibuja en un recuadro 16:9 con bandas a los lados, y la interfaz se dibujaba después dentro de ese mismo recuadro, encogida, mientras los clics se calculaban sobre la ventana entera. En 1280×720 no se notaba porque no hay bandas. | La interfaz recupera la ventana entera antes de dibujarse (una línea). Un test con una ventana de 1920×1009 lo reproducía (dibujaba desplazada 63 píxeles) y ahora pasa. |
+
