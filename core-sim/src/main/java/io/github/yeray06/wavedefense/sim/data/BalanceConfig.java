@@ -2,7 +2,12 @@ package io.github.yeray06.wavedefense.sim.data;
 
 import java.util.List;
 
-/** {@code data/balance.json}: the plan's economy formulas and wave rules. */
+/**
+ * {@code data/balance.json}: the plan's economy formulas and wave rules.
+ *
+ * @param speeds game speeds the player can pick, from 1 upwards; anything above 1 only on waves
+ *     already beaten without leaks (plan, "Farmeo")
+ */
 public record BalanceConfig(
     List<String> notFromPlan,
     int ticksPerSecond,
@@ -14,7 +19,8 @@ public record BalanceConfig(
     BossRule boss,
     int lastWave,
     int startingTurrets,
-    double startingMoney) {
+    double startingMoney,
+    List<Integer> speeds) {
 
   /** {@code base · growthPerWave^(n−1)}. */
   public record Growth(double base, double growthPerWave) {
@@ -59,5 +65,14 @@ public record BalanceConfig(
     Check.positive("lastWave", lastWave);
     Check.positive("startingTurrets", startingTurrets);
     Check.atLeastZero("startingMoney", startingMoney);
+    speeds = List.copyOf(Check.present("speeds", speeds));
+    if (speeds.isEmpty() || speeds.get(0) != 1) {
+      throw new IllegalArgumentException("speeds must start at 1");
+    }
+    for (int i = 1; i < speeds.size(); i++) {
+      if (speeds.get(i) <= speeds.get(i - 1)) {
+        throw new IllegalArgumentException("speeds must grow");
+      }
+    }
   }
 }

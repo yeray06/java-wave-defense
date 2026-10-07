@@ -20,6 +20,7 @@ import io.github.yeray06.wavedefense.game.i18n.Texts;
 import io.github.yeray06.wavedefense.game.loop.FixedStepClock;
 import io.github.yeray06.wavedefense.game.playtest.ReloadReactionLog;
 import io.github.yeray06.wavedefense.game.render.WorldRenderer;
+import io.github.yeray06.wavedefense.game.ui.SpeedSelector;
 import io.github.yeray06.wavedefense.sim.data.GameData;
 import io.github.yeray06.wavedefense.sim.economy.Money;
 import io.github.yeray06.wavedefense.sim.progress.Progress;
@@ -42,7 +43,6 @@ public final class BattleScreen extends ScreenAdapter {
   /** Ticks a late frame may run per speed unit (ARCHITECTURE §5). */
   private static final int MAX_TICKS_PER_FRAME = 5;
 
-  private static final int FAST = 3;
   private static final float LABEL_OFFSET = 46;
   private static final float PAD = 10;
   private static final float BUTTON_PAD = 12;
@@ -60,18 +60,16 @@ public final class BattleScreen extends ScreenAdapter {
   private final Label coreLabel;
   private final Label moneyLabel;
   private final Label resultLabel;
-  private final TextButton speedButton;
+  private final SpeedSelector speedSelector;
   private final TextButton autoButton;
   private final TextButton deployButton;
   private final Label[] turretLabels;
   private final int[] turretLabelState;
 
-  private boolean fastRequested;
   private int shownFinished = -1;
   private int shownWave = -1;
   private int shownLives = -1;
   private long shownMoney = -1;
-  private int shownSpeed = -1;
   private int shownAuto = -1;
   private int shownDeploy = -1;
   private double seconds;
@@ -95,11 +93,12 @@ public final class BattleScreen extends ScreenAdapter {
     coreLabel = new Label("", skin);
     moneyLabel = new Label("", skin);
     resultLabel = new Label("", skin, "small");
-    speedButton = new TextButton("", skin);
     autoButton = new TextButton("", skin);
     deployButton = new TextButton("", skin);
     Label hint = new Label(texts.get("hud.hint.reload"), skin, "small");
-    speedButton.pad(4, BUTTON_PAD, 4, BUTTON_PAD);
+    speedSelector =
+        new SpeedSelector(
+            data.balance().speeds(), skin, speed -> texts.format("hud.speed", speed), BUTTON_PAD);
     autoButton.pad(4, BUTTON_PAD, 4, BUTTON_PAD);
     deployButton.pad(BUTTON_PAD, BUTTON_PAD * 2, BUTTON_PAD, BUTTON_PAD * 2);
 
@@ -109,7 +108,7 @@ public final class BattleScreen extends ScreenAdapter {
     top.add(waveLabel).left().padRight(30);
     top.add(coreLabel).left().padRight(30);
     top.add(moneyLabel).left().expandX();
-    top.add(speedButton).right().padRight(PAD).minWidth(70);
+    top.add(speedSelector).right().padRight(PAD);
     top.add(autoButton).right();
     stage.addActor(top);
 
@@ -134,13 +133,6 @@ public final class BattleScreen extends ScreenAdapter {
       stage.addActor(turretLabels[i]);
     }
 
-    speedButton.addListener(
-        new ChangeListener() {
-          @Override
-          public void changed(ChangeEvent event, Actor actor) {
-            fastRequested = speedButton.isChecked();
-          }
-        });
     autoButton.addListener(
         new ChangeListener() {
           @Override
@@ -186,7 +178,8 @@ public final class BattleScreen extends ScreenAdapter {
   @Override
   public void render(float delta) {
     seconds += delta;
-    int speed = speed();
+    speedSelector.setFastAllowed(loop.speedUpAllowed());
+    int speed = speedSelector.speed();
     if (loop.state() == WaveLoop.State.RUNNING) {
       int ticks = clock.advance(delta, speed);
       for (int i = 0; i < ticks && loop.state() == WaveLoop.State.RUNNING; i++) {
@@ -203,16 +196,12 @@ public final class BattleScreen extends ScreenAdapter {
 
     ScreenUtils.clear(BACKGROUND);
     world.render(loop.battle(), clock.alpha(), delta);
-    updateHud(speed);
+    updateHud();
     stage.act(delta);
     stage.draw();
   }
 
-  private int speed() {
-    return fastRequested && loop.speedUpAllowed() ? FAST : 1;
-  }
-
-  private void updateHud(int speed) {
+  private void updateHud() {
     Battle battle = loop.battle();
     Progress progress = loop.progress();
     if (battle.wave() != shownWave) {
@@ -228,12 +217,6 @@ public final class BattleScreen extends ScreenAdapter {
     if (money != shownMoney) {
       shownMoney = money;
       moneyLabel.setText(texts.format("hud.money", money));
-    }
-    int speedState = (loop.speedUpAllowed() ? 2 : 0) + (speed == FAST ? 1 : 0);
-    if (speedState != shownSpeed) {
-      shownSpeed = speedState;
-      speedButton.setText(texts.get(speed == FAST ? "hud.speed.fast" : "hud.speed.normal"));
-      speedButton.setDisabled(!loop.speedUpAllowed());
     }
     int auto = progress.autoAdvance() ? 1 : 0;
     if (auto != shownAuto) {

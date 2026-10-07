@@ -28,6 +28,7 @@ Valores provisionales (D-12 y siguientes) que el plan no fija. Salen de la lista
 | `data/balance.json` | `ticksPerSecond` | 60 |
 | `data/balance.json` | `startingMoney` | 0 |
 | `data/balance.json` | `boss.repeatKillRewardInEnemies` | 20 |
+| `data/balance.json` | `speeds[1]` | (no encontrado) |
 | `data/turret.json` | `rangeUnits` | 330 |
 | `data/turret.json` | `bulletSpeedUnitsPerSecond` | 1000 |
 | `data/turret.json` | `defaultTarget` | "NEAREST_TO_TURRET" |

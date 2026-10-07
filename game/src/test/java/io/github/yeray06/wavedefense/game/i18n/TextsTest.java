@@ -14,6 +14,7 @@ class TextsTest {
         () -> {
           Texts texts = Texts.load(Gdx.files.internal("i18n/messages"));
           assertEquals("Oleada 3/10", texts.format("hud.wave", 3, 10));
+          assertEquals("×2", texts.format("hud.speed", 2));
           assertEquals("Núcleo: 7/10", texts.format("hud.core", 7, 10));
           assertEquals("Dinero: 12.345", texts.format("hud.money", 12345L));
           assertEquals(
@@ -23,8 +24,6 @@ class TextsTest {
               texts.format("hud.turret.fault", texts.get("script.fault.NO_AMMO"), 1));
           for (String key :
               new String[] {
-                "hud.speed.normal",
-                "hud.speed.fast",
                 "hud.auto.on",
                 "hud.auto.off",
                 "hud.deploy",

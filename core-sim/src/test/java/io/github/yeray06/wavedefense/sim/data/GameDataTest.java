@@ -71,6 +71,8 @@ class GameDataTest {
         "initialScript");
     assertRejected(GameData.BALANCE, "\"lastWave\": 10", "\"lastWave\": 9", "lastWave");
     assertRejected(GameData.BALANCE, "\"startingTurrets\": 1", "\"startingTurrets\": 3", "slots");
+    assertRejected(GameData.BALANCE, "\"speeds\": [1, 2, 3]", "\"speeds\": [2, 3]", "start at 1");
+    assertRejected(GameData.BALANCE, "\"speeds\": [1, 2, 3]", "\"speeds\": [1, 3, 2]", "grow");
     assertRejected(GameData.SHOP, "\"kind\": \"DAMAGE\"", "\"kind\": \"MEMORY\"", "exactly once");
     assertRejected(
         GameData.SHOP,
