@@ -21,6 +21,11 @@ cada decisión técnica en una línea. Di sin rodeos cuándo algo es mala idea.
   y topes de hardware según la sintaxis comprada (D-34, en `shop.json`).
 - Excepción aceptada a la regla del doble: Variables (D-39). Se revisa con el
   playtest («A observar en el playtest», `docs/PROGRESS.md`).
+- Economía nueva decidida por Yeray (D-57, cambia el «Farmeo» del plan):
+  estrellas por oleada que se cobran una sola vez y una moneda de jefes. Se
+  implementa en la fase 6c; hasta entonces sigue el dinero del plan.
+- El manual es para quien nunca ha programado: frases cortas, cada símbolo
+  explicado y ejemplos comentados (D-58).
 - FUERA: for, métodos, try/catch, clases, contratos, modificadores, Nueva
   versión. No implementarlos, pero la arquitectura debe admitirlos.
 
@@ -31,7 +36,8 @@ cada decisión técnica en una línea. Di sin rodeos cuándo algo es mala idea.
 - Código del jugador: intérprete propio (lexer → parser → AST → checker →
   árbol ejecutable). Nunca javac, Janino ni reflexión. Ninguna excepción de
   Java sale del intérprete. BucleInfinito a las 1.000 vueltas. Errores con
-  línea. Sintaxis no comprada: «Aún no has desbloqueado while».
+  línea. Sintaxis no comprada: «Aún no has desbloqueado «Repetir (while)»» (nombres
+  para quien no sabe programar, D-58).
 - Simulación determinista: timestep fijo, ticks enteros, RNG con semilla, sin
   reloj. x3 = más ticks por frame, nunca un dt mayor.
 - Todo el balance en `assets/data/*.json`, validado al cargar. Ningún número

@@ -190,3 +190,28 @@ nueva partida.
 
 ![Interfaz al 150 % sin límite (el problema)](capturas/fase6-03-interfaz-al-150-sin-limite-problema.png)
 
+## Fase 6b · 7 de octubre · Manual para principiantes y economía decidida
+
+**Lo que pidió Yeray después de probar la fase 6**:
+- la tienda se iba arriba al comprar;
+- el manual debía entenderlo alguien que nunca ha programado, y las piezas
+  necesitaban nombres que se entendieran;
+- y la economía se rompía repitiendo una oleada fácil a ×3.
+
+- Piezas renombradas: «Decidir (if/else)», «Recordar (variables)»,
+  «Combinar condiciones (&&, ||, !)», «Repetir (while)».
+- Manual reescrito con «Empieza aquí» y «Símbolos y palabras».
+- Economía nueva decidida (D-57), para la fase 6c: estrellas que se cobran una
+  sola vez (superar, sin fugas, reto de código) y una moneda de jefes para lo
+  más grande.
+
+![Manual: Empieza aquí](capturas/fase6b-01-manual-empieza-aqui.png)
+![Los símbolos, uno a uno](capturas/fase6b-02-simbolos-uno-a-uno.png)
+
+| Problema | Solución |
+|---|---|
+| «Cómo leer el código en voz alta» salía con candado porque su ejemplo usa `&&`: una página para principiantes bloqueada al principio. | El requisito pasa al ejemplo, no a la página. |
+| Farmear rompía la economía: la oleada 3 perfecta a ×3 da 159 por minuto y toda la sintaxis cuesta 385, así que en unos 2,5 minutos se compraba todo sin programar mejor. | Lo medí con las fórmulas del plan y Yeray eligió el modelo de estrellas (como en Human Resource Machine u Opus Magnum: retos de menos líneas, menos pasos). Cambia el plan; queda apuntado como D-57. |
+| Cambiar los nombres rompía textos del plan y de D-34 que tienen test («Aún no has desbloqueado while»). | Los tests se actualizan a propósito, con el nombre entre comillas: «Aún no has desbloqueado «Repetir (while)»». |
+| El símbolo || no es fácil de encontrar en el teclado. | El manual dice cómo escribirlo en un teclado español (AltGr + 1). |
+

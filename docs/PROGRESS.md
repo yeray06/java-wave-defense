@@ -18,6 +18,8 @@ capturas está en [`DIARIO.md`](DIARIO.md).
 | 5. Editor, tienda, parte de oleada, informe, mapa | ✅ Hecha, en PR | `phase-5-interfaz` |
 | 5b. Manual del jugador | ✅ Hecha, en PR | `phase-5b-manual` |
 | 6. Guardado, ajustes, robustez | ✅ Hecha, en PR | `phase-6-guardado` |
+| 6b. Manual para principiantes y nombres | ✅ Hecha, en PR | `phase-6b-manual-sencillo` |
+| 6c. Economía de estrellas y retos (D-57) | Siguiente | — |
 | 7. Empaquetado y documentación | Solo con Yeray en casa | — |
 
 ## Fase 0 (hecha)
@@ -333,10 +335,33 @@ Comprobado aquí con Xvfb y capturas: el panel de ajustes, el código del
 editor a 20 px conservando lo escrito, la interfaz al 150 % y la partida
 recuperada al volver a abrir el juego.
 
-## Siguiente: fase 7
+## Fase 6b: manual para principiantes y nombres (hecha)
 
-Empaquetado y documentación. **Necesita que estés en casa**; no empiezo sin
-que me lo digas.
+Pedido por Yeray: que el manual lo entienda alguien que nunca ha programado y
+que las piezas tengan nombres que se entiendan sin saber programación (D-58).
+
+- Piezas: «Decidir (if/else)», «Recordar (variables)», «Combinar
+  condiciones (&&, ||, !)» y «Repetir (while)». Los mensajes las ponen entre
+  comillas: «Aún no has desbloqueado «Repetir (while)»».
+- Manual reescrito (47 páginas en 9 capítulos):
+  - Capítulo nuevo «Empieza aquí», con «Qué es programar» y «Tus primeros
+    pasos».
+  - Capítulo nuevo «Símbolos y palabras»: cada símbolo (incluido cómo
+    escribir || en un teclado español), un glosario y cómo leer el código en
+    voz alta.
+  - Títulos que dicen qué hace cada orden («disparar() · dispara una
+    bala») y ejemplos con comentarios.
+- La tienda ya no vuelve arriba al comprar (arreglado en el PR #12).
+- Decidido para la fase siguiente (D-57): economía de estrellas sin farmeo y
+  moneda de jefes.
+
+## Siguiente: fase 6c
+
+Economía de estrellas (D-57): 3 estrellas por oleada que se cobran una vez
+(superar, sin fugas, reto de código), moneda de jefes, precios en estrellas,
+retos en el parte de oleada y el informe, y `sim-cli` y `BALANCE.md`
+rehechos para calibrarla. Después, la fase 7 (empaquetado), cuando Yeray lo
+diga.
 
 ## Decisiones por revisar
 
@@ -404,6 +429,8 @@ Propuestas mías aplicadas como PROVISIONAL (detalle en
   escrito yo; se revisa leyéndolo en el juego.
 - **D-55**: guardado automático (como mucho una vez por segundo mientras se
   escribe); la oleada en curso no se guarda.
+- **D-57**: los números de la economía de estrellas (cuántas hacen falta,
+  precios, retos de cada oleada) se calibran en la fase 6c.
 - **D-56**: tamaños de interfaz 100–200 % (limitados a lo que cabe en la
   ventana) y de código 12–22 px.
 
@@ -426,6 +453,13 @@ deciden con ese dato, no antes.
   así: empujan a programar «dispara solo si hay enemigos». D-05 cerrada.
 
 ## Pendiente de probar en local
+
+Fase 6b:
+
+- [ ] Leer el manual como alguien que no ha programado nunca: ¿se entiende
+  «Empieza aquí» y «Símbolos y palabras»? ¿Falta algo?
+- [ ] Los nombres nuevos de las piezas en la Tienda, en el manual y en los
+  errores del editor se leen bien.
 
 Fase 6 (`gradlew.bat :lwjgl3:run`):
 
