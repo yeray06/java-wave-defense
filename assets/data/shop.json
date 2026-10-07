@@ -1,61 +1,72 @@
 {
-  "notFromPlan": [],
+  "notFromPlan": [
+    "syntax[].example"
+  ],
+  "exampleLines": 5,
   "syntax": [
     {
       "feature": "IF_ELSE",
       "price": 25,
       "requires": null,
       "arrivesAroundWave": 2,
-      "inMvp": true
+      "inMvp": true,
+      "example": "if (municion() == 0) {\n  recargar();\n} else if (hayEnemigos()) {\n  disparar();\n}"
     },
     {
       "feature": "VARIABLES",
       "price": 60,
       "requires": "IF_ELSE",
       "arrivesAroundWave": 4,
-      "inMvp": true
+      "inMvp": true,
+      "example": "Enemigo e = objetivo();\nif (e == null) e = enemigoMasCercano();\nif (e != null) apuntar(e);\nif (municion() == 0) recargar();\nelse if (e != null) disparar();"
     },
     {
       "feature": "LOGIC_OPS",
       "price": 100,
       "requires": "VARIABLES",
       "arrivesAroundWave": 6,
-      "inMvp": true
+      "inMvp": true,
+      "example": "if (municion() == 0 || !hayEnemigos()) {\n  recargar();\n} else if (calor() < 80 && hayEnemigos()) {\n  disparar();\n}"
     },
     {
       "feature": "WHILE",
       "price": 200,
       "requires": "LOGIC_OPS",
       "arrivesAroundWave": 8,
-      "inMvp": true
+      "inMvp": true,
+      "example": "if (municion() == 0) recargar();\nwhile (hayEnemigos() && municion() > 0 && calor() < 80) {\n  disparar();\n}"
     },
     {
       "feature": "FOR",
       "price": 450,
       "requires": "WHILE",
       "arrivesAroundWave": 11,
-      "inMvp": false
+      "inMvp": false,
+      "example": null
     },
     {
       "feature": "METHODS",
       "price": 900,
       "requires": "FOR",
       "arrivesAroundWave": 15,
-      "inMvp": false
+      "inMvp": false,
+      "example": null
     },
     {
       "feature": "TRY_CATCH",
       "price": 1800,
       "requires": "METHODS",
       "arrivesAroundWave": 18,
-      "inMvp": false
+      "inMvp": false,
+      "example": null
     },
     {
       "feature": "CLASSES",
       "price": 4000,
       "requires": "TRY_CATCH",
       "arrivesAroundWave": 23,
-      "inMvp": false
+      "inMvp": false,
+      "example": null
     }
   ],
   "hardware": [

@@ -92,4 +92,19 @@ class ScriptMessagesTest {
       new MessageFormat(value, Locale.ROOT).format(new Object[] {"a", "b", "c"});
     }
   }
+
+  @Test
+  void everyShopPieceSaysWhatItTakesOffYourHands() {
+    for (Feature feature : Feature.values()) {
+      text("shop.relief." + feature.name());
+    }
+  }
+
+  @Test
+  void everyEnemyHasANameAndADescription() {
+    for (EnemyKind kind : EnemyKind.values()) {
+      text("enemy." + kind.name() + ".name");
+      text("enemy." + kind.name() + ".info");
+    }
+  }
 }

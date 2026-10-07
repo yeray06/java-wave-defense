@@ -4,17 +4,31 @@ import io.github.yeray06.wavedefense.script.api.Feature;
 import java.util.List;
 import java.util.Optional;
 
-/** {@code data/shop.json}: syntax tree and hardware, with the plan's prices. */
+/**
+ * {@code data/shop.json}: syntax tree and hardware, with the plan's prices.
+ *
+ * @param exampleLines longest purchase-card example (plan: "un ejemplo de cinco líneas")
+ */
 public record ShopConfig(
-    List<String> notFromPlan, List<SyntaxItem> syntax, List<HardwareItem> hardware) {
+    List<String> notFromPlan,
+    int exampleLines,
+    List<SyntaxItem> syntax,
+    List<HardwareItem> hardware) {
 
   /**
    * @param requires piece that must be owned first, or {@code null} for the first one
    * @param arrivesAroundWave first wave of the plan's "Llega hacia la oleada" range
    * @param inMvp whether the MVP sells it (the others are shown, locked)
+   * @param example the purchase card's example (plan: five lines that work as they are); {@code
+   *     null} for pieces the MVP does not sell
    */
   public record SyntaxItem(
-      Feature feature, double price, Feature requires, int arrivesAroundWave, boolean inMvp) {
+      Feature feature,
+      double price,
+      Feature requires,
+      int arrivesAroundWave,
+      boolean inMvp,
+      String example) {
     public SyntaxItem {
       Check.present("feature", feature);
       Check.positive("price", price);
@@ -60,6 +74,7 @@ public record ShopConfig(
   }
 
   public ShopConfig {
+    Check.positive("exampleLines", exampleLines);
     notFromPlan = List.copyOf(Check.present("notFromPlan", notFromPlan));
     syntax = List.copyOf(Check.notEmpty("syntax", syntax));
     hardware = List.copyOf(Check.notEmpty("hardware", hardware));
@@ -83,7 +98,10 @@ public record ShopConfig(
   /** The same shop with every hardware cap removed: what the double rule calls "sin tope". */
   public ShopConfig withoutCaps() {
     return new ShopConfig(
-        notFromPlan, syntax, hardware.stream().map(HardwareItem::withoutCaps).toList());
+        notFromPlan,
+        exampleLines,
+        syntax,
+        hardware.stream().map(HardwareItem::withoutCaps).toList());
   }
 
   public SyntaxItem syntax(Feature feature) {
