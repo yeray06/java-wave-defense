@@ -4,7 +4,7 @@ Documento vivo. Cada decisión lleva su motivo en una línea. La fuente de verda
 del diseño es [`plan-diseno.pdf`](plan-diseno.pdf); si algo de aquí lo
 contradice, manda el plan y hay que avisar.
 
-Estado: **fase 5 hecha** (editor, tienda, parte de oleada, informe y mapa de oleadas). Antes, fase 4: pantalla de combate jugable. Antes: simulación, `sim-cli`, `docs/BALANCE.md` y la revisión de balance (D-34 … D-39). Las decisiones están en la sección 12. Las que
+Estado: **fase 5b hecha** (manual del jugador dentro del juego). Antes, fase 5: editor, tienda, parte de oleada, informe y mapa de oleadas. Antes, fase 4: pantalla de combate jugable. Antes: simulación, `sim-cli`, `docs/BALANCE.md` y la revisión de balance (D-34 … D-39). Las decisiones están en la sección 12. Las que
 llevan **PROVISIONAL** son propuestas mías aceptadas para poder avanzar; se
 listan en `docs/PROGRESS.md` («Decisiones por revisar»). Los números que no
 vienen del plan van marcados en los JSON y en `docs/BALANCE.md`.
@@ -64,7 +64,8 @@ java-wave-defense/
 │   │   ├── turret.json            # cargador, calor, ciclos, memoria, recarga, cuelgue, rango
 │   │   ├── shop.json              # árbol de sintaxis y hardware (precios, requisitos)
 │   │   ├── script-api.json        # nombre visible y desbloqueo de cada llamada
-│   │   └── map.json               # camino y huecos de torreta
+│   │   ├── map.json               # camino y huecos de torreta
+│   │   └── manual.json            # capítulos y páginas del manual, qué desbloquea cada una y sus ejemplos de código
 │   ├── i18n/
 │   │   └── messages.properties    # todos los textos y nombres visibles (también los tematizables); español por defecto
 │   └── fonts/
@@ -101,11 +102,11 @@ java-wave-defense/
 │       ├── screen/                # BattleScreen (fase 4); Briefing, Report, Shop, Settings (fases 5–6)
 │       ├── render/                # WorldRenderer (D-40) y ShapeWorldRenderer (2D): mundo, efectos, cámara
 │       ├── ui/                    # scene2d.ui, skin generado por código
-│       ├── editor/                # EditorDocument (texto, cursor, deshacer), Highlighter (con el lexer del juego), CodeEditor (widget)
-│       ├── panel/                 # BriefingPanel, EditorPanel, ShopPanel, MapPanel, ReportPanel, ReportLines
+│       ├── editor/                # EditorDocument (texto, cursor, deshacer), Highlighter (con el lexer del juego), CodeEditor (widget), CodeView (código de solo lectura)
+│       ├── panel/                 # BriefingPanel, EditorPanel, ShopPanel, MapPanel, ReportPanel, ReportLines, ManualPanel
 │       ├── audio/                 # sonidos sintetizados por código propio
 │       ├── input/
-│       ├── i18n/                  # Texts: envoltorio de I18NBundle
+│       ├── i18n/                  # Texts: envoltorio de I18NBundle; ScriptTexts; ManualFacts (números del manual)
 │       ├── settings/              # Settings persistidos
 │       ├── playtest/              # ReloadReactionLog: tiempo de recarga a mano (decisión C)
 │       └── log/                   # handler global y log rotativo
@@ -423,6 +424,19 @@ Así se ve en el propio dato qué es provisional.
   puntos; candado en las no alcanzadas, bandera roja en la actual, el jefe
   más grande. Clic en una alcanzada: se abandona la oleada en curso sin cobrar
   ni contar como derrota y la elegida espera a «Desplegar» (D-50).
+- **Manual** (fase 5b, D-54): botón Manual en la barra. Índice por capítulos
+  (primeros pasos, lo que hace la torreta, lo que se le pregunta a un
+  enemigo, sintaxis, excepciones, errores al escribir, enemigos y recetas) y
+  una página por llamada, pieza, excepción y enemigo, con anterior/siguiente.
+  Lo que el jugador aún no tiene sale con candado y qué lo trae (pieza de la
+  tienda, oleada), como la tienda y el mapa. Cada ejemplo se pinta con los
+  colores del editor (`CodeView`, mismo `Highlighter`), dice cuánta memoria
+  ocupa y tiene un botón «Copiar» que lo deja en el portapapeles para
+  pegarlo en el editor con Ctrl+V. Estructura, desbloqueos y código en
+  `data/manual.json`; `GameData` exige una página por cada llamada, pieza del
+  MVP, enemigo y excepción, y compila cada ejemplo con lo que pide su página.
+  Los textos van en `manual.*` y citan los números de los datos por nombre
+  (`{cargador}`, `ManualFacts`), sin `MessageFormat`.
 - **Textos**: `I18NBundle` con `messages.properties` en español. El código
   solo usa claves. Los módulos puros devuelven códigos + argumentos; quien
   pinta el texto es `game` (o `sim-cli`, que lee el mismo fichero).
@@ -699,6 +713,7 @@ provisional contradice el plan.
 | D-51 | Código con errores en el editor | PROVISIONAL | Se queda en el editor marcado en rojo; la torreta sigue con la última versión que compilaba. El código que compila se aplica al momento: en la oleada siguiente, o en la que espera a «Desplegar» (plan, «Edición en caliente»). |
 | D-52 | Dónde van los paneles | PROVISIONAL | A la derecha, uno a la vez, encima del mundo (500 px); el mundo sigue corriendo y se puede recargar a mano en la parte visible. El informe se abre solo al acabar una oleada si no hay otro panel abierto. |
 | D-53 | Ejemplos de las tarjetas de la tienda | PROVISIONAL | Escritos por mí (el plan solo pide «cinco líneas que funcionen tal cual»), en `shop.json`, validados al cargar. |
+| D-54 | Manual del jugador (fase 5b) | CERRADA la idea (Yeray, no viene del plan); contenido PROVISIONAL | Un libro dentro del juego con cada llamada, pieza de sintaxis, excepción y enemigo, ejemplos que se copian con un botón y recetas. Todo visible desde el principio; lo no desbloqueado, con candado y qué lo trae, como el árbol de la tienda. Textos y ejemplos escritos por mí; los ejemplos se compilan al cargar y los números salen de los datos. |
 | D-44 | Semilla de cada batalla | PROVISIONAL | Un contador de batallas de la partida: las mismas acciones repiten la misma partida. Hoy solo la usa el objetivo «al azar», que no está activo. |
 | D-45 | Medida de la decisión C | PROVISIONAL | En la oleada 1, segundos reales desde que una torreta se queda sin balas hasta el clic que la recarga, más un resumen al acabar la oleada. Se escribe en la consola (`Gdx.app.log`, etiqueta `wave-defense`); el log a fichero llega en la fase 6. |
 | D-46 | Escala de la UI | PROVISIONAL | `ScreenViewport` a 1 píxel por unidad y fuentes a tamaño fijo (18 y 14 px): nítidas a 1280×720. La escala de UI configurable va con los ajustes (fase 6). |
