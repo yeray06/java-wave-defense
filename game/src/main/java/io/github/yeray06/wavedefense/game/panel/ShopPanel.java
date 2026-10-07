@@ -39,7 +39,8 @@ public final class ShopPanel extends Table {
   private long shownWallet = -1;
 
   /**
-   * @param onPurchase called after a purchase with the {@link Feature} or {@link HardwareKind}
+   * @param onPurchase called after a purchase or a refund (D-59) with the {@link Feature} or {@link
+   *     HardwareKind}
    */
   public ShopPanel(
       GameData data, Progress progress, ScriptTexts names, Skin skin, Consumer<Object> onPurchase) {
@@ -96,7 +97,9 @@ public final class ShopPanel extends Table {
               onPurchase.accept(feature);
               showCard(feature);
             }
-          });
+          },
+          null,
+          null);
     }
     add(new Label(texts.get("shop.hardwareTitle"), skin, "title")).left().padTop(10).row();
     for (ShopConfig.HardwareItem item : data.shop().hardware()) {
@@ -122,7 +125,15 @@ public final class ShopPanel extends Table {
             if (shop.buy(progress, kind) == PurchaseCheck.OK) {
               onPurchase.accept(kind);
             }
-          });
+          },
+          texts.format("shop.refund", shop.refundValue(progress, kind)),
+          shop.canRefund(progress, kind)
+              ? () -> {
+                if (shop.refund(progress, kind)) {
+                  onPurchase.accept(kind);
+                }
+              }
+              : null);
     }
     add(new Label(texts.get("shop.trophies.title"), skin, "title")).left().padTop(10).row();
     Label trophies = new Label(texts.get("shop.trophies.text"), skin, "small");
@@ -146,7 +157,9 @@ public final class ShopPanel extends Table {
       String buttonText,
       PurchaseCheck check,
       String reason,
-      Runnable buy) {
+      Runnable buy,
+      String refundText,
+      Runnable refund) {
     Table row = new Table();
     row.setBackground(skin.getDrawable("row"));
     row.pad(6, 8, 6, 8);
@@ -177,7 +190,22 @@ public final class ShopPanel extends Table {
             }
           }
         });
-    row.add(button).right().padTop(4);
+    Table buttons = new Table();
+    if (refund != null) {
+      TextButton back = new TextButton(refundText, skin);
+      back.pad(4, 10, 4, 10);
+      back.addListener(
+          new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+              refund.run();
+              rebuild();
+            }
+          });
+      buttons.add(back).padRight(8);
+    }
+    buttons.add(button);
+    row.add(buttons).right().padTop(4);
     add(row).width(WIDTH).padTop(4).row();
   }
 

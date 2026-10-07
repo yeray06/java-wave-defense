@@ -28,6 +28,7 @@ import io.github.yeray06.wavedefense.script.api.Feature;
 import io.github.yeray06.wavedefense.script.diag.FaultType;
 import io.github.yeray06.wavedefense.sim.data.EnemyKind;
 import io.github.yeray06.wavedefense.sim.data.GameData;
+import io.github.yeray06.wavedefense.sim.data.HardwareKind;
 import io.github.yeray06.wavedefense.sim.progress.Goal;
 import io.github.yeray06.wavedefense.sim.progress.Progress;
 import io.github.yeray06.wavedefense.sim.progress.WaveLoop;
@@ -142,6 +143,36 @@ class PanelsTest {
               all(stage.getRoot()).stream().anyMatch(a -> a instanceof Dialog),
               "the purchase card is open");
           assertNotNull(button(shop, names.texts().get("shop.owned")));
+        });
+  }
+
+  @Test
+  void theShopGivesBackAnUpgradeForWhatItCost() {
+    withUi(
+        (data, names, skin, stage) -> {
+          Progress progress = Progress.newGame(data).copyWithStars(10);
+          var prices = new io.github.yeray06.wavedefense.sim.progress.Shop(data);
+          prices.buy(progress, Feature.IF_ELSE);
+          List<Object> changed = new ArrayList<>();
+          ShopPanel shop = new ShopPanel(data, progress, names, skin, changed::add);
+          stage.addActor(shop);
+          shop.rebuild();
+          String refund =
+              names
+                  .texts()
+                  .format("shop.refund", data.shop().hardware(HardwareKind.DAMAGE).prices().get(0));
+          assertTrue(
+              all(shop).stream()
+                  .noneMatch(
+                      a -> a instanceof TextButton b && b.getText().toString().equals(refund)),
+              "nothing to give back yet");
+          int before = progress.stars();
+          prices.buy(progress, HardwareKind.DAMAGE);
+          shop.rebuild();
+          button(shop, refund).fire(new ChangeListener.ChangeEvent());
+          assertEquals(0, progress.level(HardwareKind.DAMAGE));
+          assertEquals(before, progress.stars());
+          assertEquals(List.of(HardwareKind.DAMAGE), changed, "the game hears about it");
         });
   }
 
