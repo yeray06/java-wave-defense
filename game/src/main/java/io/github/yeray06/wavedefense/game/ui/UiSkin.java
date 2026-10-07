@@ -34,15 +34,24 @@ public final class UiSkin {
 
   private UiSkin() {}
 
+  /** The skin at 100 % with the editor's original code size. */
+  public static Skin create(FileHandle fontFile) {
+    return create(fontFile, 1, SMALL_FONT_SIZE);
+  }
+
   /**
    * @param fontFile the TTF file
+   * @param scale the interface size (D-56): fonts are rasterised at their size on screen and scaled
+   *     back, so layouts keep their units and text stays sharp
+   * @param codeFontSize the {@code code} font for the editor and the manual, before {@code scale}
    */
-  public static Skin create(FileHandle fontFile) {
+  public static Skin create(FileHandle fontFile, float scale, int codeFontSize) {
     Skin skin = new Skin();
     FreeTypeFontGenerator generator = new FreeTypeFontGenerator(fontFile);
     try {
-      skin.add("default", font(generator, FONT_SIZE), BitmapFont.class);
-      skin.add("small", font(generator, SMALL_FONT_SIZE), BitmapFont.class);
+      skin.add("default", font(generator, FONT_SIZE, scale), BitmapFont.class);
+      skin.add("small", font(generator, SMALL_FONT_SIZE, scale), BitmapFont.class);
+      skin.add("code", font(generator, codeFontSize, scale), BitmapFont.class);
     } finally {
       generator.dispose();
     }
@@ -138,12 +147,17 @@ public final class UiSkin {
     return pixmap;
   }
 
-  private static BitmapFont font(FreeTypeFontGenerator generator, int size) {
+  private static BitmapFont font(FreeTypeFontGenerator generator, int size, float scale) {
     FreeTypeFontGenerator.FreeTypeFontParameter parameter =
         new FreeTypeFontGenerator.FreeTypeFontParameter();
-    parameter.size = size;
+    parameter.size = Math.round(size * scale);
     parameter.characters = FreeTypeFontGenerator.DEFAULT_CHARS + EXTRA_CHARS;
-    return generator.generateFont(parameter);
+    BitmapFont font = generator.generateFont(parameter);
+    if (scale != 1) {
+      font.getData().setScale(1 / scale);
+      font.setUseIntegerPositions(false);
+    }
+    return font;
   }
 
   private static Drawable tinted(TextureRegion region, float r, float g, float b) {

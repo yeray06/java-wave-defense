@@ -33,7 +33,8 @@ class BattleScreenTest {
           ShapeWorldRenderer world = new ShapeWorldRenderer(data);
           WaveLoop loop = new WaveLoop(data, Progress.newGame(data));
           ReloadReactionLog reactions = new ReloadReactionLog(1, 2, log::add);
-          BattleScreen screen = new BattleScreen(data, texts, skin, loop, world, reactions);
+          BattleScreen screen =
+              new BattleScreen(data, texts, skin, loop, world, reactions, new FakeControls(), 1);
           screen.resize(1280, 720);
 
           screen.render(1f / 60);
@@ -67,9 +68,17 @@ class BattleScreenTest {
           Skin skin = UiSkin.create(Gdx.files.internal("fonts/JetBrainsMono-Regular.ttf"));
           ShapeWorldRenderer world = new ShapeWorldRenderer(data);
           WaveLoop loop = new WaveLoop(data, Progress.newGame(data));
+          FakeControls controls = new FakeControls();
           BattleScreen screen =
               new BattleScreen(
-                  data, texts, skin, loop, world, new ReloadReactionLog(1, 2, line -> {}));
+                  data,
+                  texts,
+                  skin,
+                  loop,
+                  world,
+                  new ReloadReactionLog(1, 2, line -> {}),
+                  controls,
+                  1);
           screen.resize(1280, 720);
           screen.toggle(screen.editorPanel());
           assertTrue(screen.openPanel() == screen.editorPanel());
@@ -78,6 +87,11 @@ class BattleScreenTest {
           screen.toggle(screen.manualScroll());
           assertTrue(screen.openPanel() == screen.manualScroll(), "the manual opens");
           screen.toggle(screen.manualScroll());
+          screen.openSettings();
+          assertTrue(screen.openPanel() == screen.settingsScroll(), "the settings open");
+          screen.toggle(screen.settingsScroll());
+          screen.showNotice("aviso");
+          assertTrue(screen.notice().equals("aviso"));
 
           loop.deploy();
           for (int frame = 0; frame < 20_000 && loop.wavesFinished() == 0; frame++) {

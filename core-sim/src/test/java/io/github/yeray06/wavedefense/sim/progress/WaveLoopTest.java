@@ -167,4 +167,29 @@ class WaveLoopTest {
     loop.purchased();
     assertEquals(2, loop.battle().turretCount());
   }
+
+  @Test
+  void theRevisionGrowsWithEverythingWorthSaving() {
+    GameData data = data();
+    Progress progress = Progress.newGame(data).copyWithMoney(100_00);
+    WaveLoop loop = new WaveLoop(data, progress);
+    long start = loop.revision();
+    loop.setScript(0, "disparar();");
+    assertEquals(start, loop.revision(), "the same code is no change");
+    loop.setScript(0, "disparar(); disparar(");
+    assertEquals(start + 1, loop.revision(), "a broken draft is still worth saving");
+    assertEquals("disparar(); disparar(", loop.draft(0));
+    assertEquals("disparar();", loop.script(0));
+    loop.setAutoAdvance(false);
+    assertEquals(start + 2, loop.revision());
+    loop.setAutoAdvance(false);
+    assertEquals(start + 2, loop.revision());
+    loop.purchased();
+    assertEquals(start + 3, loop.revision());
+    loop.deploy();
+    finishWave(loop);
+    assertEquals(start + 4, loop.revision(), "a finished wave");
+    loop.selectWave(1);
+    assertEquals(start + 5, loop.revision());
+  }
 }

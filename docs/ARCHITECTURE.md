@@ -4,7 +4,7 @@ Documento vivo. Cada decisión lleva su motivo en una línea. La fuente de verda
 del diseño es [`plan-diseno.pdf`](plan-diseno.pdf); si algo de aquí lo
 contradice, manda el plan y hay que avisar.
 
-Estado: **fase 5b hecha** (manual del jugador dentro del juego). Antes, fase 5: editor, tienda, parte de oleada, informe y mapa de oleadas. Antes, fase 4: pantalla de combate jugable. Antes: simulación, `sim-cli`, `docs/BALANCE.md` y la revisión de balance (D-34 … D-39). Las decisiones están en la sección 12. Las que
+Estado: **fase 6 hecha** (guardado, ajustes y robustez). Antes, fase 5b: manual del jugador. Antes, fase 5: editor, tienda, parte de oleada, informe y mapa de oleadas. Antes, fase 4: pantalla de combate jugable. Antes: simulación, `sim-cli`, `docs/BALANCE.md` y la revisión de balance (D-34 … D-39). Las decisiones están en la sección 12. Las que
 llevan **PROVISIONAL** son propuestas mías aceptadas para poder avanzar; se
 listan en `docs/PROGRESS.md` («Decisiones por revisar»). Los números que no
 vienen del plan van marcados en los JSON y en `docs/BALANCE.md`.
@@ -87,7 +87,7 @@ java-wave-defense/
 │       ├── economy/               # Formulas (las del plan), Money (centésimas)
 │       ├── world/                 # Battle (una oleada), Turret, Enemy, Bullet, pools, PathTrack, WaveReport, BattleEvents
 │       ├── progress/              # Progress, Shop, Progression (pago, avance, derrota, ×3), WaveLoop (D-01)
-│       ├── save/                  # fase 6: SaveData versionado, migraciones, códec JSON
+│       ├── save/                  # SaveGame (progreso, código, borradores), SaveCodec (versión y migraciones)
 │       └── rng/                   # SplitMix64 con semilla (reservado: el MVP no tiene azar)
 ├── platform/                      # servicios del SO / Steam. Java puro
 │   └── src/{main,test}/java/io/github/yeray06/wavedefense/platform/
@@ -99,17 +99,18 @@ java-wave-defense/
 │   └── src/{main,test}/java/io/github/yeray06/wavedefense/game/
 │       ├── WaveDefenseGame.java   # composición raíz: crea y conecta todo
 │       ├── loop/                  # FixedStepClock (acumulador, x1/x3)
-│       ├── screen/                # BattleScreen (fase 4); Briefing, Report, Shop, Settings (fases 5–6)
+│       ├── screen/                # BattleScreen; GameControls (lo que el panel de ajustes pide al juego)
 │       ├── render/                # WorldRenderer (D-40) y ShapeWorldRenderer (2D): mundo, efectos, cámara
 │       ├── ui/                    # scene2d.ui, skin generado por código
 │       ├── editor/                # EditorDocument (texto, cursor, deshacer), Highlighter (con el lexer del juego), CodeEditor (widget), CodeView (código de solo lectura)
-│       ├── panel/                 # BriefingPanel, EditorPanel, ShopPanel, MapPanel, ReportPanel, ReportLines, ManualPanel
+│       ├── panel/                 # BriefingPanel, EditorPanel, ShopPanel, MapPanel, ReportPanel, ReportLines, ManualPanel, SettingsPanel
+│       ├── save/                  # GameStore (save.json y settings.json en la carpeta de usuario), AutoSaver
 │       ├── audio/                 # sonidos sintetizados por código propio
 │       ├── input/
 │       ├── i18n/                  # Texts: envoltorio de I18NBundle; ScriptTexts; ManualFacts (números del manual)
-│       ├── settings/              # Settings persistidos
+│       ├── settings/              # Settings: pantalla completa, tamaños (settings.json)
 │       ├── playtest/              # ReloadReactionLog: tiempo de recarga a mano (decisión C)
-│       └── log/                   # handler global y log rotativo
+│       └── log/                   # GameLog: log rotativo y handler global
 ├── lwjgl3/                        # lanzador de escritorio + configuración de Construo
 │   └── src/main/java/io/github/yeray06/wavedefense/lwjgl3/
 │       ├── Lwjgl3Launcher.java
@@ -446,24 +447,52 @@ Así se ve en el propio dato qué es provisional.
 
 ## 7. Guardado, ajustes y robustez
 
-- **Ruta** (compatible con Steam Auto-Cloud):
+- **Ruta** (compatible con Steam Auto-Cloud), `UserDataDirectory`:
   - Windows: `%APPDATA%\JavaWaveDefense\`
   - Linux: `$XDG_DATA_HOME/java-wave-defense/` (o `~/.local/share/…`)
   - macOS: `~/Library/Application Support/JavaWaveDefense/`
+  - Dentro: `save.json` (y `.bak`), `settings.json` (y `.bak`) y `logs/`.
   - No uso las `Preferences` de libGDX: van a `~/.prefs/` y no son atómicas.
-- **Formato**: `save.json` con `"version": N`. Al cargar se aplican las
-  migraciones `vN → vN+1` en orden; cada una tiene test.
-- **Escritura atómica**: escribir `save.json.tmp`, `fsync`, copiar el actual a
-  `save.json.bak` y renombrar con `ATOMIC_MOVE` (si el sistema no lo soporta,
-  `REPLACE_EXISTING`).
-- **Carga tolerante**: si `save.json` está corrupto se prueba `.bak`; si
-  también, partida nueva y aviso al jugador. El fichero roto se conserva como
-  `save.json.corrupt-<fecha>` para depurar. El juego nunca se cierra por eso.
-- **Logs**: `java.util.logging` con `FileHandler` rotativo (5 ficheros × 1 MB)
-  en `<carpeta>/logs/`. Sin dependencia extra. `Gdx.app` redirige ahí.
-- **Handler global**: `Thread.setDefaultUncaughtExceptionHandler` y
-  `try/catch` alrededor de `render()` que registra y muestra un aviso en vez
-  de cerrar.
+- **Escritura atómica** (`AtomicFileStore`, en `platform`): escribir
+  `save.json.tmp`, `force` a disco, copiar el actual a `save.json.bak` y
+  renombrar con `ATOMIC_MOVE` (si el sistema no lo soporta,
+  `REPLACE_EXISTING`). Un `.tmp` que quede de un corte se ignora.
+- **Formato** (`SaveGame` + `SaveCodec`, en `core-sim/save`): JSON con
+  `"version"`, el progreso (`Progress.Snapshot`: dinero, sintaxis, hardware,
+  oleada actual y máxima, avance automático, oleadas superadas, perfectas y
+  jefes derribados), el código que corre cada torreta, el borrador de cada
+  editor y el contador de batallas (semilla). Al cargar se aplican las
+  migraciones `vN → vN+1` en orden; un fichero de una versión más nueva o sin
+  migración se rechaza. Lectura estricta: campos desconocidos o que faltan
+  son error.
+- **Carga comprobada**: `Progress.restore` valida contra los datos (oleadas
+  en rango, cada pieza con la que exige, hardware que se vende, torretas que
+  caben). Un script guardado que ya no compila vuelve al inicial y se
+  conserva su borrador. La oleada actual espera a «Desplegar» aunque esté
+  superada: cargar nunca arranca una oleada sola (D-55).
+- **Carga tolerante**: si `save.json` no se puede leer se prueba `.bak` y se
+  avisa («se ha recuperado la copia anterior»); si tampoco, partida nueva y
+  aviso con la ruta del fichero roto. Los ficheros rotos se conservan como
+  `save.json.corrupt-<fecha>`. El juego nunca se cierra por eso.
+- **Guardado automático** (`AutoSaver`, D-55): `WaveLoop.revision()` crece con
+  todo lo que merece guardarse (código, compras, oleada acabada, oleada
+  elegida en el mapa, avance automático). Tras un rato sin cambios, el primer
+  cambio se guarda al momento; mientras se escribe, como mucho uno por
+  segundo. Al cerrar o pasar a segundo plano, al momento. Si falla la
+  escritura, aviso y se reintenta. Una partida nueva se guarda al empezar.
+- **Ajustes** (`Settings`, `settings.json`, D-56): pantalla completa, tamaño
+  de la interfaz (100–200 %) y tamaño del código (12–22 px). Las fuentes se
+  generan a su tamaño en pantalla y se escalan de vuelta, y el `ScreenViewport`
+  usa `unitsPerPixel = 1 / escala`: la interfaz mantiene sus medidas y el
+  texto sale nítido. Cambiar un tamaño rehace la piel y la pantalla en el
+  frame siguiente; el código no se pierde porque los borradores viven en
+  `WaveLoop`. «Nueva partida» pide confirmación y no toca los ajustes.
+- **Logs** (`GameLog`): `java.util.logging` con `FileHandler` rotativo (5
+  ficheros × 1 MB) en `logs/`. `Gdx.app.log` va ahí (también la medida de la
+  decisión C, D-45).
+- **Handler global**: `Thread.setDefaultUncaughtExceptionHandler` registra
+  cualquier excepción sin capturar. Un frame que falla se registra (una vez
+  por error distinto), sale un aviso y el juego sigue.
 
 ## 8. Steam (sin integrar)
 
@@ -715,6 +744,8 @@ provisional contradice el plan.
 | D-51 | Código con errores en el editor | PROVISIONAL | Se queda en el editor marcado en rojo; la torreta sigue con la última versión que compilaba. El código que compila se aplica al momento: en la oleada siguiente, o en la que espera a «Desplegar» (plan, «Edición en caliente»). |
 | D-52 | Dónde van los paneles | PROVISIONAL | A la derecha, uno a la vez, encima del mundo (500 px); el mundo sigue corriendo y se puede recargar a mano en la parte visible. El informe se abre solo al acabar una oleada si no hay otro panel abierto. |
 | D-53 | Ejemplos de las tarjetas de la tienda | PROVISIONAL | Escritos por mí (el plan solo pide «cinco líneas que funcionen tal cual»), en `shop.json`, validados al cargar. |
+| D-55 | Guardado (fase 6) | CERRADA (Yeray) lo que se guarda; detalles PROVISIONAL | Una sola partida, automática, sin botón de guardar: al acabar una oleada, al comprar, al cambiar el código (como mucho una vez por segundo mientras se escribe) y al cerrar. Se guardan el borrador de cada editor y la versión que compila. La oleada en curso no se guarda: al volver, la oleada actual espera a «Desplegar». |
+| D-56 | Ajustes (fase 6) | CERRADA (Yeray) qué ajustes; valores PROVISIONAL | Pantalla completa, tamaño de la interfaz (100, 125, 150, 175 y 200 %), tamaño del código del editor y del manual (12 a 22 px, 14 por defecto) y «Nueva partida» con confirmación. Se aplican al momento y se guardan aparte de la partida. |
 | D-54 | Manual del jugador (fase 5b) | CERRADA la idea (Yeray, no viene del plan); contenido PROVISIONAL | Un libro dentro del juego con cada llamada, pieza de sintaxis, excepción y enemigo, ejemplos que se copian con un botón y recetas. Todo visible desde el principio; lo no desbloqueado, con candado y qué lo trae, como el árbol de la tienda. Textos y ejemplos escritos por mí; los ejemplos se compilan al cargar y los números salen de los datos. |
 | D-44 | Semilla de cada batalla | PROVISIONAL | Un contador de batallas de la partida: las mismas acciones repiten la misma partida. Hoy solo la usa el objetivo «al azar», que no está activo. |
 | D-45 | Medida de la decisión C | PROVISIONAL | En la oleada 1, segundos reales desde que una torreta se queda sin balas hasta el clic que la recarga, más un resumen al acabar la oleada. Se escribe en la consola (`Gdx.app.log`, etiqueta `wave-defense`); el log a fichero llega en la fase 6. |

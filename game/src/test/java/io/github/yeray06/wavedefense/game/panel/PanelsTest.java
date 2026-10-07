@@ -36,7 +36,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-/** Phase 5 panels: editor, shop, map, briefing, report and manual, on the headless backend. */
+/** The side panels and the briefing, on the headless backend. */
 class PanelsTest {
   private interface Body {
     void run(GameData data, ScriptTexts names, Skin skin, Stage stage);
@@ -122,6 +122,36 @@ class PanelsTest {
               all(stage.getRoot()).stream().anyMatch(a -> a instanceof Dialog),
               "the purchase card is open");
           assertNotNull(button(shop, names.texts().get("shop.owned")));
+        });
+  }
+
+  @Test
+  void theShopKeepsItsScrollWhenItIsRebuilt() {
+    withUi(
+        (data, names, skin, stage) -> {
+          Progress progress = Progress.newGame(data).copyWithMoney(1_000_00);
+          ShopPanel shop = new ShopPanel(data, progress, names, skin, item -> {});
+          com.badlogic.gdx.scenes.scene2d.ui.ScrollPane scroll =
+              new com.badlogic.gdx.scenes.scene2d.ui.ScrollPane(shop, skin);
+          scroll.setSize(500, 200);
+          stage.addActor(scroll);
+          shop.rebuild();
+          scroll.layout();
+          scroll.setScrollY(scroll.getMaxY());
+          scroll.updateVisualScroll();
+          float bottom = scroll.getScrollY();
+          assertTrue(bottom > 0, "the shop is taller than its window");
+          button(shop, names.texts().format("shop.buy", 25)).fire(new ChangeListener.ChangeEvent());
+          // The bought piece's row got shorter, so the bottom is a little higher now.
+          assertEquals(
+              Math.min(bottom, scroll.getMaxY()),
+              scroll.getScrollY(),
+              0.5f,
+              "a purchase keeps the scroll");
+          assertTrue(scroll.getScrollY() > 0, "not back at the top");
+          float after = scroll.getScrollY();
+          shop.rebuild();
+          assertEquals(after, scroll.getScrollY(), 0.5f, "so does money coming in");
         });
   }
 
@@ -243,6 +273,37 @@ class PanelsTest {
   private static io.github.yeray06.wavedefense.sim.data.ManualConfig.Page page(
       GameData data, String id) {
     return data.manual().pages().stream().filter(p -> p.id().equals(id)).findFirst().orElseThrow();
+  }
+
+  @Test
+  void theSettingsApplyAtOnceAndANewGameAsksFirst() {
+    withUi(
+        (data, names, skin, stage) -> {
+          var controls = new io.github.yeray06.wavedefense.game.screen.FakeControls();
+          SettingsPanel settings = new SettingsPanel(controls, names.texts(), skin);
+          stage.addActor(settings);
+          button(settings, names.texts().format("settings.percent", 150)).toggle();
+          assertEquals(150, controls.settings.uiScalePercent());
+          button(settings, "18").toggle();
+          assertEquals(18, controls.settings.codeFontSize());
+          button(settings, names.texts().get("settings.fullscreen.off"))
+              .fire(new ChangeListener.ChangeEvent());
+          assertTrue(controls.settings.fullscreen());
+          assertNotNull(button(settings, names.texts().get("settings.fullscreen.on")));
+
+          button(settings, names.texts().get("settings.newGame"))
+              .fire(new ChangeListener.ChangeEvent());
+          assertEquals(0, controls.newGames, "only after confirming");
+          Dialog dialog =
+              (Dialog)
+                  all(stage.getRoot()).stream()
+                      .filter(a -> a instanceof Dialog)
+                      .findFirst()
+                      .orElseThrow();
+          button(dialog, names.texts().get("settings.newGame.yes"))
+              .fire(new ChangeListener.ChangeEvent());
+          assertEquals(1, controls.newGames);
+        });
   }
 
   @Test

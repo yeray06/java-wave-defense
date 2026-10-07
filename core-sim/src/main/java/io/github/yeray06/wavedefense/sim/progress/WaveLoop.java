@@ -35,12 +35,14 @@ public final class WaveLoop {
   private final Progress progress;
   private final Progression progression;
   private final List<String> sources;
+  private final List<String> drafts;
   private Battle battle;
   private State state;
   private WaveReport lastReport;
   private WaveOutcome lastOutcome;
   private int wavesFinished;
   private long battlesBuilt;
+  private long revision;
 
   /** Starts from {@code progress}; every turret runs the data's initial script (D-14). */
   public WaveLoop(GameData data, Progress progress) {
@@ -49,7 +51,28 @@ public final class WaveLoop {
     this.progression = new Progression(data);
     int slots = data.map().turretSlots().size();
     this.sources = new ArrayList<>(Collections.nCopies(slots, data.turret().initialScript()));
+    this.drafts = new ArrayList<>(sources);
     next();
+  }
+
+  /**
+   * A saved game: its progress, the code each turret runs and what the editor held. The current
+   * wave waits for {@link #deploy()} even if it was beaten, so loading never starts a wave by
+   * itself. A saved script that no longer compiles (the data changed) falls back to the initial
+   * script; its draft is kept so the player sees their code.
+   */
+  public static WaveLoop restore(
+      GameData data, Progress progress, List<String> scripts, List<String> drafts, long battles) {
+    WaveLoop loop = new WaveLoop(data, progress);
+    for (int i = 0; i < loop.sources.size(); i++) {
+      if (i < scripts.size() && loop.compile(scripts.get(i)).succeeded()) {
+        loop.sources.set(i, scripts.get(i));
+      }
+      loop.drafts.set(i, i < drafts.size() ? drafts.get(i) : loop.sources.get(i));
+    }
+    loop.battlesBuilt = battles;
+    loop.build(true);
+    return loop;
   }
 
   /** Advances the running wave one tick; when it ends, applies it and moves on. */
@@ -62,6 +85,7 @@ public final class WaveLoop {
       lastReport = battle.report();
       lastOutcome = progression.apply(progress, lastReport);
       wavesFinished++;
+      revision++;
       next();
     }
   }
@@ -90,6 +114,10 @@ public final class WaveLoop {
    * @return the compilation, for the editor's errors and memory counter
    */
   public CompileResult setScript(int slot, String source) {
+    if (!source.equals(drafts.get(slot))) {
+      drafts.set(slot, source);
+      revision++;
+    }
     CompileResult result = compile(source);
     if (result.succeeded()) {
       sources.set(slot, source);
@@ -103,6 +131,42 @@ public final class WaveLoop {
   /** The script a slot runs: the last one that compiled, or the initial script (D-14). */
   public String script(int slot) {
     return sources.get(slot);
+  }
+
+  /** What the editor holds for a slot: the last code given to {@link #setScript}, even broken. */
+  public String draft(int slot) {
+    return drafts.get(slot);
+  }
+
+  /** Every slot's script, in slot order, for saving. */
+  public List<String> scripts() {
+    return List.copyOf(sources);
+  }
+
+  /** Every slot's draft, in slot order, for saving. */
+  public List<String> drafts() {
+    return List.copyOf(drafts);
+  }
+
+  /** Battles built so far: the seed of the next one. Saved so a loaded game replays the same. */
+  public long battlesBuilt() {
+    return battlesBuilt;
+  }
+
+  /**
+   * Grows whenever something worth saving changes: code, purchases, a finished wave, the wave
+   * chosen on the map or the auto-advance switch. Waves in progress are not saved.
+   */
+  public long revision() {
+    return revision;
+  }
+
+  /** The player's auto-advance switch. */
+  public void setAutoAdvance(boolean on) {
+    if (progress.autoAdvance() != on) {
+      progress.setAutoAdvance(on);
+      revision++;
+    }
   }
 
   /** Compiles code with the player's current unlocks and the turret's memory. */
@@ -121,6 +185,7 @@ public final class WaveLoop {
       return false;
     }
     progress.currentWave = wave;
+    revision++;
     build(true);
     return true;
   }
@@ -130,6 +195,7 @@ public final class WaveLoop {
    * running one keeps what it started with.
    */
   public void purchased() {
+    revision++;
     if (state == State.AWAITING_DEPLOY) {
       build(true);
     }

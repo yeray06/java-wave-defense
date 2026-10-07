@@ -38,7 +38,9 @@ cada decisión técnica en una línea. Di sin rodeos cuándo algo es mala idea.
   del plan en el código. Ningún texto visible en el código: i18n, español por
   defecto. Nombres tematizables desde datos.
 - Guardado JSON versionado con migraciones, escritura atómica y .bak, en la
-  carpeta de usuario del SO (compatible Steam Auto-Cloud).
+  carpeta de usuario del SO (compatible Steam Auto-Cloud). Cambiar lo que se
+  guarda = subir `SaveCodec.VERSION` y añadir su migración con test.
+  Todo lo que cambie la partida debe subir `WaveLoop.revision()` (D-55).
 - Nada de reservar memoria en el bucle caliente (pools).
 - Todo el dibujo del mundo pasa por `WorldRenderer` y solo lee la simulación
   (D-40); la UI (HUD, editor, tienda, informe) va en scene2d.
