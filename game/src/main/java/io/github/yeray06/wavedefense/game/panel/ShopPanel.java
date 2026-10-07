@@ -4,6 +4,7 @@ import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Dialog;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
@@ -62,6 +63,9 @@ public final class ShopPanel extends Table {
 
   /** Rebuilds every row: prices, levels and what can be bought now. */
   public void rebuild() {
+    // Rebuilt on every purchase and every coin earned: keep the player where they were reading.
+    ScrollPane scroll = getParent() instanceof ScrollPane pane ? pane : null;
+    float scrolledTo = scroll == null ? 0 : scroll.getScrollY();
     shownMoney = progress.moneyCents();
     clearChildren();
     top().left();
@@ -114,6 +118,11 @@ public final class ShopPanel extends Table {
               onPurchase.accept(kind);
             }
           });
+    }
+    if (scroll != null) {
+      scroll.layout();
+      scroll.setScrollY(scrolledTo);
+      scroll.updateVisualScroll();
     }
   }
 

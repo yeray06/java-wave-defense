@@ -126,6 +126,36 @@ class PanelsTest {
   }
 
   @Test
+  void theShopKeepsItsScrollWhenItIsRebuilt() {
+    withUi(
+        (data, names, skin, stage) -> {
+          Progress progress = Progress.newGame(data).copyWithMoney(1_000_00);
+          ShopPanel shop = new ShopPanel(data, progress, names, skin, item -> {});
+          com.badlogic.gdx.scenes.scene2d.ui.ScrollPane scroll =
+              new com.badlogic.gdx.scenes.scene2d.ui.ScrollPane(shop, skin);
+          scroll.setSize(500, 200);
+          stage.addActor(scroll);
+          shop.rebuild();
+          scroll.layout();
+          scroll.setScrollY(scroll.getMaxY());
+          scroll.updateVisualScroll();
+          float bottom = scroll.getScrollY();
+          assertTrue(bottom > 0, "the shop is taller than its window");
+          button(shop, names.texts().format("shop.buy", 25)).fire(new ChangeListener.ChangeEvent());
+          // The bought piece's row got shorter, so the bottom is a little higher now.
+          assertEquals(
+              Math.min(bottom, scroll.getMaxY()),
+              scroll.getScrollY(),
+              0.5f,
+              "a purchase keeps the scroll");
+          assertTrue(scroll.getScrollY() > 0, "not back at the top");
+          float after = scroll.getScrollY();
+          shop.rebuild();
+          assertEquals(after, scroll.getScrollY(), 0.5f, "so does money coming in");
+        });
+  }
+
+  @Test
   void theMapLocksWavesNotReachedAndChoosesReachedOnes() {
     withUi(
         (data, names, skin, stage) -> {

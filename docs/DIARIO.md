@@ -185,6 +185,7 @@ nueva partida.
 | En los tests no hay portapapeles ni ventana. | Las dependencias entran por constructor (`GameControls`, carpeta y reloj). |
 | En Windows (CI) fallaban los tests del juego entero: el log se quedaba abierto y Windows no deja borrar un fichero en uso. | El log se cierra al cerrar el juego; un test comprueba que no queda su `.lck`. |
 | **En el Windows de Yeray el juego se abría y se cerraba** al momento: al mostrarse la ventana, Windows avisa de que se ha movido y el lanzador dibuja un frame en cada movimiento (D-48), antes de que el juego exista. El guardado automático aún no estaba creado. En Linux no pasa, por eso ni los tests ni mis pruebas lo vieron. | Un frame antes de crear el juego no hace nada; un test lo reproduce. |
+| La tienda volvía arriba sola al comprar (Yeray): se rehace con cada compra y con cada moneda ganada, y perdía la posición. | Conserva el desplazamiento al rehacerse; un test lo comprueba. |
 | Mi primera prueba seguía al 150 %: un reemplazo de texto en el código no se había aplicado. | Lo detectó la línea nueva del log («Interface at 100 % (asked 150 %)»); arreglado y comprobado. |
 
 ![Interfaz al 150 % sin límite (el problema)](capturas/fase6-03-interfaz-al-150-sin-limite-problema.png)
