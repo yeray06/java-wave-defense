@@ -97,8 +97,8 @@ class GameDataTest {
   void rejectsABrokenManual() {
     assertRejected(
         GameData.MANUAL,
-        "recargar();\\ndisparar(); // nunca",
-        "recargar();\\nwhile (true) disparar(); // nunca",
+        "recargar();\\ndisparar();  // nunca",
+        "recargar();\\nwhile (true) disparar();  // nunca",
         "CALL_RELOAD example 1 does not compile");
     assertRejected(
         GameData.MANUAL, "\"call\": \"SPEED\"", "\"call\": \"HEALTH\"", "exactly one page");

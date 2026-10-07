@@ -19,7 +19,8 @@ class ScriptTextsTest {
           ScriptTexts names =
               new ScriptTexts(Texts.load(Gdx.files.internal("i18n/messages")), data);
           var locked = data.compiler().compile("while (true) disparar();", Unlocks.of(1), 12);
-          assertEquals("Aún no has desbloqueado while", names.error(locked.errors().get(0)));
+          assertEquals(
+              "Aún no has desbloqueado «Repetir (while)»", names.error(locked.errors().get(0)));
           var cut = data.compiler().compile("disparar()", Unlocks.of(1), 12);
           assertEquals("Se esperaba ; y hay el final del código", names.error(cut.errors().get(0)));
           assertEquals(
