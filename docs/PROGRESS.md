@@ -234,6 +234,9 @@ porque empujan a programar «dispara solo si hay enemigos».
 Editor, tienda, parte de oleada e informe. **Necesita que estés en casa**; no
 empiezo sin que me lo digas.
 
+Entra también el **mapa de oleadas** que pidió Yeray (D-49): elegir cualquier
+oleada ya alcanzada, al estilo de un mapa de niveles.
+
 ## Decisiones por revisar
 
 Propuestas mías aplicadas como PROVISIONAL (detalle en
