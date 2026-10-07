@@ -6,10 +6,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.yeray06.wavedefense.script.api.AmmoType;
+import io.github.yeray06.wavedefense.script.api.ApiFunction;
+import io.github.yeray06.wavedefense.script.api.Feature;
 import io.github.yeray06.wavedefense.sim.TestData;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
@@ -87,6 +91,62 @@ class GameDataTest {
         "outside the MVP");
     assertRejected(
         GameData.MAP, "{ \"x\": 1000, \"y\": 560 },", "{ \"x\": 0, \"y\": 560 },", "zero-length");
+  }
+
+  @Test
+  void rejectsABrokenManual() {
+    assertRejected(
+        GameData.MANUAL,
+        "recargar();\\ndisparar(); // nunca",
+        "recargar();\\nwhile (true) disparar(); // nunca",
+        "CALL_RELOAD example 1 does not compile");
+    assertRejected(
+        GameData.MANUAL, "\"call\": \"SPEED\"", "\"call\": \"HEALTH\"", "exactly one page");
+    assertRejected(
+        GameData.MANUAL, "\"fault\": \"OVERHEAT\"", "\"fault\": \"NO_AMMO\"", "exactly one page");
+    assertRejected(
+        GameData.MANUAL, "\"id\": \"START_GAME\"", "\"id\": \"START_SHOP\"", "used twice");
+    assertRejected(
+        GameData.MANUAL,
+        "\"id\": \"START_GAME\"",
+        "\"id\": \"START_GAME\", \"about\": { \"call\": \"FIRE\", \"feature\": \"WHILE\" }",
+        "one call, piece");
+  }
+
+  @Test
+  void manualPagesUnlockWithTheirCallPieceOrFirstWave() {
+    GameData data = TestData.load();
+    var ammo = new ManualConfig.Topic(ApiFunction.USE_AMMO, null, null, null);
+    assertEquals(6, data.unlocksFor(List.of(ammo)).highestWaveReached());
+    var whilePiece = new ManualConfig.Topic(null, Feature.WHILE, null, null);
+    assertEquals(
+        EnumSet.of(Feature.IF_ELSE, Feature.VARIABLES, Feature.LOGIC_OPS, Feature.WHILE),
+        EnumSet.copyOf(data.unlocksFor(List.of(whilePiece)).features()),
+        "a piece brings the ones it requires");
+    var swarm = new ManualConfig.Topic(null, null, EnemyKind.SWARM, null);
+    assertEquals(
+        data.waves().firstWave(EnemyKind.SWARM),
+        data.unlocksFor(List.of(swarm)).highestWaveReached());
+    assertTrue(
+        data.requirements(new ManualConfig.Topic(null, null, EnemyKind.BASIC, null)).isEmpty());
+    assertTrue(data.requirements(ManualConfig.Topic.NONE).isEmpty());
+  }
+
+  @Test
+  void theFullTurretRecipeFillsTheMemoryAsItsCaptionSays() {
+    GameData data = TestData.load();
+    ManualConfig.Page full =
+        data.manual().pages().stream()
+            .filter(p -> p.id().equals("RECIPE_FULL"))
+            .findFirst()
+            .orElseThrow();
+    var result =
+        data.compiler()
+            .compile(
+                full.examples().get(0).code(),
+                data.unlocksFor(full.topics()),
+                data.turret().memoryLines());
+    assertEquals(data.turret().memoryLines(), result.memoryUsed());
   }
 
   private static void assertRejected(String file, String find, String replace, String messagePart) {

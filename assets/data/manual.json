@@ -1,0 +1,625 @@
+{
+  "notFromPlan": [],
+  "chapters": [
+    {
+      "id": "START",
+      "pages": [
+        {
+          "id": "START_CYCLE",
+          "examples": [
+            {
+              "code": "disparar();"
+            }
+          ]
+        },
+        {
+          "id": "START_EDITOR",
+          "examples": [
+            {
+              "code": "// Esto es un comentario: no ocupa memoria\ndisparar();"
+            }
+          ]
+        },
+        {
+          "id": "START_MEMORY",
+          "examples": [
+            {
+              "code": "if (municion() == 0) {\n  recargar();\n} else {\n  disparar();\n}",
+              "needs": [
+                {
+                  "feature": "IF_ELSE"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "START_GAME"
+        },
+        {
+          "id": "START_SHOP"
+        }
+      ]
+    },
+    {
+      "id": "TURRET",
+      "pages": [
+        {
+          "id": "CALL_FIRE",
+          "about": {
+            "call": "FIRE"
+          },
+          "examples": [
+            {
+              "code": "disparar();"
+            },
+            {
+              "code": "disparar();\ndisparar();\ndisparar();"
+            }
+          ]
+        },
+        {
+          "id": "CALL_RELOAD",
+          "about": {
+            "call": "RELOAD"
+          },
+          "examples": [
+            {
+              "code": "recargar();\ndisparar(); // nunca llega a ejecutarse"
+            },
+            {
+              "code": "if (municion() == 0) {\n  recargar();\n}\ndisparar();",
+              "needs": [
+                {
+                  "feature": "IF_ELSE"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "CALL_AMMO",
+          "about": {
+            "call": "AMMO"
+          },
+          "examples": [
+            {
+              "code": "if (municion() == 0) {\n  recargar();\n} else if (hayEnemigos()) {\n  disparar();\n}"
+            }
+          ]
+        },
+        {
+          "id": "CALL_HEAT",
+          "about": {
+            "call": "HEAT"
+          },
+          "examples": [
+            {
+              "code": "if (municion() == 0) {\n  recargar();\n} else if (calor() < 100) {\n  disparar();\n}"
+            }
+          ]
+        },
+        {
+          "id": "CALL_HAS_ENEMIES",
+          "about": {
+            "call": "HAS_ENEMIES"
+          },
+          "examples": [
+            {
+              "code": "if (hayEnemigos()) {\n  disparar();\n}"
+            }
+          ]
+        },
+        {
+          "id": "CALL_NEAREST_ENEMY",
+          "about": {
+            "call": "NEAREST_ENEMY"
+          },
+          "examples": [
+            {
+              "code": "if (municion() == 0) recargar();\nEnemigo e = enemigoMasCercano();\nif (e != null) {\n  apuntar(e);\n  disparar();\n}"
+            }
+          ]
+        },
+        {
+          "id": "CALL_TARGET",
+          "about": {
+            "call": "TARGET"
+          },
+          "examples": [
+            {
+              "code": "if (municion() == 0) recargar();\nEnemigo e = objetivo();\nif (e == null) e = enemigoMasCercano();\nif (e != null) {\n  apuntar(e);\n  disparar();\n}"
+            }
+          ]
+        },
+        {
+          "id": "CALL_AIM",
+          "about": {
+            "call": "AIM"
+          },
+          "examples": [
+            {
+              "code": "Enemigo e = enemigoMasCercano();\nif (e != null) apuntar(e);"
+            },
+            {
+              "code": "Enemigo e = enemigoMasCercano();\napuntar(e); // falla si no hay nadie a tiro"
+            }
+          ]
+        },
+        {
+          "id": "CALL_USE_AMMO",
+          "about": {
+            "call": "USE_AMMO"
+          },
+          "examples": [
+            {
+              "code": "usarMunicion(PERFORANTE);\nif (municion() == 0) recargar();\nelse if (hayEnemigos()) disparar();",
+              "needs": [
+                {
+                  "feature": "IF_ELSE"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ENEMY_CALLS",
+      "pages": [
+        {
+          "id": "ENEMY_TYPE",
+          "needs": [
+            {
+              "feature": "VARIABLES"
+            }
+          ],
+          "examples": [
+            {
+              "code": "Enemigo e = enemigoMasCercano();\nif (e == null) {\n  // no hay nadie a tiro\n} else if (e == objetivo()) {\n  // ya le estás apuntando\n} else {\n  apuntar(e);\n}"
+            }
+          ]
+        },
+        {
+          "id": "CALL_HEALTH",
+          "about": {
+            "call": "HEALTH"
+          },
+          "examples": [
+            {
+              "code": "Enemigo e = objetivo();\nEnemigo cerca = enemigoMasCercano();\nif (e == null) e = cerca;\nif (cerca != null) {\n  if (cerca.vida() < e.vida()) e = cerca;\n}\nif (e != null) apuntar(e);"
+            }
+          ]
+        },
+        {
+          "id": "CALL_SPEED",
+          "about": {
+            "call": "SPEED"
+          },
+          "examples": [
+            {
+              "code": "Enemigo e = enemigoMasCercano();\nif (e != null) {\n  if (e.velocidad() > 150) apuntar(e);\n}"
+            }
+          ]
+        },
+        {
+          "id": "CALL_ARMORED",
+          "about": {
+            "call": "ARMORED"
+          },
+          "examples": [
+            {
+              "code": "if (municion() == 0) recargar();\nEnemigo e = enemigoMasCercano();\nif (e != null) {\n  if (e.blindado()) usarMunicion(PERFORANTE);\n  else usarMunicion(NORMAL);\n  disparar();\n}",
+              "needs": [
+                {
+                  "call": "USE_AMMO"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "CALL_DISTANCE_TO_CORE",
+          "about": {
+            "call": "DISTANCE_TO_CORE"
+          },
+          "examples": [
+            {
+              "code": "Enemigo e = objetivo();\nEnemigo cerca = enemigoMasCercano();\nif (e == null) e = cerca;\nif (cerca != null) {\n  if (cerca.distanciaAlNucleo() < 300) e = cerca;\n}\nif (e != null) apuntar(e);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "SYNTAX",
+      "pages": [
+        {
+          "id": "SYNTAX_BASICS",
+          "examples": [
+            {
+              "code": "// Dispara una vez en cada ciclo\ndisparar(); /* y esto también es un comentario */"
+            }
+          ]
+        },
+        {
+          "id": "SYNTAX_IF_ELSE",
+          "about": {
+            "feature": "IF_ELSE"
+          },
+          "examples": [
+            {
+              "code": "if (hayEnemigos()) {\n  disparar();\n}"
+            },
+            {
+              "code": "if (municion() == 0) {\n  recargar();\n} else {\n  disparar();\n}"
+            },
+            {
+              "code": "if (municion() == 0) {\n  recargar();\n} else if (calor() >= 80) {\n  // espera a que se enfríe\n} else if (hayEnemigos()) {\n  disparar();\n}"
+            },
+            {
+              "code": "if (municion() == 0) recargar();\nelse if (hayEnemigos()) disparar();"
+            }
+          ]
+        },
+        {
+          "id": "SYNTAX_VARIABLES",
+          "about": {
+            "feature": "VARIABLES"
+          },
+          "examples": [
+            {
+              "code": "int balas = municion();\nboolean hay = hayEnemigos();\nif (balas == 0) recargar();\nelse if (hay) disparar();"
+            },
+            {
+              "code": "int disparos = 0;\nif (hayEnemigos()) disparos = 2;\nif (municion() < disparos) recargar();\nif (disparos > 0) disparar();\nif (disparos > 1) disparar();"
+            },
+            {
+              "code": "int n = municion();\nn = n * 2 + 1;\nn++;\nn += 10;\nn = n % 7;"
+            }
+          ]
+        },
+        {
+          "id": "SYNTAX_LOGIC_OPS",
+          "about": {
+            "feature": "LOGIC_OPS"
+          },
+          "examples": [
+            {
+              "code": "if (municion() == 0) {\n  recargar();\n} else if (hayEnemigos() && calor() < 80) {\n  disparar();\n}"
+            },
+            {
+              "code": "if (municion() == 0\n    || (!hayEnemigos() && municion() < 6)) {\n  recargar();\n} else if (hayEnemigos()) {\n  disparar();\n}"
+            },
+            {
+              "code": "Enemigo e = enemigoMasCercano();\nif (e != null && e.vida() > 10) {\n  apuntar(e);\n}"
+            }
+          ]
+        },
+        {
+          "id": "SYNTAX_WHILE",
+          "about": {
+            "feature": "WHILE"
+          },
+          "examples": [
+            {
+              "code": "if (municion() == 0) recargar();\nwhile (hayEnemigos() && municion() > 0\n    && calor() < 80) {\n  disparar();\n}"
+            },
+            {
+              "code": "int n = 0;\nwhile (n < 3 && municion() > 0) {\n  disparar();\n  n++;\n}"
+            },
+            {
+              "code": "while (hayEnemigos()) {\n  disparar(); // acaba sin balas\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FAULTS",
+      "pages": [
+        {
+          "id": "FAULTS_INTRO"
+        },
+        {
+          "id": "FAULT_NO_AMMO",
+          "about": {
+            "fault": "NO_AMMO"
+          },
+          "examples": [
+            {
+              "code": "disparar(); // con el cargador vacío, salta"
+            },
+            {
+              "code": "if (municion() == 0) {\n  recargar();\n} else if (hayEnemigos()) {\n  disparar();\n}",
+              "needs": [
+                {
+                  "feature": "IF_ELSE"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "FAULT_OVERHEAT",
+          "about": {
+            "fault": "OVERHEAT"
+          },
+          "examples": [
+            {
+              "code": "disparar();\ndisparar();\ndisparar();\ndisparar();\ndisparar();\ndisparar();"
+            },
+            {
+              "code": "if (municion() == 0) recargar();\nif (calor() < 100) disparar();\nif (calor() < 100) disparar();",
+              "needs": [
+                {
+                  "feature": "IF_ELSE"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "FAULT_NULL_POINTER",
+          "about": {
+            "fault": "NULL_POINTER"
+          },
+          "examples": [
+            {
+              "code": "Enemigo e = objetivo();\napuntar(e); // si no hay objetivo, salta",
+              "needs": [
+                {
+                  "feature": "VARIABLES"
+                }
+              ]
+            },
+            {
+              "code": "Enemigo e = objetivo();\nif (e != null) apuntar(e);",
+              "needs": [
+                {
+                  "feature": "VARIABLES"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "FAULT_INFINITE_LOOP",
+          "about": {
+            "fault": "INFINITE_LOOP"
+          },
+          "examples": [
+            {
+              "code": "while (calor() < 100) {\n  // se te olvidó disparar: el calor nunca sube\n}",
+              "needs": [
+                {
+                  "feature": "WHILE"
+                }
+              ]
+            },
+            {
+              "code": "while (hayEnemigos() && municion() > 0\n    && calor() < 80) {\n  disparar();\n}",
+              "needs": [
+                {
+                  "feature": "WHILE"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "FAULT_ARITHMETIC",
+          "about": {
+            "fault": "ARITHMETIC"
+          },
+          "examples": [
+            {
+              "code": "int n = municion();\nint parte = 100 / n; // con 0 balas, salta",
+              "needs": [
+                {
+                  "feature": "VARIABLES"
+                }
+              ]
+            },
+            {
+              "code": "int n = municion();\nint parte = 0;\nif (n != 0) parte = 100 / n;",
+              "needs": [
+                {
+                  "feature": "VARIABLES"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ERRORS",
+      "pages": [
+        {
+          "id": "ERRORS_COMMON"
+        }
+      ]
+    },
+    {
+      "id": "ENEMIES",
+      "pages": [
+        {
+          "id": "ENEMY_BASIC",
+          "about": {
+            "enemy": "BASIC"
+          },
+          "examples": [
+            {
+              "code": "if (municion() == 0) {\n  recargar();\n} else if (hayEnemigos()) {\n  disparar();\n}",
+              "needs": [
+                {
+                  "feature": "IF_ELSE"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ENEMY_REGENERATOR",
+          "about": {
+            "enemy": "REGENERATOR"
+          },
+          "examples": [
+            {
+              "code": "if (municion() == 0) recargar();\nEnemigo e = objetivo();\nif (e == null) e = enemigoMasCercano();\nif (e != null) {\n  apuntar(e);\n  disparar();\n}",
+              "needs": [
+                {
+                  "feature": "VARIABLES"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ENEMY_ARMORED",
+          "about": {
+            "enemy": "ARMORED"
+          },
+          "examples": [
+            {
+              "code": "if (municion() == 0) recargar();\nEnemigo e = enemigoMasCercano();\nif (e != null) {\n  if (e.blindado()) usarMunicion(PERFORANTE);\n  else usarMunicion(NORMAL);\n  disparar();\n}",
+              "needs": [
+                {
+                  "feature": "VARIABLES"
+                },
+                {
+                  "call": "USE_AMMO"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ENEMY_SWARM",
+          "about": {
+            "enemy": "SWARM"
+          },
+          "examples": [
+            {
+              "code": "if (municion() == 0) recargar();\nwhile (hayEnemigos() && municion() > 0\n    && calor() < 80) {\n  disparar();\n}",
+              "needs": [
+                {
+                  "feature": "WHILE"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ENEMY_BOSS",
+          "about": {
+            "enemy": "BOSS"
+          },
+          "examples": [
+            {
+              "code": "if (municion() == 0) recargar();\nEnemigo e = objetivo();\nif (e == null) e = enemigoMasCercano();\nif (e != null) {\n  apuntar(e);\n  if (e.blindado()) usarMunicion(PERFORANTE);\n  else usarMunicion(NORMAL);\n  while (municion() > 0 && calor() < 80) {\n    disparar();\n  }\n}",
+              "needs": [
+                {
+                  "feature": "WHILE"
+                },
+                {
+                  "call": "USE_AMMO"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "RECIPES",
+      "pages": [
+        {
+          "id": "RECIPE_NO_AIR",
+          "needs": [
+            {
+              "feature": "IF_ELSE"
+            }
+          ],
+          "examples": [
+            {
+              "code": "if (municion() == 0) {\n  recargar();\n} else if (hayEnemigos()) {\n  disparar();\n}"
+            }
+          ]
+        },
+        {
+          "id": "RECIPE_IDLE_RELOAD",
+          "needs": [
+            {
+              "feature": "LOGIC_OPS"
+            }
+          ],
+          "examples": [
+            {
+              "code": "if (municion() == 0\n    || (!hayEnemigos() && municion() < 6)) {\n  recargar();\n} else if (hayEnemigos()) {\n  disparar();\n}"
+            }
+          ]
+        },
+        {
+          "id": "RECIPE_FOCUS",
+          "needs": [
+            {
+              "feature": "VARIABLES"
+            }
+          ],
+          "examples": [
+            {
+              "code": "if (municion() == 0) recargar();\nEnemigo e = objetivo();\nif (e == null) e = enemigoMasCercano();\nif (e != null) {\n  apuntar(e);\n  disparar();\n}"
+            }
+          ]
+        },
+        {
+          "id": "RECIPE_ARMOR",
+          "needs": [
+            {
+              "feature": "VARIABLES"
+            },
+            {
+              "call": "USE_AMMO"
+            }
+          ],
+          "examples": [
+            {
+              "code": "if (municion() == 0) recargar();\nEnemigo e = enemigoMasCercano();\nif (e != null) {\n  if (e.blindado()) usarMunicion(PERFORANTE);\n  else usarMunicion(NORMAL);\n  disparar();\n}"
+            }
+          ]
+        },
+        {
+          "id": "RECIPE_BURST",
+          "needs": [
+            {
+              "feature": "WHILE"
+            }
+          ],
+          "examples": [
+            {
+              "code": "if (municion() == 0) recargar();\nwhile (hayEnemigos() && municion() > 0\n    && calor() < 80) {\n  disparar();\n}"
+            }
+          ]
+        },
+        {
+          "id": "RECIPE_FULL",
+          "needs": [
+            {
+              "feature": "WHILE"
+            },
+            {
+              "call": "USE_AMMO"
+            }
+          ],
+          "examples": [
+            {
+              "code": "if (municion() == 0) recargar();\nEnemigo e = objetivo();\nif (e == null) e = enemigoMasCercano();\nif (e != null) {\n  apuntar(e);\n  if (e.blindado()) usarMunicion(PERFORANTE);\n  else usarMunicion(NORMAL);\n  while (municion() > 0 && calor() < 80) {\n    disparar();\n  }\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

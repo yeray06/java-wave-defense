@@ -91,6 +91,10 @@ class ScriptMessagesTest {
       String value = MESSAGES.getProperty(key);
       // A single quote silently swallows text in MessageFormat (and in libGDX's I18NBundle).
       assertFalse(value.contains("'"), key);
+      if (key.startsWith("manual.page.")) {
+        // Manual pages quote data by name ({cargador}) and are filled without MessageFormat.
+        continue;
+      }
       new MessageFormat(value, Locale.ROOT).format(new Object[] {"a", "b", "c"});
     }
   }
