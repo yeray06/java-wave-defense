@@ -220,6 +220,15 @@ con SinMunicionException. Si el jugador recarga pronto, vuelve a vaciarlo al
 aire. La primera medida de la oleada 1 incluye esa espera, así que conviene
 mirar el resumen entero, no solo la primera línea.
 
+**Probado en local por Yeray** (Windows 11, GPU real): `gradlew.bat
+:lwjgl3:run` funciona. Se ve el campo y el HUD, «Desplegar» arranca la
+oleada, la excepción sale encima de la torreta, el clic recarga, se ven los
+efectos, la oleada 1 se supera y la consola da la medida de la decisión C:
+3 recargas a mano en 1,43 s, 1,12 s y 0,12 s (media 0,89 s; sin la tercera,
+que parece anticipada, 1,28 s). El simulador supone 1 s: se sostiene.
+D-05 queda cerrada: los disparos al aire molestan, y es lo que se busca,
+porque empujan a programar «dispara solo si hay enemigos».
+
 ## Siguiente: fase 5
 
 Editor, tienda, parte de oleada e informe. **Necesita que estés en casa**; no
@@ -236,8 +245,6 @@ Propuestas mías aplicadas como PROVISIONAL (detalle en
 - **D-03b (cambiada en la fase 3)**: la recarga a mano se puede hacer también
   con la torreta colgada. Prohibirla dejaba la oleada 1 sin salida (el
   cuelgue dura justo 6 ciclos y la torreta vuelve a colgarse al despertar).
-- **D-05**: `disparar()` sin enemigos en rango gasta bala y calor; «más
-  cercano» = a la torreta.
 - **D-09**: perforante solo atraviesa blindaje.
 - **D-10**: jefe paga 549 el primer derribo; después, como 20 enemigos
   normales de la oleada 10.
@@ -291,28 +298,19 @@ deciden con ese dato, no antes.
   diferencia al comprar Variables en las oleadas 4–5? Si no la nota, se
   rediseña el Regenerador con ese dato. El simulador da 1,07 frente al
   hardware del mismo precio (1,69 frente a no tenerla).
-- [ ] **Recarga a mano en la oleada 1** (decisión C): cuánto tarda el jugador
-  en recargar. El simulador supone 1 s. Ya se mide: juega la oleada 1 y
-  copia las líneas `[wave-defense]` de la consola (D-45).
-- [ ] **Disparos al aire en la oleada 1** (D-05): ¿molesta que `disparar();`
-  vacíe el cargador antes de que llegue el primer enemigo?
+- [x] **Recarga a mano en la oleada 1** (decisión C): primera partida de
+  Yeray, media 0,89 s (1,43 / 1,12 / 0,12 s). El simulador supone 1 s; se
+  mantiene. Conviene repetir la medida con más partidas.
+- [x] **Disparos al aire en la oleada 1** (D-05): molestan, y Yeray lo quiere
+  así: empujan a programar «dispara solo si hay enemigos». D-05 cerrada.
 
 ## Pendiente de probar en local
 
 Fase 4 (`gradlew.bat :lwjgl3:run`, Windows con GPU real):
 
-- [ ] Se ve el camino, el núcleo azul abajo, la torreta con su círculo de
-  alcance y el hueco gris de la segunda torreta; arriba oleada, núcleo,
-  dinero, ×1 y avance automático; en el centro «Desplegar oleada 1».
-- [ ] «Desplegar» arranca la oleada; los enemigos se mueven suaves (sin
-  tirones) por el camino.
-- [ ] Al vaciarse la torreta sale «SinMunicionException (línea 1)» encima;
-  un clic en la torreta la pone amarilla («Recargando…») y vuelve a disparar.
-- [ ] Se ven las balas, los fogonazos y los anillos al morir un enemigo.
-- [ ] Al acabar la oleada sale «Oleada 1 superada: +N» abajo y la oleada 2
-  espera a «Desplegar».
-- [ ] La consola muestra las líneas `[wave-defense] manual reload…` y el
-  resumen de la oleada 1.
+- [x] Se ven el campo y el HUD, «Desplegar» arranca la oleada, la excepción
+  sale encima de la torreta, el clic recarga, se ven los efectos, la oleada 1
+  se supera y la consola da la medida de la decisión C (Yeray, Windows 11).
 - [ ] Al perder una oleada se vuelve a la anterior con el avance automático
   apagado y las repeticiones se encadenan solas; ×3 se activa en oleadas
   superadas sin fugas.

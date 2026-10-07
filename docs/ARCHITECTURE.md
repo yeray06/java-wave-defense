@@ -468,7 +468,7 @@ los JSON y en `docs/BALANCE.md`.
 | `recargar()` | Corta el script en ese punto; la torreta queda ocupada 3 ciclos (el calor sigue disipándose); al volver, cargador lleno. Con el cargador lleno cuesta lo mismo | Plan + Yeray (D-03) |
 | Recarga a mano | Mismo efecto que `recargar()`; **también con la torreta colgada** (la recarga avanza durante el cuelgue); no si ya está recargando | PROVISIONAL (D-03b, cambiada en la fase 3) |
 | Excepción sin capturar | Corta el script, torreta colgada 3 s, error con línea encima | Plan |
-| `disparar()` sin enemigos en rango | Bala «al aire»: gasta bala y calor | PROVISIONAL (D-05) |
+| `disparar()` sin enemigos en rango | Bala «al aire»: gasta bala y calor | Yeray (D-05) |
 | Objetivo por defecto | Enemigo vivo más cercano **a la torreta** dentro del rango. Configurable en `turret.json` (`defaultTarget`: más cercano a la torreta, más cercano al núcleo o uno al azar en rango, con la semilla de la oleada) para medir; `enemigoMasCercano()` siempre es «a la torreta» | Plan + Yeray (D-05, D-36) |
 | Objetivo fijado | `apuntar(e)` lo mantiene entre ciclos; `objetivo()` da `null` si no hay, murió o salió de rango | Yeray (D-20) |
 | `usarMunicion(tipo)` | Disponible desde la oleada 6; el tipo elegido se mantiene entre ciclos | Plan |
@@ -626,7 +626,7 @@ provisional contradice el plan.
 | D-03 | `recargar()` | CERRADA | Corta el script; 3 ciclos ocupada; el calor sigue disipándose; vuelve con el cargador lleno; con el cargador lleno cuesta lo mismo. La recarga a mano funciona igual (PROVISIONAL). |
 | D-03b | Recarga a mano con la torreta colgada | PROVISIONAL (cambiada en la fase 3) | Se permite. Antes estaba prohibida, pero el cuelgue dura justo 6 ciclos: un script que lanza con el cargador vacío se despierta y vuelve a lanzar en el mismo tick, y el jugador nunca podía recargar (la oleada 1 se volvía imposible de jugar, contra el plan). |
 | D-04 | Calor | CERRADA | Se disipa al inicio del ciclo, antes del script, mínimo 0. Excepción solo si disparas con 100; un disparo que lo supera lo deja en 100. |
-| D-05 | Disparo sin objetivo y «más cercano» | PROVISIONAL | Bala al aire (gasta bala y calor). «Más cercano» = a la torreta. |
+| D-05 | Disparo sin objetivo y «más cercano» | CERRADA (Yeray, tras jugar la fase 4) | Bala al aire (gasta bala y calor): con `disparar();` la torreta vacía el cargador antes de que llegue nadie, y eso empuja a programar «dispara solo si hay enemigos». «Más cercano» = a la torreta. |
 | D-06 | Línea de memoria | CERRADA | Una sentencia = una línea (4.4). Se explica en una frase y el editor muestra el contador en vivo. |
 | D-07 | Qué trae cada pieza | CERRADA | Tabla de 4.3. |
 | D-08 | División entre cero | CERRADA | `ArithmeticException` como en Java; cuelga 3 s y muestra la línea. |
