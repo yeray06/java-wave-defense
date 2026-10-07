@@ -13,7 +13,6 @@ import com.badlogic.gdx.scenes.scene2d.ui.Widget;
 import com.badlogic.gdx.scenes.scene2d.utils.UIUtils;
 import com.badlogic.gdx.utils.Align;
 import io.github.yeray06.wavedefense.game.editor.Highlighter.Span;
-import io.github.yeray06.wavedefense.game.editor.Highlighter.Style;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
@@ -33,7 +32,6 @@ public final class CodeEditor extends Widget {
   private static final float BLINK = 0.53f;
   private static final int MEMORY_BARS = 3;
 
-  private static final Color BACKGROUND = new Color(0.09f, 0.10f, 0.12f, 1f);
   private static final Color GUTTER = new Color(0.12f, 0.13f, 0.16f, 1f);
   private static final Color LINE_NUMBER = new Color(0.45f, 0.48f, 0.54f, 1f);
   private static final Color MEMORY = new Color(0.55f, 0.75f, 0.95f, 1f);
@@ -41,17 +39,6 @@ public final class CodeEditor extends Widget {
   private static final Color ERROR_LINE = new Color(0.55f, 0.15f, 0.15f, 0.35f);
   private static final Color ERROR_MARK = new Color(0.95f, 0.35f, 0.35f, 1f);
   private static final Color CURSOR = new Color(0.95f, 0.95f, 0.95f, 1f);
-  private static final Color[] STYLE = new Color[Style.values().length];
-
-  static {
-    STYLE[Style.PLAIN.ordinal()] = new Color(0.88f, 0.90f, 0.93f, 1f);
-    STYLE[Style.KEYWORD.ordinal()] = new Color(0.80f, 0.55f, 0.95f, 1f);
-    STYLE[Style.TYPE.ordinal()] = new Color(0.45f, 0.80f, 0.95f, 1f);
-    STYLE[Style.CALL.ordinal()] = new Color(0.95f, 0.85f, 0.50f, 1f);
-    STYLE[Style.NUMBER.ordinal()] = new Color(0.70f, 0.90f, 0.60f, 1f);
-    STYLE[Style.CONSTANT.ordinal()] = new Color(0.95f, 0.60f, 0.45f, 1f);
-    STYLE[Style.COMMENT.ordinal()] = new Color(0.50f, 0.55f, 0.60f, 1f);
-  }
 
   private final EditorDocument document;
   private final BitmapFont font;
@@ -178,7 +165,7 @@ public final class CodeEditor extends Widget {
     float x = getX();
     float y = getY();
     batchColor.set(batch.getColor());
-    rect(batch, BACKGROUND, x, y, getWidth(), getHeight(), parentAlpha);
+    rect(batch, CodeColors.BACKGROUND, x, y, getWidth(), getHeight(), parentAlpha);
     rect(batch, GUTTER, x, y, gutterWidth, getHeight(), parentAlpha);
     drawSelection(batch, x, y, parentAlpha);
     for (int line = 0; line < document.lineCount(); line++) {
@@ -219,7 +206,7 @@ public final class CodeEditor extends Widget {
           if (span.end() <= span.start() || span.end() > text.length()) {
             continue;
           }
-          font.setColor(STYLE[span.style().ordinal()]);
+          font.setColor(CodeColors.of(span.style()));
           font.draw(
               batch,
               text,

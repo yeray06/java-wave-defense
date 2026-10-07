@@ -59,6 +59,7 @@ public final class UiSkin {
     BitmapFont small = skin.getFont("small");
     skin.add("default", new Label.LabelStyle(font, TEXT));
     skin.add("small", new Label.LabelStyle(small, MUTED));
+    skin.add("body", new Label.LabelStyle(small, TEXT));
     skin.add("warning", new Label.LabelStyle(small, WARNING));
     skin.add("good", new Label.LabelStyle(font, GOOD));
 

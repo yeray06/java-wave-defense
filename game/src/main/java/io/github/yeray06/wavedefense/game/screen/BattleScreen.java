@@ -24,6 +24,7 @@ import io.github.yeray06.wavedefense.game.i18n.Texts;
 import io.github.yeray06.wavedefense.game.loop.FixedStepClock;
 import io.github.yeray06.wavedefense.game.panel.BriefingPanel;
 import io.github.yeray06.wavedefense.game.panel.EditorPanel;
+import io.github.yeray06.wavedefense.game.panel.ManualPanel;
 import io.github.yeray06.wavedefense.game.panel.MapPanel;
 import io.github.yeray06.wavedefense.game.panel.ReportLines;
 import io.github.yeray06.wavedefense.game.panel.ReportPanel;
@@ -44,9 +45,9 @@ import io.github.yeray06.wavedefense.sim.world.Turret;
  * The battlefield: runs the wave loop on a fixed step, draws the world through {@link
  * WorldRenderer} and lays a scene2d HUD on top. Clicking a turret reloads it by hand (D-03).
  *
- * <p>The briefing, the full report, the shop and the editor arrive in phase 5; here the HUD shows
- * the wave, the core, the money, the speed and auto-advance switches, a deploy button for new waves
- * and a one-line result of the last wave.
+ * <p>The HUD shows the wave, the core, the money, the speed and auto-advance switches and a
+ * one-line result of the last wave. A waiting wave shows its briefing; the toolbar opens the code,
+ * shop, map, report and manual panels on the right.
  */
 public final class BattleScreen extends ScreenAdapter {
   private static final Color BACKGROUND = new Color(0.07f, 0.08f, 0.10f, 1f);
@@ -79,10 +80,12 @@ public final class BattleScreen extends ScreenAdapter {
   private final ShopPanel shopPanel;
   private final MapPanel mapPanel;
   private final ReportPanel reportPanel;
+  private final ManualPanel manualPanel;
   private final ScriptTexts names;
   private final Container<Actor> side;
   private final ScrollPane shopScroll;
   private final ScrollPane reportScroll;
+  private final ScrollPane manualScroll;
   private final double pathLength;
   private Actor openPanel;
   private Cell<Container<Actor>> sideCell;
@@ -134,6 +137,9 @@ public final class BattleScreen extends ScreenAdapter {
     shopScroll.setFadeScrollBars(false);
     reportScroll = new ScrollPane(reportPanel, skin);
     reportScroll.setFadeScrollBars(false);
+    manualPanel = new ManualPanel(data, loop.progress(), names, skin, Gdx.app.getClipboard());
+    manualScroll = new ScrollPane(manualPanel, skin);
+    manualScroll.setFadeScrollBars(false);
     side = new Container<>();
     side.setBackground(skin.getDrawable("panel"));
     side.pad(PAD);
@@ -153,7 +159,8 @@ public final class BattleScreen extends ScreenAdapter {
     toolbar.add(panelButton(skin, "hud.panel.code", editorPanel)).padRight(6);
     toolbar.add(panelButton(skin, "hud.panel.shop", shopScroll)).padRight(6);
     toolbar.add(panelButton(skin, "hud.panel.map", mapPanel)).padRight(6);
-    toolbar.add(panelButton(skin, "hud.panel.report", reportScroll));
+    toolbar.add(panelButton(skin, "hud.panel.report", reportScroll)).padRight(6);
+    toolbar.add(panelButton(skin, "hud.panel.manual", manualScroll));
     top.add(toolbar).colspan(5).right().padTop(6);
     stage.addActor(top);
 
@@ -217,6 +224,9 @@ public final class BattleScreen extends ScreenAdapter {
     if (panel == shopScroll) {
       shopPanel.rebuild();
     }
+    if (panel == manualScroll) {
+      manualPanel.refresh();
+    }
     if (panel == editorPanel) {
       editorPanel.focus();
     } else {
@@ -239,6 +249,14 @@ public final class BattleScreen extends ScreenAdapter {
 
   MapPanel mapPanel() {
     return mapPanel;
+  }
+
+  ManualPanel manualPanel() {
+    return manualPanel;
+  }
+
+  ScrollPane manualScroll() {
+    return manualScroll;
   }
 
   private void purchased(Object item) {
