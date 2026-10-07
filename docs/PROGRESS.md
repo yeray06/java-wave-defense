@@ -17,7 +17,7 @@ capturas está en [`DIARIO.md`](DIARIO.md).
 | 4. Juego: camino, torretas, enemigos, bucle | ✅ Fusionada | `phase-4-juego` |
 | 5. Editor, tienda, parte de oleada, informe, mapa | ✅ Hecha, en PR | `phase-5-interfaz` |
 | 5b. Manual del jugador | ✅ Hecha, en PR | `phase-5b-manual` |
-| 6. Guardado, ajustes, robustez | Solo con Yeray en casa | — |
+| 6. Guardado, ajustes, robustez | ✅ Hecha, en PR | `phase-6-guardado` |
 | 7. Empaquetado y documentación | Solo con Yeray en casa | — |
 
 ## Fase 0 (hecha)
@@ -290,10 +290,53 @@ todo lo que puede necesitar el jugador y código que se pueda copiar.
   inventados (`ManualTextsTest`), índice, candados, copiar, anterior y
   siguiente, todas las páginas abren y su código cabe en el panel.
 
-## Siguiente: fase 6
+## Fase 6: guardado, ajustes y robustez (hecha)
 
-Guardado, ajustes y robustez. **Necesita que estés en casa**; no empiezo sin
-que me lo digas. Hasta entonces cada arranque es una partida nueva.
+Lo decidido por Yeray antes de empezar: una sola partida, guardado
+automático, se guardan el borrador y la versión buena del código, y los
+ajustes son pantalla completa, tamaño de la interfaz, tamaño del código y
+nueva partida (D-55, D-56).
+
+- **Guardado** (`save.json` en la carpeta de usuario, compatible con Steam
+  Auto-Cloud):
+  - Escritura atómica con copia `.bak` (`AtomicFileStore`, en `platform`).
+  - Formato con versión y migraciones (`SaveGame`, `SaveCodec`). Se guardan
+    el progreso, el código de cada torreta, los borradores del editor y la
+    semilla.
+  - Al cargar se comprueba todo contra los datos. Un script que ya no
+    compila vuelve al inicial, pero su borrador se conserva.
+  - Si el fichero está roto, se usa la copia; si también lo está, partida
+    nueva. En los dos casos sale un aviso y el fichero roto se guarda aparte.
+  - Se guarda solo: al acabar cada oleada, al comprar, al cambiar el código
+    (como mucho una vez por segundo mientras escribes), al elegir oleada en el
+    mapa, al cambiar el avance automático y al cerrar. La oleada en curso no
+    se guarda: al volver espera a «Desplegar».
+- **Ajustes** (`settings.json`, botón Ajustes):
+  - Pantalla completa.
+  - Tamaño de la interfaz (100–200 %): crece solo hasta donde cabe en la
+    ventana, para no romper la disposición.
+  - Tamaño del código del editor y del manual (12–22 px).
+  - Nueva partida, con confirmación.
+  - Los tamaños se aplican al momento sin perder el código. El panel dice
+    dónde está guardada la partida.
+- **Robustez**:
+  - Log rotativo en `logs/` (5 × 1 MB); `Gdx.app.log` también va ahí.
+  - Las excepciones sin capturar se registran.
+  - Un frame que falla se registra y avisa, y el juego sigue.
+- Tests: escritura atómica (copia, fichero roto, los dos rotos, `.tmp`
+  sobrante), formato (ida y vuelta, migraciones, versión nueva, campos de
+  más, reglas rotas), `WaveLoop` (borradores y revisión), almacén, guardado
+  automático, ajustes, panel de ajustes, y el juego entero arrancando con
+  una partida rota y cambiando tamaños.
+
+Comprobado aquí con Xvfb y capturas: el panel de ajustes, el código del
+editor a 20 px conservando lo escrito, la interfaz al 150 % y la partida
+recuperada al volver a abrir el juego.
+
+## Siguiente: fase 7
+
+Empaquetado y documentación. **Necesita que estés en casa**; no empiezo sin
+que me lo digas.
 
 ## Decisiones por revisar
 
@@ -336,16 +379,16 @@ Propuestas mías aplicadas como PROVISIONAL (detalle en
 - **D-37**: Regenerador vida ×2 y cura 50 %/s; Blindado vida ×2; Enjambre
   200 u/s.
 - **D-41**: hasta la fase 5, «Desplegar oleada N» hace de parte, una línea de
-  resultado hace de informe y cada torreta usa su script inicial; cada
-  arranque es partida nueva.
+  resultado hace de informe y cada torreta usa su script inicial (superada:
+  ya hay parte, informe, editor y guardado).
 - **D-42**: recarga a mano con clic izquierdo en la torreta; también con el
   cargador lleno, como D-03.
 - **D-43**: el botón ×3 recuerda lo pedido; solo se aplica en oleadas
   superadas sin fugas.
 - **D-44**: la semilla de cada batalla es un contador de la partida.
-- **D-45**: la medida de la decisión C sale por consola (el log a fichero es
-  de la fase 6).
-- **D-46**: UI a 1 píxel por unidad, sin escala configurable hasta la fase 6.
+- **D-45**: la medida de la decisión C sale en el log (`logs/game-0.log`).
+- **D-46**: fuentes a 18 y 14 px a 100 %; la escala la da ahora el ajuste de
+  tamaño de la interfaz (D-56).
 - **D-47**: ×2 sigue la misma regla que ×3 (solo en oleadas superadas sin
   fugas). La forma del selector la pidió Yeray.
 - **D-48**: el juego avanza y se dibuja mientras se mueve o redimensiona la
@@ -359,6 +402,10 @@ Propuestas mías aplicadas como PROVISIONAL (detalle en
 - **D-53**: los ejemplos de las tarjetas de la tienda los he escrito yo.
 - **D-54**: el contenido del manual (textos, ejemplos y recetas) lo he
   escrito yo; se revisa leyéndolo en el juego.
+- **D-55**: guardado automático (como mucho una vez por segundo mientras se
+  escribe); la oleada en curso no se guarda.
+- **D-56**: tamaños de interfaz 100–200 % (limitados a lo que cabe en la
+  ventana) y de código 12–22 px.
 
 Números de balance que no vienen del plan (D-12): están en la lista
 `notFromPlan` de cada JSON y en la sección 2 de `docs/BALANCE.md`.
@@ -379,6 +426,19 @@ deciden con ese dato, no antes.
   así: empujan a programar «dispara solo si hay enemigos». D-05 cerrada.
 
 ## Pendiente de probar en local
+
+Fase 6 (`gradlew.bat :lwjgl3:run`):
+
+- [ ] Jugar un poco, comprar, escribir código, cerrar con la X y volver a
+  abrir: todo sigue igual y la oleada espera a «Desplegar».
+- [ ] La partida está en `%APPDATA%\JavaWaveDefense\save.json` (y
+  `save.json.bak`, `settings.json` y `logs\game-0.log`).
+- [ ] Ajustes: pantalla completa entra y sale bien; tamaño de la interfaz y
+  del código se aplican al momento sin perder el código; en pantalla
+  completa el 150 % se ve nítido.
+- [ ] Nueva partida pide confirmación y empieza de cero sin tocar los ajustes.
+- [ ] Romper `save.json` a mano (borrar la mitad) y abrir: sale el aviso de
+  copia recuperada.
 
 Fase 5b (`gradlew.bat :lwjgl3:run`):
 
