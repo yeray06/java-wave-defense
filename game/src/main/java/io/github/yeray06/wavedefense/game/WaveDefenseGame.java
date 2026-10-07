@@ -4,6 +4,7 @@ import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import io.github.yeray06.wavedefense.game.i18n.Texts;
+import io.github.yeray06.wavedefense.game.loop.FrameTimer;
 import io.github.yeray06.wavedefense.game.playtest.ReloadReactionLog;
 import io.github.yeray06.wavedefense.game.render.ShapeWorldRenderer;
 import io.github.yeray06.wavedefense.game.render.WorldRenderer;
@@ -23,6 +24,11 @@ public final class WaveDefenseGame extends Game {
 
   /** Decision C: the wave whose manual reloads are timed. */
   private static final int MEASURED_WAVE = 1;
+
+  /** Longest frame passed to the screen; the fixed-step clock caps the ticks anyway. */
+  private static final float MAX_FRAME_SECONDS = 1;
+
+  private final FrameTimer frames = new FrameTimer(System::nanoTime, MAX_FRAME_SECONDS);
 
   private final PlatformServices platform;
   private Skin skin;
@@ -47,6 +53,17 @@ public final class WaveDefenseGame extends Game {
         new ReloadReactionLog(
             MEASURED_WAVE, data.map().turretSlots().size(), line -> Gdx.app.log(LOG_TAG, line));
     setScreen(new BattleScreen(data, texts, skin, loop, world, reactions));
+  }
+
+  /**
+   * Draws a frame with the time measured here, not the backend's delta: the desktop launcher also
+   * calls this while the window is moved or resized, when the backend's delta is stale (D-48).
+   */
+  @Override
+  public void render() {
+    if (screen != null) {
+      screen.render(frames.next());
+    }
   }
 
   @Override

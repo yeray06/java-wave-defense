@@ -26,7 +26,10 @@ public final class Lwjgl3Launcher {
     if (StartupHelper.relaunchedOnMainThread()) {
       return;
     }
-    new Lwjgl3Application(new WaveDefenseGame(new NoOpPlatformServices()), configuration());
+    WaveDefenseGame game = new WaveDefenseGame(new NoOpPlatformServices());
+    Lwjgl3ApplicationConfiguration config = configuration();
+    config.setWindowListener(new RedrawWhileMoving(game));
+    new Lwjgl3Application(game, config);
   }
 
   private static Lwjgl3ApplicationConfiguration configuration() {
