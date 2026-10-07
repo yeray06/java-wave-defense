@@ -4,7 +4,7 @@ Documento vivo. Cada decisión lleva su motivo en una línea. La fuente de verda
 del diseño es [`plan-diseno.pdf`](plan-diseno.pdf); si algo de aquí lo
 contradice, manda el plan y hay que avisar.
 
-Estado: **fase 4 hecha** (pantalla de combate jugable: camino, torretas, enemigos y bucle de oleadas). Antes: simulación, `sim-cli`, `docs/BALANCE.md` y la revisión de balance (D-34 … D-39). Las decisiones están en la sección 12. Las que
+Estado: **fase 5 hecha** (editor, tienda, parte de oleada, informe y mapa de oleadas). Antes, fase 4: pantalla de combate jugable. Antes: simulación, `sim-cli`, `docs/BALANCE.md` y la revisión de balance (D-34 … D-39). Las decisiones están en la sección 12. Las que
 llevan **PROVISIONAL** son propuestas mías aceptadas para poder avanzar; se
 listan en `docs/PROGRESS.md` («Decisiones por revisar»). Los números que no
 vienen del plan van marcados en los JSON y en `docs/BALANCE.md`.
@@ -101,7 +101,8 @@ java-wave-defense/
 │       ├── screen/                # BattleScreen (fase 4); Briefing, Report, Shop, Settings (fases 5–6)
 │       ├── render/                # WorldRenderer (D-40) y ShapeWorldRenderer (2D): mundo, efectos, cámara
 │       ├── ui/                    # scene2d.ui, skin generado por código
-│       ├── editor/                # CodeEditor (widget propio), resaltado y errores por línea
+│       ├── editor/                # EditorDocument (texto, cursor, deshacer), Highlighter (con el lexer del juego), CodeEditor (widget)
+│       ├── panel/                 # BriefingPanel, EditorPanel, ShopPanel, MapPanel, ReportPanel, ReportLines
 │       ├── audio/                 # sonidos sintetizados por código propio
 │       ├── input/
 │       ├── i18n/                  # Texts: envoltorio de I18NBundle
@@ -390,10 +391,38 @@ Así se ve en el propio dato qué es provisional.
 - **Conversión pantalla ↔ mundo** en `ShapeWorldRenderer` a mano con los
   límites del viewport: la cámara 2D no gira ni hace zoom, y
   `Camera.unproject` invierte la y con la altura global de la ventana.
-- **Editor**: widget scene2d propio (el `TextArea` de libGDX no sirve para
-  código: sin números de línea ni marcas). Números de línea, resaltado, marca
-  roja en la línea con error y tooltip con el mensaje, contador de memoria.
-  Es la pieza de UI con más riesgo: fase 5.
+- **Paneles (fase 5)**: barra con Código, Tienda, Mapa e Informe; cada botón
+  abre su panel a la derecha (o lo cierra) sin parar la oleada (D-52). El
+  **parte de oleada** sale en el centro mientras una oleada espera: enemigos
+  por tipo con su número y qué los hace especiales (textos con los números de
+  `enemies.json`), y el botón «Desplegar». El **informe** se abre solo al
+  acabar cada oleada si no hay otro panel abierto: dinero y de dónde sale,
+  fugas por tipo y por qué tramo del camino, y por torreta disparos, al aire,
+  balas en enemigos ya muertos, recargas, segundos colgada y cada excepción
+  con su línea (`ReportLines`, texto sin libGDX para poder probarlo).
+- **Editor**: widget scene2d propio (`CodeEditor`; el `TextArea` de libGDX no
+  sirve para código). El texto vive en `EditorDocument` (Java puro, con
+  tests): cursor, selección con Mayús, Ctrl+A/C/X/V, Ctrl+Z/Y, sangría
+  automática tras `{` y al cerrar `}`, Tab a 2 espacios. Colores con el
+  **lexer del propio intérprete** (`Highlighter`): lo que se pinta como
+  palabra clave es lo que el juego lee como tal. Números de línea, una barra
+  azul por instrucción que ocupa memoria (D-06), línea roja y subrayado en
+  cada error, y debajo los errores con su línea (primero los de la línea bajo
+  el ratón). Contador «Memoria: N/12». Una pestaña por torreta construida.
+  Compila con cada cambio: el código que compila pasa a la torreta y entra
+  en la siguiente oleada (o en la que espera); el que no, se queda en el
+  editor y la torreta sigue con su última versión buena (D-51).
+- **Tienda**: el árbol entero con precios desde el principio (plan), cada
+  pieza con lo que «te quita de encima» y, si no se puede comprar, por qué
+  (dinero, requisito, fuera del MVP, tope de sintaxis D-34). Al comprar una
+  pieza se abre su tarjeta con el ejemplo de `shop.json`, que se valida al
+  cargar: compila con esa pieza y cabe en `exampleLines` (5, plan). El
+  hardware muestra nivel, efecto y precio; la torreta extra aparece en el
+  siguiente hueco.
+- **Mapa de oleadas** (D-49): Acto 1 con las 10 oleadas en un camino de
+  puntos; candado en las no alcanzadas, bandera roja en la actual, el jefe
+  más grande. Clic en una alcanzada: se abandona la oleada en curso sin cobrar
+  ni contar como derrota y la elegida espera a «Desplegar» (D-50).
 - **Textos**: `I18NBundle` con `messages.properties` en español. El código
   solo usa claves. Los módulos puros devuelven códigos + argumentos; quien
   pinta el texto es `game` (o `sim-cli`, que lee el mismo fichero).
@@ -666,6 +695,10 @@ provisional contradice el plan.
 | D-47 | Selector de velocidad | CERRADA la forma (Yeray); regla de ×2 PROVISIONAL | Plegado muestra la velocidad en uso; con el ratón encima se abre a lo ancho en ×1, ×2 y ×3 y un clic elige. Las velocidades están en `balance.json` (`speeds`; el ×2 no viene del plan). ×2 sigue la misma regla que ×3: solo en oleadas superadas sin fugas. |
 | D-48 | El juego sigue al mover o redimensionar la ventana | PROVISIONAL | En Windows, arrastrar o redimensionar la ventana bloquea el bucle del juego hasta soltar. El lanzador dibuja (y avanza) un frame en cada cambio de posición que GLFW avisa desde ese bucle, como libGDX ya hace al redimensionar, y el juego mide su propio tiempo entre frames (`FrameTimer`) porque el del backend no se actualiza ahí. Con el ratón quieto en mitad del arrastre Windows no avisa y el juego espera. |
 | D-49 | Mapa de oleadas (fase 5) | CERRADA la idea (Yeray, no viene del plan); detalles PROVISIONAL | Pantalla de mapa al estilo de un mapa de niveles: las oleadas como puntos unidos por un camino; las ya alcanzadas se pueden elegir; las demás llevan candado y no se pueden elegir; la actual lleva una banderita roja; el jefe (oleada 10) se distingue. Un mapa por acto: el MVP tiene uno (oleadas 1–10); las pestañas de actos quedan para cuando haya más oleadas. Tras jugar una oleada elegida, el avance automático sigue desde ella como hoy (encendido: a la siguiente; apagado: la repite). Sin selector de dificultad: no está en el plan. Amplía el farmeo del plan («Farmeo»: repetir oleadas superadas); las oleadas antiguas pagan menos, así que no da ventaja. |
+| D-50 | Elegir oleada en el mapa con una en curso | PROVISIONAL | La oleada en curso se abandona sin cobrar y sin contar como derrota; la elegida espera a «Desplegar» aunque ya esté superada (es una elección del jugador, que quiere ver el parte). |
+| D-51 | Código con errores en el editor | PROVISIONAL | Se queda en el editor marcado en rojo; la torreta sigue con la última versión que compilaba. El código que compila se aplica al momento: en la oleada siguiente, o en la que espera a «Desplegar» (plan, «Edición en caliente»). |
+| D-52 | Dónde van los paneles | PROVISIONAL | A la derecha, uno a la vez, encima del mundo (500 px); el mundo sigue corriendo y se puede recargar a mano en la parte visible. El informe se abre solo al acabar una oleada si no hay otro panel abierto. |
+| D-53 | Ejemplos de las tarjetas de la tienda | PROVISIONAL | Escritos por mí (el plan solo pide «cinco líneas que funcionen tal cual»), en `shop.json`, validados al cargar. |
 | D-44 | Semilla de cada batalla | PROVISIONAL | Un contador de batallas de la partida: las mismas acciones repiten la misma partida. Hoy solo la usa el objetivo «al azar», que no está activo. |
 | D-45 | Medida de la decisión C | PROVISIONAL | En la oleada 1, segundos reales desde que una torreta se queda sin balas hasta el clic que la recarga, más un resumen al acabar la oleada. Se escribe en la consola (`Gdx.app.log`, etiqueta `wave-defense`); el log a fichero llega en la fase 6. |
 | D-46 | Escala de la UI | PROVISIONAL | `ScreenViewport` a 1 píxel por unidad y fuentes a tamaño fijo (18 y 14 px): nítidas a 1280×720. La escala de UI configurable va con los ajustes (fase 6). |
