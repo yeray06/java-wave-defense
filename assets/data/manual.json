@@ -387,7 +387,7 @@
           },
           "examples": [
             {
-              "code": "// recorre la lista: e es cada enemigo, uno detras de otro\nfor (Enemigo e : enemigos()) {\n  if (e.velocidad() > 200) {\n    apuntar(e);  // el rapido primero\n  }\n}\ndisparar();"
+              "code": "// recorre la lista: en cada vuelta,\n// e es un enemigo distinto\nfor (Enemigo e : enemigos()) {\n  if (e.velocidad() > 200) {\n    apuntar(e);  // el rapido primero\n  }\n}\ndisparar();"
             },
             {
               "code": "// cuenta de 0 a 2: el bloque se repite 3 veces\nfor (int i = 0; i < 3; i++) {\n  if (municion() > 0 && calor() < 80) {\n    disparar();\n  }\n}"

@@ -215,7 +215,8 @@ public final class ShopPanel extends Table {
     if (item.kind() == HardwareKind.DAMAGE) {
       value *= 100;
     }
-    return value == Math.rint(value) ? (long) value : value;
+    // Texts writes numbers as integers; a half step (the processor) is shown the Spanish way.
+    return value == Math.rint(value) ? (long) value : String.valueOf(value).replace('.', ',');
   }
 
   /** Plan: "Cada compra abre una tarjeta con un ejemplo de cinco líneas". */

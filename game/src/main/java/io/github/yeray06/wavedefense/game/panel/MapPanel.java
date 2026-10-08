@@ -1,6 +1,7 @@
 package io.github.yeray06.wavedefense.game.panel;
 
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Group;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
@@ -8,6 +9,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import io.github.yeray06.wavedefense.game.i18n.Texts;
 import io.github.yeray06.wavedefense.game.ui.UiSkin;
@@ -20,7 +23,8 @@ import java.util.function.IntConsumer;
  * The wave map (D-49), in the style of a level map: the waves as points along a winding road from
  * the bottom up. Reached waves can be chosen; the others carry a padlock; a red flag marks the
  * current one; the boss wave is a bigger red point. Under each reached wave, its stars (D-57). One
- * map per act: the MVP has act 1.
+ * map per act, as long as the boss rhythm (10 waves); with more than one act, buttons switch
+ * between them and the act of the current wave opens by default.
  */
 public final class MapPanel extends Table {
   private static final float MAP_WIDTH = 460;
@@ -44,6 +48,9 @@ public final class MapPanel extends Table {
   private final IntConsumer onChoose;
   private final Group map = new Group();
   private final Label hint;
+  private final Label actTitle;
+  private final Table actButtons = new Table();
+  private int shownAct = -1;
   private int shownCurrent = -1;
   private int shownHighest = -1;
   private int shownStars = -1;
@@ -60,7 +67,9 @@ public final class MapPanel extends Table {
     map.setSize(MAP_WIDTH, MAP_HEIGHT);
     hint = new Label("", skin, "small");
     top().left();
-    add(new Label(texts.format("map.act", 1), skin, "title")).left().padBottom(6).row();
+    actTitle = new Label("", skin, "title");
+    add(actTitle).left().padBottom(6).row();
+    add(actButtons).left().padBottom(6).row();
     add(map).size(MAP_WIDTH, MAP_HEIGHT).row();
     add(hint).left().padTop(6);
   }
@@ -68,17 +77,37 @@ public final class MapPanel extends Table {
   @Override
   public void act(float delta) {
     super.act(delta);
-    if (progress.currentWave() != shownCurrent
-        || progress.highestWaveReached() != shownHighest
+    if (progress.currentWave() != shownCurrent) {
+      shownAct = actOf(progress.currentWave());
+      rebuild();
+    } else if (progress.highestWaveReached() != shownHighest
         || progress.starsEarned() != shownStars) {
       rebuild();
     }
   }
 
-  /** Where wave {@code wave} (1-based) sits: a zigzag from the bottom to the top. */
+  private int actSize() {
+    return data.balance().boss().everyWaves();
+  }
+
+  int actOf(int wave) {
+    return (wave - 1) / actSize() + 1;
+  }
+
+  private int acts() {
+    return actOf(data.balance().lastWave());
+  }
+
+  /** Shows act {@code act}; rebuilt at once. */
+  void showAct(int act) {
+    shownAct = act;
+    rebuild();
+  }
+
+  /** Where wave {@code wave} sits in its act: a zigzag from the bottom to the top. */
   float[] position(int wave) {
-    int last = data.balance().lastWave();
-    float t = (wave - 1) / (float) Math.max(1, last - 1);
+    int inAct = (wave - 1) % actSize();
+    float t = inAct / (float) Math.max(1, actSize() - 1);
     float y = 30 + t * (MAP_HEIGHT - 80);
     float x =
         MAP_WIDTH / 2 + (wave % 2 == 0 ? 1 : -1) * MAP_WIDTH * 0.22f * (wave % 4 < 2 ? 1 : 0.6f);
@@ -89,9 +118,31 @@ public final class MapPanel extends Table {
     shownCurrent = progress.currentWave();
     shownHighest = progress.highestWaveReached();
     shownStars = progress.starsEarned();
+    if (shownAct < 1) {
+      shownAct = actOf(shownCurrent);
+    }
+    actTitle.setText(texts.format("map.act", shownAct));
+    actButtons.clearChildren();
+    if (acts() > 1) {
+      for (int act = 1; act <= acts(); act++) {
+        int chosen = act;
+        TextButton button = new TextButton(texts.format("map.act.button", act), skin);
+        button.pad(2, 10, 2, 10);
+        button.setDisabled(act == shownAct);
+        button.addListener(
+            new ChangeListener() {
+              @Override
+              public void changed(ChangeEvent event, Actor actor) {
+                showAct(chosen);
+              }
+            });
+        actButtons.add(button).padRight(6);
+      }
+    }
     map.clearChildren();
-    int last = data.balance().lastWave();
-    for (int wave = 1; wave < last; wave++) {
+    int first = (shownAct - 1) * actSize() + 1;
+    int last = Math.min(shownAct * actSize(), data.balance().lastWave());
+    for (int wave = first; wave < last; wave++) {
       float[] from = position(wave);
       float[] to = position(wave + 1);
       for (int d = 1; d <= DOTS_BETWEEN; d++) {
@@ -107,7 +158,7 @@ public final class MapPanel extends Table {
         map.addActor(dot);
       }
     }
-    for (int wave = 1; wave <= last; wave++) {
+    for (int wave = first; wave <= last; wave++) {
       map.addActor(node(wave));
     }
     hint.setText(texts.format("map.current", shownCurrent));
@@ -150,7 +201,8 @@ public final class MapPanel extends Table {
       flag.setBounds(size * 0.55f, size * 0.55f, 26, 26);
       node.addActor(flag);
     }
-    Label label = new Label(texts.format("map.node", wave), skin, "small");
+    Label label =
+        new Label(texts.format("map.node", actOf(wave), (wave - 1) % actSize() + 1), skin, "small");
     label.setColor(reached ? Color.WHITE : Color.GRAY);
     label.pack();
     label.setPosition(size + 6, (size - label.getHeight()) / 2);
