@@ -49,7 +49,9 @@ public final class Checker {
       int intSlots,
       int refSlots,
       int memoryUsed,
-      SortedMap<Integer, Integer> memoryByLine) {}
+      SortedMap<Integer, Integer> memoryByLine,
+      Function script,
+      List<DebugVar> debugVars) {}
 
   private record Var(String name, Type type, int id, int slot) {}
 
@@ -84,6 +86,7 @@ public final class Checker {
 
   private Current current;
   private int nextVarId;
+  private final List<DebugVar> debugVars = new ArrayList<>();
 
   private Checker(
       ScriptApi api,
@@ -114,7 +117,7 @@ public final class Checker {
     }
     Checker checker =
         new Checker(api, unlocks, memoryLimit, diagnostics, methods, library.hasErrors());
-    Function script = new Function();
+    Function script = new Function("");
     checker.current = new Current(script, Type.VOID);
     Exec root = checker.block(statements, new BitSet());
     script.define(root, checker.current.intSlots, checker.current.refSlots);
@@ -132,7 +135,9 @@ public final class Checker {
         checker.current.intSlots,
         checker.current.refSlots,
         checker.memory.used(),
-        checker.memory.byLine());
+        checker.memory.byLine(),
+        script,
+        List.copyOf(checker.debugVars));
   }
 
   /**
@@ -156,7 +161,8 @@ public final class Checker {
       maxInts = Math.max(maxInts, method.function().intSlots());
       maxRefs = Math.max(maxRefs, method.function().refSlots());
     }
-    return new Library(methods, diagnostics.hasErrors(), maxInts, maxRefs);
+    return new Library(
+        methods, diagnostics.hasErrors(), maxInts, maxRefs, List.copyOf(checker.debugVars));
   }
 
   // ------------------------------------------------------------------- methods
@@ -176,7 +182,7 @@ public final class Checker {
       paramSlots[i] = type.isReference() ? refs++ : ints++;
     }
     Library.Method method =
-        new Library.Method(d.name(), returnType, params, paramSlots, new Function());
+        new Library.Method(d.name(), returnType, params, paramSlots, new Function(d.name()));
     if (methods.containsKey(d.name())) {
       report(ErrorCode.DUPLICATE_METHOD, d.namePos(), d.name());
     } else if (api.turretCall(d.name()).isPresent()) {
@@ -199,7 +205,7 @@ public final class Checker {
         continue;
       }
       Type type = method.params().get(i);
-      Var var = declare(param.name(), type);
+      Var var = declare(param.name(), type, param.pos());
       assigned.set(var.id());
     }
     Exec body = block(d.body().statements(), assigned);
@@ -453,7 +459,7 @@ public final class Checker {
     if (lookup(s.name()) != null) {
       report(ErrorCode.DUPLICATE_VARIABLE, s.namePos(), s.name());
     } else {
-      var = declare(s.name(), elementType == Type.ENEMY ? Type.ENEMY : Type.ERROR);
+      var = declare(s.name(), elementType == Type.ENEMY ? Type.ENEMY : Type.ERROR, s.namePos());
     }
     BitSet inLoop = (BitSet) assigned.clone();
     if (var != null) {
@@ -491,7 +497,7 @@ public final class Checker {
       if (lookup(d.name()) != null) {
         report(ErrorCode.DUPLICATE_VARIABLE, d.pos(), d.name());
       } else {
-        var = declare(d.name(), type);
+        var = declare(d.name(), type, d.pos());
       }
       if (d.initializer() == null) {
         continue;
@@ -1036,7 +1042,7 @@ public final class Checker {
     return null;
   }
 
-  private Var declare(String name, Type type) {
+  private Var declare(String name, Type type, Pos pos) {
     int slot =
         switch (type) {
           case ENEMY, ENEMY_LIST -> current.refSlots++;
@@ -1045,6 +1051,17 @@ public final class Checker {
         };
     Var var = new Var(name, type, nextVarId++, slot);
     scopes.peek().put(name, var);
+    DebugVar.Kind kind =
+        switch (type) {
+          case INT -> DebugVar.Kind.INT;
+          case BOOLEAN -> DebugVar.Kind.BOOLEAN;
+          case ENEMY -> DebugVar.Kind.ENEMY;
+          case ENEMY_LIST -> DebugVar.Kind.LIST;
+          default -> null;
+        };
+    if (kind != null) {
+      debugVars.add(new DebugVar(current.function.name(), name, kind, slot, pos.line()));
+    }
     return var;
   }
 

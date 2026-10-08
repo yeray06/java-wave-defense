@@ -9,6 +9,7 @@ import io.github.yeray06.wavedefense.sim.world.Battle;
 import io.github.yeray06.wavedefense.sim.world.BattleSetup;
 import io.github.yeray06.wavedefense.sim.world.WaveReport;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
 
@@ -49,6 +50,14 @@ public final class WaveLoop {
   private long battlesBuilt;
   private long revision;
 
+  /** Debugger breakpoints (1-based lines) of each slot's script and of the library; not saved. */
+  private final List<BitSet> breakpoints;
+
+  private final BitSet libraryBreakpoints = new BitSet();
+
+  /** The turret whose script stopped at a breakpoint, with the wave paused; -1 when running. */
+  private int debugTurret = -1;
+
   /** The most memory any turret's code takes in the battle built: for the code challenge. */
   private int memoryUsed;
 
@@ -60,6 +69,10 @@ public final class WaveLoop {
     int slots = data.map().turretSlots().size();
     this.sources = new ArrayList<>(Collections.nCopies(slots, data.turret().initialScript()));
     this.drafts = new ArrayList<>(sources);
+    this.breakpoints = new ArrayList<>();
+    for (int i = 0; i < slots; i++) {
+      breakpoints.add(new BitSet());
+    }
     next();
   }
 
@@ -108,11 +121,13 @@ public final class WaveLoop {
 
   /** Advances the running wave one tick; when it ends, applies it and moves on. */
   public void tick() {
-    if (state != State.RUNNING) {
+    if (state != State.RUNNING || debugTurret >= 0) {
       return;
     }
     battle.tick();
+    debugTurret = battle.takeDebugStop();
     if (battle.finished()) {
+      debugTurret = -1;
       lastReport = battle.report();
       lastOutcome = progression.apply(progress, lastReport, memoryUsed);
       wavesFinished++;
@@ -182,6 +197,66 @@ public final class WaveLoop {
       }
     }
     return result;
+  }
+
+  // ------------------------------------------------------------------ debugger
+
+  /**
+   * The player's breakpoints on a slot's script (1-based lines). When a turret's cycle reaches one,
+   * the wave pauses after that tick and {@link #debugTurret()} says whose recording to show.
+   */
+  public void setBreakpoints(int slot, BitSet lines) {
+    breakpoints.get(slot).clear();
+    breakpoints.get(slot).or(lines);
+    applyBreakpoints();
+  }
+
+  /** Breakpoints on the library's lines; they stop any turret that runs them. */
+  public void setLibraryBreakpoints(BitSet lines) {
+    libraryBreakpoints.clear();
+    libraryBreakpoints.or(lines);
+    applyBreakpoints();
+  }
+
+  /** A slot's breakpoints, as set. */
+  public BitSet breakpoints(int slot) {
+    return (BitSet) breakpoints.get(slot).clone();
+  }
+
+  public BitSet libraryBreakpoints() {
+    return (BitSet) libraryBreakpoints.clone();
+  }
+
+  /**
+   * «Paso a paso»: the turret's next cycle is recorded and the wave pauses after it. Resumes a
+   * paused wave first, so pressing it again walks cycle by cycle.
+   */
+  public void stepCycle(int turret) {
+    if (turret < battle.turretCount()) {
+      debugTurret = -1;
+      battle.breakOnNextCycle(turret);
+    }
+  }
+
+  /** The turret whose recording the debugger shows while the wave is paused, or -1. */
+  public int debugTurret() {
+    return debugTurret;
+  }
+
+  /** Whether the wave is paused by the debugger. */
+  public boolean debugPaused() {
+    return debugTurret >= 0;
+  }
+
+  /** The debugger's «Continuar»: the wave runs again until the next breakpoint. */
+  public void resumeDebug() {
+    debugTurret = -1;
+  }
+
+  private void applyBreakpoints() {
+    for (int i = 0; i < battle.turretCount(); i++) {
+      battle.setBreakpoints(i, breakpoints.get(i), libraryBreakpoints);
+    }
   }
 
   /** The library's code that runs: the last that compiled. */
@@ -322,5 +397,7 @@ public final class WaveLoop {
             new BattleSetup(
                 progress.currentWave(), scripts, progress.loadout(), 1.0, battlesBuilt++));
     state = wait ? State.AWAITING_DEPLOY : State.RUNNING;
+    debugTurret = -1;
+    applyBreakpoints();
   }
 }

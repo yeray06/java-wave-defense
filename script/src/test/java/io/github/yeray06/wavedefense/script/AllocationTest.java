@@ -78,6 +78,15 @@ class AllocationTest {
     assertNoAllocation(Scripts.ok(SCRIPT_WITH_CALLS, BUSY_LIBRARY));
   }
 
+  @Test
+  void recordingForTheDebuggerAllocatesNothing() {
+    CompiledScript script = Scripts.ok(SCRIPT_WITH_CALLS, BUSY_LIBRARY);
+    java.util.BitSet everyLine = new java.util.BitSet();
+    everyLine.set(1, 30);
+    script.setBreakpoints(everyLine, everyLine);
+    assertNoAllocation(script);
+  }
+
   private static void assertNoAllocation(CompiledScript script) {
     java.lang.management.ThreadMXBean bean = ManagementFactory.getThreadMXBean();
     assumeTrue(

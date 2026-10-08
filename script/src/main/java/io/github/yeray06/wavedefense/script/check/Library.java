@@ -13,10 +13,10 @@ import java.util.Set;
  */
 public final class Library {
   /** No methods: for players without methods, and for tests. */
-  public static final Library EMPTY = new Library(Map.of(), false, 0, 0);
+  public static final Library EMPTY = new Library(Map.of(), false, 0, 0, List.of());
 
   /** What a library that could not be compiled at all (an internal error) leaves. */
-  public static final Library BROKEN = new Library(Map.of(), true, 0, 0);
+  public static final Library BROKEN = new Library(Map.of(), true, 0, 0, List.of());
 
   /**
    * One method.
@@ -31,9 +31,16 @@ public final class Library {
   private final boolean hasErrors;
   private final int maxIntSlots;
   private final int maxRefSlots;
+  private final List<DebugVar> debugVars;
 
-  Library(Map<String, Method> methods, boolean hasErrors, int maxIntSlots, int maxRefSlots) {
+  Library(
+      Map<String, Method> methods,
+      boolean hasErrors,
+      int maxIntSlots,
+      int maxRefSlots,
+      List<DebugVar> debugVars) {
     this.methods = Map.copyOf(methods);
+    this.debugVars = List.copyOf(debugVars);
     this.hasErrors = hasErrors;
     this.maxIntSlots = maxIntSlots;
     this.maxRefSlots = maxRefSlots;
@@ -57,6 +64,11 @@ public final class Library {
   /** The most reference slots any one method uses. */
   public int maxRefSlots() {
     return maxRefSlots;
+  }
+
+  /** Every variable of every method, for the debugger. */
+  public List<DebugVar> debugVars() {
+    return debugVars;
   }
 
   Optional<Method> method(String name) {

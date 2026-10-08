@@ -7,9 +7,19 @@ package io.github.yeray06.wavedefense.script.runtime;
  * afterwards.
  */
 public final class Function {
+  private final String name;
   Exec body;
   int intSlots;
   int refSlots;
+
+  /** {@code name} is the method's, or empty for a turret's script. */
+  public Function(String name) {
+    this.name = name;
+  }
+
+  public String name() {
+    return name;
+  }
 
   public void define(Exec body, int intSlots, int refSlots) {
     this.body = body;

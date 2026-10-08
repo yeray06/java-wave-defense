@@ -62,7 +62,9 @@ public final class ShapeWorldRenderer implements WorldRenderer {
     KILL(0.35f, 6, 34, Color.WHITE),
     LEAK(0.6f, CORE_RADIUS, CORE_RADIUS + 40, CORE_LOW),
     FAULT(0.5f, TURRET_HALF, TURRET_HALF + 30, TURRET_HUNG),
-    RELOAD(0.3f, TURRET_HALF, TURRET_HALF + 16, TURRET_RELOADING);
+    RELOAD(0.3f, TURRET_HALF, TURRET_HALF + 16, TURRET_RELOADING),
+    /** {@code saludar()}: a friendly golden wave around the turret. */
+    GREET(0.8f, TURRET_HALF, TURRET_HALF + 48, new Color(1f, 0.85f, 0.3f, 1f));
 
     final float life;
     final float fromRadius;
@@ -286,6 +288,7 @@ public final class ShapeWorldRenderer implements WorldRenderer {
             case LEAK -> Effect.LEAK;
             case FAULT -> Effect.FAULT;
             case RELOAD -> Effect.RELOAD;
+            case GREET -> Effect.GREET;
             case EMPTY -> null;
           };
       if (started == null) {

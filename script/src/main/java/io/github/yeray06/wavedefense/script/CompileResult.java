@@ -1,5 +1,6 @@
 package io.github.yeray06.wavedefense.script;
 
+import io.github.yeray06.wavedefense.script.check.DebugVar;
 import io.github.yeray06.wavedefense.script.diag.CompileError;
 import io.github.yeray06.wavedefense.script.runtime.CompiledScript;
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.SortedMap;
  *     live counter)
  * @param memoryLimit memory lines available
  * @param memoryByLine memory lines per source line, for the editor's margin
+ * @param debugVars the script's variables, for the debugger
  * @param internalError cause of an {@link
  *     io.github.yeray06.wavedefense.script.diag.ErrorCode#INTERNAL_ERROR}, for the log
  */
@@ -24,10 +26,12 @@ public record CompileResult(
     int memoryUsed,
     int memoryLimit,
     SortedMap<Integer, Integer> memoryByLine,
+    List<DebugVar> debugVars,
     Optional<Throwable> internalError) {
 
   public CompileResult {
     errors = List.copyOf(errors);
+    debugVars = List.copyOf(debugVars);
   }
 
   public boolean succeeded() {

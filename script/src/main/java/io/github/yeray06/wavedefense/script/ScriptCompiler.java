@@ -53,13 +53,22 @@ public final class ScriptCompiler {
       Optional<CompiledScript> script =
           diagnostics.hasErrors()
               ? Optional.empty()
-              : Optional.of(new CompiledScript(checked.root(), intSlots, refSlots, limits));
+              : Optional.of(
+                  new CompiledScript(
+                      checked.root(),
+                      checked.script(),
+                      intSlots,
+                      refSlots,
+                      Math.max(checked.intSlots(), library.maxIntSlots()),
+                      Math.max(checked.refSlots(), library.maxRefSlots()),
+                      limits));
       return new CompileResult(
           diagnostics.sorted(),
           script,
           checked.memoryUsed(),
           memoryLimit,
           checked.memoryByLine(),
+          checked.debugVars(),
           Optional.empty());
     } catch (RuntimeException | StackOverflowError e) {
       return new CompileResult(
@@ -68,6 +77,7 @@ public final class ScriptCompiler {
           0,
           memoryLimit,
           new TreeMap<>(),
+          List.of(),
           Optional.of(e));
     }
   }

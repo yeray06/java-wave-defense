@@ -278,6 +278,7 @@ public final class Nodes {
       int intBase = frame.intBase;
       int refBase = frame.refBase;
       int loopLine = frame.loopLine;
+      Function running = frame.function;
       int calleeInts = intBase + caller.intSlots;
       int calleeRefs = refBase + caller.refSlots;
       for (int i = 0; i < isRef.length; i++) {
@@ -291,6 +292,7 @@ public final class Nodes {
       frame.refBase = calleeRefs;
       frame.depth++;
       frame.loopLine = 0;
+      frame.function = callee;
       try {
         callee.body.exec(frame);
       } catch (Return returned) {
@@ -300,6 +302,7 @@ public final class Nodes {
         frame.refBase = refBase;
         frame.depth--;
         frame.loopLine = loopLine;
+        frame.function = running;
       }
     }
   }

@@ -7,6 +7,8 @@ import io.github.yeray06.wavedefense.script.api.PrintKind;
 import io.github.yeray06.wavedefense.script.api.TurretApi;
 import io.github.yeray06.wavedefense.script.diag.CycleOutcome;
 import io.github.yeray06.wavedefense.script.runtime.CompiledScript;
+import io.github.yeray06.wavedefense.script.runtime.Function;
+import io.github.yeray06.wavedefense.script.runtime.Tracer;
 import io.github.yeray06.wavedefense.sim.data.DefaultTarget;
 import io.github.yeray06.wavedefense.sim.data.EnemyCatalog;
 import io.github.yeray06.wavedefense.sim.data.EnemyKind;
@@ -18,6 +20,7 @@ import io.github.yeray06.wavedefense.sim.data.WaveTable;
 import io.github.yeray06.wavedefense.sim.economy.Formulas;
 import io.github.yeray06.wavedefense.sim.rng.SplitMix64;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
 
 /**
@@ -57,6 +60,9 @@ public final class Battle {
   private final SplitMix64 random;
   private final BattleEvents events = new BattleEvents(EVENT_CAPACITY);
   private final OutputLog output = new OutputLog();
+
+  /** The turret whose script reached a breakpoint this tick, or -1. */
+  private int debugStop = -1;
 
   // Spawn schedule, computed once.
   private final int[] spawnTicks;
@@ -264,6 +270,9 @@ public final class Battle {
       return;
     }
     CycleOutcome outcome = turret.script.run(apis[turret.index]);
+    if (turret.script.stopped() && debugStop < 0) {
+      debugStop = turret.index;
+    }
     if (outcome == CycleOutcome.RELOADING) {
       startReload(turret, false);
     } else if (outcome == CycleOutcome.FAULT) {
@@ -458,6 +467,51 @@ public final class Battle {
   }
 
   /** Instant events for the render (D-40); the battle never reads them. */
+  // ------------------------------------------------------------------ debugger
+
+  /**
+   * The player's breakpoints for one turret: lines of its script and of the library. Recording
+   * starts with the turret's next cycle; it does not change what the turret does.
+   */
+  public void setBreakpoints(int turret, BitSet scriptLines, BitSet libraryLines) {
+    CompiledScript script = turrets[turret].script;
+    // Without breakpoints a script that was never debugged keeps running without a recording.
+    if (script != null
+        && (script.trace() != null || !scriptLines.isEmpty() || !libraryLines.isEmpty())) {
+      script.setBreakpoints(scriptLines, libraryLines);
+    }
+  }
+
+  /** «Paso a paso»: the turret's next cycle is recorded and stops at its first step. */
+  public void breakOnNextCycle(int turret) {
+    CompiledScript script = turrets[turret].script;
+    if (script != null) {
+      script.breakOnNextRun();
+    }
+  }
+
+  /**
+   * The turret that reached a breakpoint in the last tick, or -1; asking clears it. The battle
+   * itself never stops: whoever drives it decides to pause.
+   */
+  public int takeDebugStop() {
+    int stop = debugStop;
+    debugStop = -1;
+    return stop;
+  }
+
+  /** The recording of the turret's last cycle, or {@code null} if it was never debugged. */
+  public Tracer trace(int turret) {
+    CompiledScript script = turrets[turret].script;
+    return script == null ? null : script.trace();
+  }
+
+  /** The turret's own script function, to tell its steps from the library's. */
+  public Function scriptFunction(int turret) {
+    CompiledScript script = turrets[turret].script;
+    return script == null ? null : script.function();
+  }
+
   /** What the turrets printed with {@code imprimir(x)}. */
   public OutputLog output() {
     return output;

@@ -30,6 +30,12 @@ public final class Frame {
   TurretApi api;
   private int steps;
 
+  /** The function running now: the script's or a library method. */
+  Function function;
+
+  /** Records every step while the player debugs this turret; {@code null} otherwise. */
+  Tracer tracer;
+
   /** Where the running function's slots start. */
   int intBase;
 
@@ -55,7 +61,8 @@ public final class Frame {
     this.limits = limits;
   }
 
-  void reset(TurretApi turret) {
+  void reset(TurretApi turret, Function script) {
+    function = script;
     Arrays.fill(ints, 0);
     Arrays.fill(refs, EnemyHandle.NONE);
     api = turret;
@@ -80,6 +87,9 @@ public final class Frame {
     currentLine = line;
     if (++steps > limits.maxStepsPerCycle()) {
       throw fault(FaultType.INFINITE_LOOP, loopLine != 0 ? loopLine : line);
+    }
+    if (tracer != null) {
+      tracer.record(this, line);
     }
   }
 

@@ -220,4 +220,64 @@ class WaveLoopTest {
     assertEquals("rafaga();", loop.script(0));
     assertFalse(loop.battle().turret(0).hasScript(), "the turret stays idle until fixed");
   }
+
+  @Test
+  void aBreakpointPausesTheWaveWithTheTurretsCycleRecorded() {
+    WaveLoop loop = new WaveLoop(data(), Progress.newGame(data()));
+    java.util.BitSet lines = new java.util.BitSet();
+    lines.set(1);
+    loop.setBreakpoints(0, lines);
+    loop.deploy();
+    for (int i = 0; i < 1000 && !loop.debugPaused(); i++) {
+      loop.tick();
+    }
+    assertTrue(loop.debugPaused(), "the turret ran line 1");
+    assertEquals(0, loop.debugTurret());
+    var trace = loop.battle().trace(0);
+    assertTrue(trace.firstBreak() >= 0);
+    assertEquals(1, trace.line(trace.firstBreak()));
+
+    int tick = loop.battle().tickCount();
+    loop.tick();
+    assertEquals(tick, loop.battle().tickCount(), "the wave waits for the player");
+    loop.resumeDebug();
+    loop.tick();
+    assertEquals(tick + 1, loop.battle().tickCount());
+  }
+
+  @Test
+  void stepCyclePausesAfterOneCycleWithoutBreakpoints() {
+    WaveLoop loop = new WaveLoop(data(), Progress.newGame(data()));
+    loop.deploy();
+    loop.stepCycle(0);
+    for (int i = 0; i < 1000 && !loop.debugPaused(); i++) {
+      loop.tick();
+    }
+    assertTrue(loop.debugPaused());
+    assertEquals(0, loop.battle().trace(0).firstBreak());
+  }
+
+  @Test
+  void debuggingDoesNotChangeTheBattle() {
+    WaveLoop plain = new WaveLoop(data(), Progress.newGame(data()));
+    WaveLoop debugged = new WaveLoop(data(), Progress.newGame(data()));
+    java.util.BitSet lines = new java.util.BitSet();
+    lines.set(1);
+    debugged.setBreakpoints(0, lines);
+    plain.deploy();
+    debugged.deploy();
+    finishWave(plain);
+    int finished = debugged.wavesFinished();
+    for (int i = 0; i < LIMIT && debugged.wavesFinished() == finished; i++) {
+      Battle battle = debugged.battle();
+      for (int t = 0; t < battle.turretCount(); t++) {
+        if (battle.turret(t).ammo() == 0) {
+          debugged.manualReload(t);
+        }
+      }
+      debugged.tick();
+      debugged.resumeDebug();
+    }
+    assertEquals(plain.lastReport(), debugged.lastReport());
+  }
 }
