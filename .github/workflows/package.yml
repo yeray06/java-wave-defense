@@ -2,10 +2,15 @@ name: Package
 
 # Builds the game with its own Java runtime for Windows, Linux and macOS (Construo, from Linux).
 # By hand (Actions > Package > Run workflow): the zips stay as artifacts for 14 days.
-# With a version tag (v0.1.0…): also a GitHub Release with the zips, on the repo's front page.
-# Never on every commit: Actions minutes are limited.
+# With a version tag (v0.1.0…), or by hand with a version: also a GitHub Release with the zips,
+# on the repo's front page. Never on every commit: Actions minutes are limited.
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish as a Release (e.g. 0.1.0). Empty: zips only, as artifacts.'
+        required: false
+        default: ''
   push:
     tags: ['v*']
 
@@ -31,14 +36,25 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v5
 
-      - name: Version from the tag
+      - name: Version from the tag or the input
         id: version
         shell: bash
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             echo "game=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+            echo "tag=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+          elif [[ -n "$INPUT_VERSION" ]]; then
+            if [[ ! "$INPUT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error::The version must look like 0.1.0, got '$INPUT_VERSION'"
+              exit 1
+            fi
+            echo "game=$INPUT_VERSION" >> "$GITHUB_OUTPUT"
+            echo "tag=v$INPUT_VERSION" >> "$GITHUB_OUTPUT"
           else
             echo "game=0.0.0-dev" >> "$GITHUB_OUTPUT"
+            echo "tag=" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Test before packaging
@@ -80,14 +96,17 @@ jobs:
           path: build/dist/JavaWaveDefense-Mac-*.zip
           retention-days: 14
 
+      # By hand, gh creates the tag on the commit that was packaged.
       - name: Publish the release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: steps.version.outputs.tag != ''
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
         shell: bash
         run: >-
-          gh release create "$GITHUB_REF_NAME"
-          --title "Java Wave Defense $GITHUB_REF_NAME"
+          gh release create "$TAG"
+          --target "$GITHUB_SHA"
+          --title "Java Wave Defense $TAG"
           --notes-file .github/release-notes.md
           --generate-notes
           build/dist/*.zip

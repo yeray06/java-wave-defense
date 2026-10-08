@@ -72,7 +72,7 @@ Desde la fase 8 Yeray pidió el resto de la sintaxis, por fases (una por sesión
   deja en `build/dist/` un zip con Java Temurin dentro. Su versión
   (`runtimeRelease` en `lwjgl3/build.gradle.kts`) tiene la misma mayor que
   `.java-version`. El workflow `Package` solo se lanza a mano o con una etiqueta
-  `v*`, que además publica una Release con los zips.
+  `v*`; con etiqueta, o a mano con versión, publica una Release con los zips.
 - JDK 21 LTS; la versión vive solo en `.java-version` (Gradle y CI la leen). libGDX
   1.14.2 con su LWJGL. Gradle Kotlin DSL. JUnit 6.
 - Decisiones de diseño cerradas y provisionales: `docs/ARCHITECTURE.md` §12.
