@@ -36,6 +36,7 @@ public final class WaveLoop {
 
   private final GameData data;
   private final Progress progress;
+  private final Career career;
   private final Progression progression;
   private final List<String> sources;
   private final List<String> drafts;
@@ -46,7 +47,10 @@ public final class WaveLoop {
   private State state;
   private WaveReport lastReport;
   private WaveOutcome lastOutcome;
+  private CareerOutcome lastCareer;
+  private long trials;
   private int wavesFinished;
+  private int purchasesUnlocking;
   private long battlesBuilt;
   private long revision;
 
@@ -63,8 +67,14 @@ public final class WaveLoop {
 
   /** Starts from {@code progress}; every turret runs the data's initial script (D-14). */
   public WaveLoop(GameData data, Progress progress) {
+    this(data, progress, Career.newGame(data, false));
+  }
+
+  /** Starts from {@code progress} and a career; every turret runs the initial script (D-14). */
+  public WaveLoop(GameData data, Progress progress, Career career) {
     this.data = data;
     this.progress = progress;
+    this.career = career;
     this.progression = new Progression(data);
     int slots = data.map().turretSlots().size();
     this.sources = new ArrayList<>(Collections.nCopies(slots, data.turret().initialScript()));
@@ -98,8 +108,9 @@ public final class WaveLoop {
    * itself. Saved code that no longer compiles (the data changed) falls back: the library to empty,
    * a script to the initial one; its draft is kept so the player sees their code.
    */
-  public static WaveLoop restore(GameData data, Progress progress, Code code, long battles) {
-    WaveLoop loop = new WaveLoop(data, progress);
+  public static WaveLoop restore(
+      GameData data, Progress progress, Career career, Code code, long battles) {
+    WaveLoop loop = new WaveLoop(data, progress, career);
     LibraryResult library = loop.compileLibrary(code.library());
     if (library.succeeded()) {
       loop.librarySource = code.library();
@@ -130,6 +141,7 @@ public final class WaveLoop {
       debugTurret = -1;
       lastReport = battle.report();
       lastOutcome = progression.apply(progress, lastReport, memoryUsed);
+      lastCareer = career.apply(progress, lastReport, memoryUsed);
       wavesFinished++;
       revision++;
       next();
@@ -341,6 +353,11 @@ public final class WaveLoop {
    */
   public void purchased() {
     revision++;
+    List<String> unlocked = career.unlock(progress);
+    if (!unlocked.isEmpty()) {
+      lastCareer = new CareerOutcome(java.util.Set.of(), career.streak(), 0, unlocked);
+      purchasesUnlocking++;
+    }
     if (state == State.AWAITING_DEPLOY) {
       build(true);
     }
@@ -372,6 +389,69 @@ public final class WaveLoop {
   /** What the last finished wave paid and where it led, or {@code null} before the first. */
   public WaveOutcome lastOutcome() {
     return lastOutcome;
+  }
+
+  /**
+   * What the last finished wave (or purchase) added to the career, or {@code null} before any.
+   * Changes with {@link #careerChanges()}.
+   */
+  public CareerOutcome lastCareer() {
+    return lastCareer;
+  }
+
+  /** Grows whenever {@link #lastCareer()} changes: to show new achievements once. */
+  public long careerChanges() {
+    return wavesFinished + purchasesUnlocking;
+  }
+
+  public Career career() {
+    return career;
+  }
+
+  /** Names a turret slot (D-63). */
+  public String setTurretName(int slot, String name) {
+    String kept = career.setName(slot, name);
+    revision++;
+    return kept;
+  }
+
+  /** Puts an unlocked hat on a turret slot, or takes it off with an empty id (D-63). */
+  public boolean setTurretHat(int slot, String hat) {
+    boolean done = career.setHat(slot, hat);
+    if (done) {
+      revision++;
+    }
+    return done;
+  }
+
+  /**
+   * «Probar» (D-65): plays a wave already reached from start to end at once, with the code the
+   * turrets run now, and returns its report. Nothing is paid or recorded and the loop does not
+   * change. The player is taken to reload by hand as soon as a turret is empty. Each trial has its
+   * own seed, so it is a sample of how the wave goes, not a forecast of the next real run.
+   *
+   * @return {@code null} for a wave not reached yet
+   */
+  public WaveReport trial(int wave) {
+    if (wave < 1 || wave > progress.highestWaveReached()) {
+      return null;
+    }
+    List<CompiledScript> scripts = new ArrayList<>();
+    for (int i = 0; i < progress.turretCount(); i++) {
+      scripts.add(compile(sources.get(i)).script().orElse(null));
+    }
+    // Negative seeds never meet a real battle's, which count up from zero.
+    Battle trial =
+        new Battle(data, new BattleSetup(wave, scripts, progress.loadout(), 1.0, -1 - trials++));
+    while (!trial.finished()) {
+      trial.tick();
+      for (int t = 0; t < trial.turretCount(); t++) {
+        if (trial.turret(t).ammo() == 0 && !trial.turret(t).reloading()) {
+          trial.manualReload(t);
+        }
+      }
+    }
+    return trial.report();
   }
 
   /** Waves finished so far; it changes exactly when {@link #lastOutcome()} does. */

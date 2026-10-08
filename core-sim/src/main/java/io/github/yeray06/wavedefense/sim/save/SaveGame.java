@@ -1,6 +1,7 @@
 package io.github.yeray06.wavedefense.sim.save;
 
 import io.github.yeray06.wavedefense.sim.data.GameData;
+import io.github.yeray06.wavedefense.sim.progress.Career;
 import io.github.yeray06.wavedefense.sim.progress.Progress;
 import io.github.yeray06.wavedefense.sim.progress.WaveLoop;
 import java.util.List;
@@ -14,6 +15,7 @@ import java.util.List;
  * @param library the library's code that runs: the last that compiled
  * @param libraryDraft what the library's tab holds, even broken
  * @param battlesBuilt the seed counter, so a loaded game replays as it would have
+ * @param career records, streak, achievements, hats and names (D-63)
  */
 public record SaveGame(
     int version,
@@ -22,10 +24,12 @@ public record SaveGame(
     List<String> drafts,
     String library,
     String libraryDraft,
-    long battlesBuilt) {
+    long battlesBuilt,
+    Career.Snapshot career) {
 
   public SaveGame {
     if (progress == null
+        || career == null
         || scripts == null
         || drafts == null
         || library == null
@@ -48,7 +52,8 @@ public record SaveGame(
         loop.drafts(),
         loop.library(),
         loop.libraryDraft(),
-        loop.battlesBuilt());
+        loop.battlesBuilt(),
+        loop.career().snapshot());
   }
 
   /**
@@ -60,6 +65,7 @@ public record SaveGame(
     return WaveLoop.restore(
         data,
         Progress.restore(data, progress),
+        Career.restore(data, career),
         new WaveLoop.Code(scripts, drafts, library, libraryDraft),
         battlesBuilt);
   }

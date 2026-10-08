@@ -8,6 +8,7 @@ import io.github.yeray06.wavedefense.script.api.Feature;
 import io.github.yeray06.wavedefense.sim.TestData;
 import io.github.yeray06.wavedefense.sim.data.GameData;
 import io.github.yeray06.wavedefense.sim.data.HardwareKind;
+import io.github.yeray06.wavedefense.sim.progress.Career;
 import io.github.yeray06.wavedefense.sim.progress.Progress;
 import io.github.yeray06.wavedefense.sim.progress.Shop;
 import io.github.yeray06.wavedefense.sim.progress.WaveLoop;
@@ -55,7 +56,8 @@ class SaveCodecTest {
             List.of(IF_SCRIPT, "if (hayEnemigos() {"),
             "",
             "void a() {",
-            7);
+            7,
+            Career.Snapshot.empty());
     SaveCodec codec = SaveCodec.standard();
     String json = codec.write(save);
     assertTrue(json.contains("\"version\" : " + SaveCodec.VERSION), json);
@@ -128,7 +130,8 @@ class SaveCodecTest {
             List.of("while (true) disparar();"),
             "void a() {\n}",
             "void a() {\n}",
-            0);
+            0,
+            Career.Snapshot.empty());
     WaveLoop restored = save.restore(data);
     assertEquals(data.turret().initialScript(), restored.script(0));
     assertEquals("while (true) disparar();", restored.draft(0));
@@ -240,7 +243,9 @@ class SaveCodecTest {
   }
 
   private static void assertRejected(GameData data, Progress.Snapshot snapshot, String part) {
-    SaveGame save = new SaveGame(SaveCodec.VERSION, snapshot, List.of(), List.of(), "", "", 0);
+    SaveGame save =
+        new SaveGame(
+            SaveCodec.VERSION, snapshot, List.of(), List.of(), "", "", 0, Career.Snapshot.empty());
     IllegalArgumentException e =
         assertThrows(IllegalArgumentException.class, () -> save.restore(data));
     assertTrue(e.getMessage().contains(part), e.getMessage());
@@ -291,7 +296,63 @@ class SaveCodecTest {
         };
     // A new game has no waves beaten, so 1 to 2 gives it the same 0 stars it already has.
     SaveCodec withMigration =
-        new SaveCodec(SaveCodec.VERSION, List.of(renameCode, new MoneyToStars(), new AddLibrary()));
+        new SaveCodec(
+            SaveCodec.VERSION,
+            List.of(renameCode, new MoneyToStars(), new AddLibrary(), new AddCareer()));
     assertEquals(current.read(json), withMigration.read(old));
+  }
+
+  @Test
+  void theCareerIsSavedWithRecordsAchievementsHatsAndNames() {
+    GameData data = data();
+    WaveLoop loop = played();
+    assertTrue(loop.career().unlocked("FIRST_WAVE"), "wave 1 won");
+    assertTrue(loop.setTurretHat(0, "FIRST_WAVE"));
+    loop.setTurretName(0, "  Lola <3  ");
+    SaveCodec codec = SaveCodec.standard();
+    WaveLoop restored = codec.read(codec.write(SaveGame.of(loop))).restore(data);
+    assertEquals(loop.career().snapshot(), restored.career().snapshot());
+    assertEquals("Lola 3", restored.career().name(0));
+    assertEquals("FIRST_WAVE", restored.career().hat(0));
+    assertEquals(loop.career().record(1), restored.career().record(1));
+  }
+
+  @Test
+  void aVersionThreeSaveStartsWithAnEmptyCareer() {
+    SaveCodec codec = SaveCodec.standard();
+    String json = codec.write(SaveGame.of(played()));
+    String v3 =
+        json.replace("\"version\" : " + SaveCodec.VERSION, "\"version\" : 3")
+            .replaceAll("(?s),\\s*\"career\" : \\{.*\\}(\\s*\\})\\s*$", "$1");
+    assertTrue(!v3.contains("career"), v3);
+    SaveGame read = codec.read(v3);
+    assertEquals(Career.Snapshot.empty(), read.career());
+    WaveLoop restored = read.restore(data());
+    assertTrue(
+        restored.career().achievements().isEmpty(), "earned ones unlock on the next wave or buy");
+    restored.purchased();
+    assertTrue(restored.career().unlocked("FIRST_WAVE"));
+  }
+
+  @Test
+  void hatsThatAreNotUnlockedAndUnknownAchievementsAreDropped() {
+    GameData data = data();
+    Career.Snapshot forged =
+        new Career.Snapshot(
+            Map.of(),
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            Set.of(),
+            List.of("NOT_IN_THE_DATA"),
+            List.of("x"),
+            List.of("COLLECTOR"),
+            false);
+    Career career = Career.restore(data, forged);
+    assertTrue(career.achievements().isEmpty());
+    assertEquals("", career.hat(0));
   }
 }

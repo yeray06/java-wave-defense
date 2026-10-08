@@ -40,7 +40,15 @@ class BattleTest {
                     new Challenge(Challenge.Type.NO_FAULTS, 0),
                     BattleTestData.weaknessFor(List.of(groups)))));
     return new GameData(
-        d.balance(), d.turret(), d.enemies(), waves, d.shop(), d.map(), d.scriptApi(), d.manual());
+        d.balance(),
+        d.turret(),
+        d.enemies(),
+        waves,
+        d.shop(),
+        d.map(),
+        d.scriptApi(),
+        d.manual(),
+        d.career());
   }
 
   private static Battle battle(GameData data, int wave, String... scripts) {
@@ -338,7 +346,15 @@ class BattleTest {
             mode,
             t.initialScript());
     return new GameData(
-        d.balance(), turret, d.enemies(), d.waves(), d.shop(), d.map(), d.scriptApi(), d.manual());
+        d.balance(),
+        turret,
+        d.enemies(),
+        d.waves(),
+        d.shop(),
+        d.map(),
+        d.scriptApi(),
+        d.manual(),
+        d.career());
   }
 
   @Test

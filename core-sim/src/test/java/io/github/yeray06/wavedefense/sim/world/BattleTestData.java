@@ -31,6 +31,14 @@ final class BattleTestData {
                     new Challenge(Challenge.Type.NO_FAULTS, 0),
                     weaknessFor(List.of(new WaveTable.Group(kind, count))))));
     return new GameData(
-        d.balance(), d.turret(), d.enemies(), waves, d.shop(), d.map(), d.scriptApi(), d.manual());
+        d.balance(),
+        d.turret(),
+        d.enemies(),
+        waves,
+        d.shop(),
+        d.map(),
+        d.scriptApi(),
+        d.manual(),
+        d.career());
   }
 }

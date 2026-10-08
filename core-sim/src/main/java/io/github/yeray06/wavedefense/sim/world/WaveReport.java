@@ -25,6 +25,15 @@ public record WaveReport(
     turrets = List.copyOf(turrets);
   }
 
+  /** Shots fired by every turret together, hits or not. */
+  public int totalShots() {
+    int shots = 0;
+    for (TurretReport turret : turrets) {
+      shots += turret.shots();
+    }
+    return shots;
+  }
+
   /** No enemy got through ("oleada perfecta"). */
   public boolean perfect() {
     return won && leaks.isEmpty();

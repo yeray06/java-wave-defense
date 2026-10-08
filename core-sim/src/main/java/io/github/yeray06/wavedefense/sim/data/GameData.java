@@ -25,7 +25,8 @@ public record GameData(
     ShopConfig shop,
     MapConfig map,
     ScriptApiData scriptApi,
-    ManualConfig manual) {
+    ManualConfig manual,
+    CareerConfig career) {
 
   public static final String BALANCE = "data/balance.json";
   public static final String TURRET = "data/turret.json";
@@ -34,6 +35,7 @@ public record GameData(
   public static final String SHOP = "data/shop.json";
   public static final String MAP = "data/map.json";
   public static final String MANUAL = "data/manual.json";
+  public static final String CAREER = "data/career.json";
 
   /**
    * @throws DataException naming the file and the problem
@@ -48,7 +50,8 @@ public record GameData(
             Json.readStrict(read(source, SHOP), ShopConfig.class, SHOP),
             Json.readStrict(read(source, MAP), MapConfig.class, MAP),
             ScriptApiLoader.load(read(source, ScriptApiLoader.FILE)),
-            Json.read(read(source, MANUAL), ManualConfig.class, MANUAL));
+            Json.read(read(source, MANUAL), ManualConfig.class, MANUAL),
+            Json.readStrict(read(source, CAREER), CareerConfig.class, CAREER));
     data.crossCheck();
     return data;
   }
@@ -56,7 +59,7 @@ public record GameData(
   /** The same data with the shop's hardware caps removed, for "sin tope" comparisons. */
   public GameData withoutHardwareCaps() {
     return new GameData(
-        balance, turret, enemies, waves, shop.withoutCaps(), map, scriptApi, manual);
+        balance, turret, enemies, waves, shop.withoutCaps(), map, scriptApi, manual, career);
   }
 
   public ScriptCompiler compiler() {
@@ -194,11 +197,30 @@ public record GameData(
       }
     }
     checkManual();
+    checkCareer();
     CompileResult initial =
         compiler().compile(turret.initialScript(), Unlocks.of(1), turret.memoryLines());
     if (!initial.succeeded()) {
       throw new DataException(
           TURRET, "initialScript does not compile with nothing unlocked: " + initial.errors());
+    }
+  }
+
+  /** Every achievement can be reached: no count above what the game has. */
+  private void checkCareer() {
+    long syntax = shop.syntax().stream().filter(ShopConfig.SyntaxItem::inMvp).count();
+    for (CareerConfig.Achievement a : career.achievements()) {
+      long most =
+          switch (a.kind()) {
+            case WAVES_BEATEN, PERFECT_WAVES, CHALLENGES, BEST_STREAK, RECORDS ->
+                balance.lastWave();
+            case BOSSES -> balance.lastWave() / balance.boss().everyWaves();
+            case SYNTAX_OWNED -> syntax;
+            case GREETINGS, FAULT, ALL -> Long.MAX_VALUE;
+          };
+      if (a.target() > most) {
+        throw new DataException(CAREER, a.id() + " asks for " + a.target() + ", at most " + most);
+      }
     }
   }
 

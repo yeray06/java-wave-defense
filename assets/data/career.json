@@ -1,0 +1,22 @@
+{
+  "notFromPlan": ["turretNameMaxLength", "achievements"],
+  "turretNameMaxLength": 14,
+  "achievements": [
+    { "id": "FIRST_WAVE", "kind": "WAVES_BEATEN", "target": 1, "fault": null, "hat": "CAP", "hatColor": "#3d7be0" },
+    { "id": "HELLO", "kind": "GREETINGS", "target": 1, "fault": null, "hat": null, "hatColor": null },
+    { "id": "NO_LEAKS", "kind": "PERFECT_WAVES", "target": 1, "fault": null, "hat": null, "hatColor": null },
+    { "id": "INFINITE_LOOP", "kind": "FAULT", "target": 1, "fault": "INFINITE_LOOP", "hat": null, "hatColor": null },
+    { "id": "NULL_POINTER", "kind": "FAULT", "target": 1, "fault": "NULL_POINTER", "hat": null, "hatColor": null },
+    { "id": "CHALLENGER", "kind": "CHALLENGES", "target": 5, "fault": null, "hat": "BOW", "hatColor": "#e05aa8" },
+    { "id": "PERFECTIONIST", "kind": "PERFECT_WAVES", "target": 10, "fault": null, "hat": "HELMET", "hatColor": "#9aa4b0" },
+    { "id": "STREAK_5", "kind": "BEST_STREAK", "target": 5, "fault": null, "hat": "PARTY", "hatColor": "#f0b429" },
+    { "id": "BOSS_SLAYER", "kind": "BOSSES", "target": 1, "fault": null, "hat": "CROWN", "hatColor": "#f5d142" },
+    { "id": "TO_INFINITY", "kind": "FAULT", "target": 1, "fault": "STACK_OVERFLOW", "hat": "WIZARD", "hatColor": "#6a4fc9" },
+    { "id": "RECORD_BREAKER", "kind": "RECORDS", "target": 10, "fault": null, "hat": null, "hatColor": null },
+    { "id": "SOCIABLE", "kind": "GREETINGS", "target": 1000, "fault": null, "hat": null, "hatColor": null },
+    { "id": "ALL_SYNTAX", "kind": "SYNTAX_OWNED", "target": 6, "fault": null, "hat": null, "hatColor": null },
+    { "id": "LAST_WAVE", "kind": "WAVES_BEATEN", "target": 16, "fault": null, "hat": null, "hatColor": null },
+    { "id": "WHOLE_RUN", "kind": "BEST_STREAK", "target": 16, "fault": null, "hat": "TOP_HAT", "hatColor": "#2b2b2b" },
+    { "id": "COLLECTOR", "kind": "ALL", "target": 0, "fault": null, "hat": "HALO", "hatColor": "#fff3a0" }
+  ]
+}
