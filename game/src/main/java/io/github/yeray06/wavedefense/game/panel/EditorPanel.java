@@ -78,6 +78,7 @@ public final class EditorPanel extends Table {
     scroll = new ScrollPane(editors[0], skin);
     scroll.setFadeScrollBars(false);
     memory = new Label("", skin);
+    memory.setWrap(true);
     status = new Label("", skin, "small");
     status.setWrap(true);
     errors = new Label("", skin, "warning");
@@ -86,7 +87,7 @@ public final class EditorPanel extends Table {
     top().left();
     add(tabs).left().padBottom(6).row();
     add(scroll).width(WIDTH).height(330).row();
-    add(memory).left().padTop(6).row();
+    add(memory).left().width(WIDTH).padTop(6).row();
     add(status).left().width(WIDTH).padTop(2).row();
     add(errors).left().width(WIDTH).padTop(4).row();
     Label help = new Label(names.texts().get("editor.help"), skin, "small");
@@ -175,7 +176,8 @@ public final class EditorPanel extends Table {
     for (int i = 0; i < tabCount; i++) {
       int index = i;
       TextButton tab = new TextButton(names.texts().format("editor.turret", i + 1), skin);
-      tab.pad(4, 12, 4, 12);
+      // Four turret tabs must fit the panel's width.
+      tab.pad(4, 8, 4, 8);
       tab.setChecked(i == slot);
       group.add(tab);
       tab.addListener(
@@ -187,11 +189,13 @@ public final class EditorPanel extends Table {
               }
             }
           });
-      tabs.add(tab).padRight(6);
+      tabs.add(tab).padRight(4);
     }
     if (libraryShown) {
+      // Its own row: shared by every turret, not one more of them.
+      tabs.row();
       TextButton tab = new TextButton(names.texts().get("editor.library.tab"), skin);
-      tab.pad(4, 12, 4, 12);
+      tab.pad(4, 8, 4, 8);
       tab.setChecked(slot == library);
       group.add(tab);
       tab.addListener(
@@ -203,7 +207,7 @@ public final class EditorPanel extends Table {
               }
             }
           });
-      tabs.add(tab).padLeft(10);
+      tabs.add(tab).colspan(Math.max(1, tabCount)).left().padTop(4);
     }
   }
 
