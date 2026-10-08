@@ -1,9 +1,10 @@
 {
-  "notFromPlan": ["limits.maxStepsPerCycle", "limits.maxNestingDepth"],
+  "notFromPlan": ["limits.maxStepsPerCycle", "limits.maxNestingDepth", "limits.maxCallDepth"],
   "limits": {
     "maxLoopIterations": 1000,
     "maxStepsPerCycle": 100000,
-    "maxNestingDepth": 64
+    "maxNestingDepth": 64,
+    "maxCallDepth": 64
   },
   "types": {
     "enemy": "Enemigo",

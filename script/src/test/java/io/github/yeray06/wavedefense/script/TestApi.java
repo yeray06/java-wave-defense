@@ -18,7 +18,7 @@ import java.util.Map;
  * this: it loads the vocabulary from data (core-sim checks the real file).
  */
 final class TestApi {
-  static final ScriptLimits LIMITS = new ScriptLimits(1000, 100_000, 64);
+  static final ScriptLimits LIMITS = new ScriptLimits(1000, 100_000, 64, 64);
   static final int WAVE_FOR_AMMO = 6;
 
   private TestApi() {}

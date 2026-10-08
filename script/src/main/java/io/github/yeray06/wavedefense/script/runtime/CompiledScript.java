@@ -16,6 +16,7 @@ public final class CompiledScript {
   private final Frame frame;
   private FaultType faultType;
   private int faultLine;
+  private boolean faultInLibrary;
   private Throwable internalError;
 
   public CompiledScript(Exec root, int intSlots, int refSlots, ScriptLimits limits) {
@@ -26,10 +27,13 @@ public final class CompiledScript {
   public CycleOutcome run(TurretApi turret) {
     faultType = null;
     faultLine = 0;
+    faultInLibrary = false;
     internalError = null;
     frame.reset(turret);
     try {
       root.exec(frame);
+      return CycleOutcome.COMPLETED;
+    } catch (Return returned) {
       return CycleOutcome.COMPLETED;
     } catch (Signal signal) {
       if (signal.fault == null) {
@@ -37,6 +41,7 @@ public final class CompiledScript {
       }
       faultType = signal.fault;
       faultLine = signal.line;
+      faultInLibrary = signal.inLibrary;
       return CycleOutcome.FAULT;
     } catch (RuntimeException | StackOverflowError e) {
       faultType = FaultType.INTERNAL_ERROR;
@@ -56,6 +61,11 @@ public final class CompiledScript {
   /** Line of the last fault, or 0. */
   public int faultLine() {
     return faultLine;
+  }
+
+  /** Whether {@link #faultLine()} is a line of the library rather than of the turret's script. */
+  public boolean faultInLibrary() {
+    return faultInLibrary;
   }
 
   /** Cause of an {@link FaultType#INTERNAL_ERROR}, for the log; otherwise {@code null}. */

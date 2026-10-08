@@ -12,6 +12,8 @@ public enum FaultType {
   ARITHMETIC,
   /** {@code lista.get(i)} with {@code i} outside {@code 0..size()-1}. */
   INDEX_OUT_OF_BOUNDS,
+  /** Too many library calls running at once: usually a method that calls itself forever. */
+  STACK_OVERFLOW,
   /** A bug in the interpreter or the simulation, not in the player's code. */
   INTERNAL_ERROR
 }

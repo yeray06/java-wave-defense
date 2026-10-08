@@ -2,7 +2,7 @@ package io.github.yeray06.wavedefense.script.ast;
 
 import java.util.List;
 
-/** Statements. {@code try} and methods will add records here. */
+/** Statements. {@code try} will add records here. */
 public sealed interface Stmt {
   Pos pos();
 
@@ -48,4 +48,21 @@ public sealed interface Stmt {
 
   /** A lone {@code ;}. */
   record Empty(Pos pos) implements Stmt {}
+
+  /** {@code return;} or {@code return value;}: {@code value} is {@code null} when absent. */
+  record Return(Pos pos, Expr value) implements Stmt {}
+
+  /**
+   * {@code Type name(Type a, Type b) { body }}. Only the library may hold them; in a turret's
+   * script the checker reports it.
+   */
+  record MethodDecl(
+      Pos pos, TypeRef returnType, Pos namePos, String name, List<Param> params, Block body)
+      implements Stmt {
+    public MethodDecl {
+      params = List.copyOf(params);
+    }
+  }
+
+  record Param(TypeRef type, Pos pos, String name) {}
 }

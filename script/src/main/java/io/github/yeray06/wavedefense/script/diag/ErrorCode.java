@@ -41,6 +41,10 @@ public enum ErrorCode {
   FEATURE_LOCKED,
   /** {@code int[]} or {@code a[0]}: the game's lists come from {@code enemigos()}. */
   ARRAYS_NOT_SUPPORTED,
+  /** {0} the modifier ({@code public}, {@code static}…). */
+  MODIFIER_NOT_ALLOWED,
+  /** Something other than a method at the top of the library. */
+  STATEMENT_OUTSIDE_METHOD,
 
   // Semantic
   /** {0} the call name, {1} the {@link io.github.yeray06.wavedefense.script.api.Feature}. */
@@ -82,6 +86,22 @@ public enum ErrorCode {
   FOR_EACH_NOT_A_LIST,
   /** {0} the type of the for-each variable, {1} the type of the list's elements. */
   FOR_EACH_WRONG_TYPE,
+
+  // Methods
+  /** A method in a turret's script or inside another method: methods go in the library. */
+  METHOD_NOT_ALLOWED_HERE,
+  /** {0} the method name. */
+  DUPLICATE_METHOD,
+  /** {0} the method name, which is already one of the game's calls. */
+  METHOD_NAME_TAKEN,
+  /** {0} the method name. */
+  MISSING_RETURN,
+  /** {@code return value;} in a void method or in a turret's script. */
+  UNEXPECTED_RETURN_VALUE,
+  /** {0} the type the method returns. */
+  MISSING_RETURN_VALUE,
+  /** {0} the method name. */
+  LIBRARY_HAS_ERRORS,
 
   /** A bug in the compiler, not in the player's code. */
   INTERNAL_ERROR

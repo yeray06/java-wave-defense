@@ -76,8 +76,8 @@ class ScriptApiTest {
 
   @Test
   void limitsMustBePositive() {
-    assertThrows(IllegalArgumentException.class, () -> new ScriptLimits(0, 1, 1));
-    assertThrows(IllegalArgumentException.class, () -> new ScriptLimits(1, -1, 1));
+    assertThrows(IllegalArgumentException.class, () -> new ScriptLimits(0, 1, 1, 1));
+    assertThrows(IllegalArgumentException.class, () -> new ScriptLimits(1, -1, 1, 1));
     assertThrows(IllegalArgumentException.class, () -> new Requirement.NeedsWave(0));
   }
 

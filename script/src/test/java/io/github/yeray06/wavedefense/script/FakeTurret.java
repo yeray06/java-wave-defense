@@ -16,6 +16,7 @@ final class FakeTurret implements TurretApi {
 
   int ammo = 12;
   int heat;
+  int heatPerShot = HEAT_PER_SHOT;
   long nearest = EnemyHandle.NONE;
   long target = EnemyHandle.NONE;
   AmmoType ammoType = AmmoType.NORMAL;
@@ -58,7 +59,7 @@ final class FakeTurret implements TurretApi {
       return FireResult.OVERHEATED;
     }
     ammo--;
-    heat = Math.min(MAX_HEAT, heat + HEAT_PER_SHOT);
+    heat = Math.min(MAX_HEAT, heat + heatPerShot);
     shotsFired++;
     return FireResult.FIRED;
   }

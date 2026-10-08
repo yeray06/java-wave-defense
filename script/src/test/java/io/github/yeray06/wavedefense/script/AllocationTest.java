@@ -31,15 +31,60 @@ class AllocationTest {
       disparar();
       """;
 
+  private static final String BUSY_LIBRARY =
+      """
+      int suma(int n) {
+        if (n <= 0) {
+          return 0;
+        }
+        return n + suma(n - 1);
+      }
+      boolean debil(Enemigo e) {
+        return e != null && e.vida() < 50;
+      }
+      Enemigo primero(List<Enemigo> lista) {
+        if (lista.isEmpty()) {
+          return null;
+        }
+        return lista.get(0);
+      }
+      void atacar(Enemigo e) {
+        if (e == null) {
+          return;
+        }
+        apuntar(e);
+        disparar();
+      }
+      """;
+
+  private static final String SCRIPT_WITH_CALLS =
+      """
+      int n = suma(10) + suma(3);
+      Enemigo e = primero(enemigos());
+      if (debil(e) && n > 0) {
+        atacar(e);
+        return;
+      }
+      atacar(enemigoMasCercano());
+      """;
+
   @Test
   void runningACycleAllocatesNothing() {
+    assertNoAllocation(Scripts.ok(BUSY_SCRIPT));
+  }
+
+  @Test
+  void callingTheLibraryAllocatesNothing() {
+    assertNoAllocation(Scripts.ok(SCRIPT_WITH_CALLS, BUSY_LIBRARY));
+  }
+
+  private static void assertNoAllocation(CompiledScript script) {
     java.lang.management.ThreadMXBean bean = ManagementFactory.getThreadMXBean();
     assumeTrue(
         bean instanceof com.sun.management.ThreadMXBean, "needs HotSpot allocation counters");
     com.sun.management.ThreadMXBean threads = (com.sun.management.ThreadMXBean) bean;
     long thread = Thread.currentThread().threadId();
 
-    CompiledScript script = Scripts.ok(BUSY_SCRIPT);
     FakeTurret turret = new FakeTurret();
     turret.nearest = turret.addEnemy(1, 40, 80, true, 900);
     turret.addEnemy(2, 60, 120, false, 700);

@@ -52,13 +52,92 @@ class JavacAgreementTest {
         void usarMunicion(Municion m) {}
       }
       class Script extends Torreta {
+      %s
         void ciclo() {
       %s
         }
       }
       """;
 
+  /** A library and a turret's script that calls it, compiled together. */
+  record WithLibrary(String library, String script) {
+    @Override
+    public String toString() {
+      return (library + " | " + script).replace("\n", "⏎");
+    }
+  }
+
   @TempDir Path classes;
+
+  static Stream<WithLibrary> bothAcceptWithLibrary() {
+    return Stream.of(
+        new WithLibrary("void rafaga() {\n  disparar();\n  disparar();\n}", "rafaga();"),
+        new WithLibrary(
+            "int doble(int x) {\n  return x * 2;\n}\nboolean grande(int x) {\n  return x > 10;\n}",
+            "if (grande(doble(municion()))) disparar();"),
+        new WithLibrary(
+            """
+            Enemigo masCercanoAlNucleo(List<Enemigo> lista) {
+              Enemigo mejor = null;
+              for (Enemigo e : lista) {
+                if (mejor == null || e.distanciaAlNucleo() < mejor.distanciaAlNucleo()) {
+                  mejor = e;
+                }
+              }
+              return mejor;
+            }
+            """,
+            "Enemigo e = masCercanoAlNucleo(enemigos());\nif (e != null) apuntar(e);"),
+        new WithLibrary(
+            "int f(int n) {\n  if (n <= 1) {\n    return 1;\n  }\n  return n * f(n - 1);\n}",
+            "int x = f(4);"),
+        new WithLibrary(
+            "int a() {\n  return b();\n}\nint b() {\n  return 1;\n}", "int x = a() + b();"),
+        new WithLibrary(
+            "int signo(int x) {\n  if (x > 0) {\n    return 1;\n  } else {\n    return -1;\n  }\n}",
+            ""),
+        new WithLibrary("int nunca() {\n  while (true) {\n    disparar();\n  }\n}", ""),
+        new WithLibrary(
+            "int v(boolean b) {\n  int x;\n  if (b) {\n    x = 1;\n  } else {\n    return 0;\n  }\n  return x;\n}",
+            ""),
+        new WithLibrary("void nada() {\n}", "nada();\nreturn;"),
+        new WithLibrary("void a(Enemigo e) {\n}", "a(null);"),
+        new WithLibrary("", "if (!hayEnemigos()) {\n  return;\n}\ndisparar();"));
+  }
+
+  static Stream<WithLibrary> bothRejectWithLibrary() {
+    return Stream.of(
+        new WithLibrary("int a() {\n  if (hayEnemigos()) return 1;\n}", ""),
+        new WithLibrary("void a() {\n  return 1;\n}", ""),
+        new WithLibrary("int a() {\n  return;\n}", ""),
+        new WithLibrary("int a() {\n  return true;\n}", ""),
+        new WithLibrary("void a() {\n}\nvoid a() {\n}", ""),
+        new WithLibrary("void a(int x, int x) {\n}", ""),
+        new WithLibrary("void a(int x) {\n  int x = 1;\n}", ""),
+        new WithLibrary("void a(int n) {\n}", "a();"),
+        new WithLibrary("void a(int n) {\n}", "a(true);"),
+        new WithLibrary("void a() {\n}", "int x = a();"),
+        new WithLibrary("void a() {\n  int x = y;\n}", ""),
+        new WithLibrary("void a() {\n  void b() {\n  }\n}", ""),
+        new WithLibrary("", "return 1;"),
+        new WithLibrary("void a(void x) {\n}", ""));
+  }
+
+  /** Valid Java that the game refuses in the library on purpose, with a clear message. */
+  static Stream<WithLibrary> gameIsStricterWithLibrary() {
+    return Stream.of(
+        // Overloads: one name, one method, so the player always knows which one runs.
+        new WithLibrary("void a(int x) {\n}\nvoid a(boolean b) {\n}", ""),
+        // A method cannot hide one of the game's calls (javac takes it as an override).
+        new WithLibrary("void disparar() {\n}", ""),
+        // No modifiers: classes come later.
+        new WithLibrary("static void a() {\n}", ""),
+        new WithLibrary("", "final int x = 1;"),
+        // No fields: the library is shared by every turret, its state would be too.
+        new WithLibrary("int contador = 0;", ""),
+        // javac folds 1 == 1 into true and sees an endless loop; the game only knows true.
+        new WithLibrary("int a() {\n  while (1 == 1) {\n  }\n}", ""));
+  }
 
   static Stream<String> bothAccept() {
     return Stream.of(
@@ -179,6 +258,11 @@ class JavacAgreementTest {
     return Stream.of("while (true) {\n}\ndisparar();");
   }
 
+  /** The same leniency after a {@code return}: javac calls what follows unreachable. */
+  static Stream<WithLibrary> gameIsMoreLenientWithLibrary() {
+    return Stream.of(new WithLibrary("void a() {\n  return;\n  disparar();\n}", ""));
+  }
+
   @ParameterizedTest
   @MethodSource("bothAccept")
   void javacAcceptsWhatTheGameAccepts(String script) {
@@ -207,14 +291,52 @@ class JavacAgreementTest {
     assertJavac(script, false);
   }
 
+  @ParameterizedTest
+  @MethodSource("bothAcceptWithLibrary")
+  void javacAcceptsTheLibrariesTheGameAccepts(WithLibrary c) {
+    assertTrue(game(c), () -> "game rejected:\n" + c);
+    assertJavac(c.library(), c.script(), true);
+  }
+
+  @ParameterizedTest
+  @MethodSource("bothRejectWithLibrary")
+  void gameRejectsTheLibrariesJavacRejects(WithLibrary c) {
+    assertFalse(game(c), () -> "game accepted:\n" + c);
+    assertJavac(c.library(), c.script(), false);
+  }
+
+  @ParameterizedTest
+  @MethodSource("gameIsStricterWithLibrary")
+  void deliberateDeviationsInTheLibrary(WithLibrary c) {
+    assertFalse(game(c), () -> "game accepted:\n" + c);
+    assertJavac(c.library(), c.script(), true);
+  }
+
+  @ParameterizedTest
+  @MethodSource("gameIsMoreLenientWithLibrary")
+  void knownLenienciesInTheLibrary(WithLibrary c) {
+    assertTrue(game(c), () -> "game rejected:\n" + c);
+    assertJavac(c.library(), c.script(), false);
+  }
+
+  /** Whether the game takes both the library and the script. */
+  private static boolean game(WithLibrary c) {
+    LibraryResult library = Scripts.library(c.library());
+    return library.succeeded() && Scripts.compile(c.script(), library.library()).succeeded();
+  }
+
   private void assertJavac(String script, boolean shouldCompile) {
+    assertJavac("", script, shouldCompile);
+  }
+
+  private void assertJavac(String library, String script, boolean shouldCompile) {
     JavaCompiler javac = ToolProvider.getSystemJavaCompiler();
     assertNotNull(javac, "tests must run on a JDK");
     JavaFileObject source =
         new SimpleJavaFileObject(URI.create("string:///Script.java"), JavaFileObject.Kind.SOURCE) {
           @Override
           public CharSequence getCharContent(boolean ignoreEncodingErrors) {
-            return STUB.formatted(script);
+            return STUB.formatted(library, script);
           }
         };
     StringWriter output = new StringWriter();
@@ -230,7 +352,14 @@ class JavacAgreementTest {
             .call();
     if (compiled != shouldCompile) {
       throw new AssertionError(
-          "javac " + (compiled ? "accepted" : "rejected") + ":\n" + script + "\n" + output);
+          "javac "
+              + (compiled ? "accepted" : "rejected")
+              + ":\n"
+              + library
+              + "\n"
+              + script
+              + "\n"
+              + output);
     }
   }
 }
