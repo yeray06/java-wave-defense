@@ -14,15 +14,18 @@ MVP (fases 1–7, "Riesgos y primera versión"): oleadas 1–10 hasta el Jefe 1.
 Desde la fase 8 Yeray pidió el resto de la sintaxis, por fases (una por sesión):
 8 for, 9 métodos, 10 try/catch y Jefe 2, 11 clases y acto 3.
 - Enemigos: Básico, Regenerador, Blindado, Enjambre, Jefe 1 y, en el acto 2,
-  Corredor (oleadas 11–13 por ahora).
-- Sintaxis comprable: if/else y comparaciones, variables, `&& || !`, while y
-  for (las dos formas, con `enemigos()` y `List<Enemigo>`: size, get, isEmpty).
+  Corredor y Mutante (oleadas 11–16 por ahora). El Mutante es débil a una
+  munición que cambia cada oleada (`mutantWeakness`, D-61).
+- Sintaxis comprable: if/else y comparaciones, variables, `&& || !`, while,
+  for (las dos formas, con `enemigos()` y `List<Enemigo>`: size, get, isEmpty)
+  y métodos (en una biblioteca compartida que no gasta memoria, con
+  parámetros, `return` y recursión hasta `StackOverflowError`).
 - Hasta 4 torretas (la 3.ª y la 4.ª con for). Hardware: daño, cargador,
   disipador, memoria y procesador (los dos últimos con for).
 - Munición NORMAL y PERFORANTE, cargador, calor, memoria de 12 líneas (+4 por
   nivel de memoria).
 - Excepciones: SinMunicion, Sobrecalentamiento, NullPointer, BucleInfinito,
-  ArithmeticException e IndexOutOfBounds.
+  ArithmeticException, IndexOutOfBounds y StackOverflowError.
 - Parte de oleada, informe, avance automático, oleada perfecta, x3, derrota
   sin perder progreso. Editor con errores por línea. Guardado y ajustes.
 - Cambios al plan aprobados por Yeray: 10 vidas del núcleo por oleada (D-35)
@@ -36,8 +39,8 @@ Desde la fase 8 Yeray pidió el resto de la sintaxis, por fases (una por sesión
   bloqueada. Las mejoras se devuelven por lo que costaron (D-59).
 - El manual es para quien nunca ha programado: frases cortas, cada símbolo
   explicado y ejemplos comentados (D-58).
-- AÚN FUERA (fases siguientes): métodos, try/catch, clases, modificadores,
-  Nueva versión, arrays. No implementarlos antes de su fase, pero la
+- AÚN FUERA (fases siguientes): try/catch, clases, modificadores, Nueva
+  versión, arrays. No implementarlos antes de su fase, pero la
   arquitectura debe admitirlos.
 
 ## Arquitectura (resumen)
@@ -45,7 +48,8 @@ Desde la fase 8 Yeray pidió el resto de la sintaxis, por fases (una por sesión
   puro) ← `game` (libGDX) ← `lwjgl3` (lanzador). `platform` (Java puro) lo usa
   `game`. `sim-cli` usa `core-sim`. Dependencias en un solo sentido.
 - Código del jugador: intérprete propio (lexer → parser → AST → checker →
-  árbol ejecutable). Nunca javac, Janino ni reflexión. Ninguna excepción de
+  árbol ejecutable). La biblioteca se compila aparte y todas las torretas la
+  comparten; sus llamadas usan ranuras en pila, sin reservar memoria. Nunca javac, Janino ni reflexión. Ninguna excepción de
   Java sale del intérprete. BucleInfinito a las 1.000 vueltas. Errores con
   línea. Sintaxis no comprada: «Aún no has desbloqueado «Repetir (while)»» (nombres
   para quien no sabe programar, D-58).

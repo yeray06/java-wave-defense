@@ -21,9 +21,9 @@ capturas está en [`DIARIO.md`](DIARIO.md).
 | 6b. Manual para principiantes y nombres | ✅ Fusionada | `phase-6b-manual-sencillo` |
 | 6c. Economía de estrellas y retos (D-57) | ✅ Fusionada | `phase-6c-estrellas` |
 | 7. Empaquetado y documentación | ✅ Fusionada | `phase-7-empaquetado` |
-| 8. for, Corredor y oleadas 11–13 (acto 2) | ✅ Hecha, en PR | `phase-8-for` |
-| 9. Métodos | Siguiente | — |
-| 10. try/catch y Jefe 2 | Pendiente | — |
+| 8. for, Corredor y oleadas 11–13 (acto 2) | ✅ Fusionada | `phase-8-for` |
+| 9. Métodos, Mutante y oleadas 14–16 | ✅ Hecha, en PR | `phase-9-methods` |
+| 10. try/catch y Jefe 2 | Siguiente | — |
 | 11. Clases y acto 3 | Pendiente | — |
 
 ## Fase 0 (hecha)
@@ -450,10 +450,48 @@ Resultado del simulador (`docs/BALANCE.md`):
   rinde más que fijar un objetivo y no soltarlo. Es un dato para Yeray, no lo
   he forzado: ver «A observar en el playtest».
 
+## Fase 9: métodos, el Mutante y las oleadas 14–16 (hecha)
+
+Yeray eligió cómo es el Mutante (débil a una munición que cambia en cada
+oleada) y que la recursión se permita con límite, como en Java.
+
+- Intérprete: métodos en una **biblioteca** compartida por todas las
+  torretas que no gasta memoria (plan), con parámetros, valores devueltos,
+  `return` (también en el script de una torreta: acaba el ciclo) y
+  recursión hasta 64 llamadas: después, `StackOverflowError`. Cada llamada
+  usa su zona de ranuras sin reservar memoria. javac sigue de árbitro con
+  bibliotecas (casos nuevos y seis desviaciones nuevas en
+  `JavacAgreementTest`).
+- Simulación: el Mutante y `e.mutante()`; cada oleada dice a qué munición es
+  débil (`mutantWeakness`); las oleadas 14–16 con sus retos; la biblioteca
+  en la partida y en el guardado (versión 3, con migración).
+- Juego: pestaña «Biblioteca» en el editor (aparece al comprar los métodos;
+  al cambiarla se vuelven a compilar todas las torretas), el parte dice a qué
+  es débil el Mutante, los fallos dentro de un método dicen «biblioteca,
+  línea N», la tarjeta de la tienda dice que el ejemplo va en la biblioteca y
+  el manual tiene seis páginas nuevas (métodos, métodos con datos,
+  `e.mutante()`, el Mutante, `StackOverflowError` y una receta).
+- `sim-cli` juega hasta la 16. Sus scripts reescriben en cada oleada cuándo
+  usar perforante; con métodos, esa línea va en la biblioteca.
+
+Resultado del simulador (`docs/BALANCE.md`):
+
+- Llega al final: Jefe 1 tras 17 oleadas jugadas y la oleada 16 tras 48
+  (26,5 min). Muros en la 13 (5 pasadas, el máximo del plan), la 14, la 15 y
+  la 16 (2 o menos).
+- **Los métodos no cumplen la regla del doble** (0,19 frente a una torreta
+  más y un procesador). Lo esperable: su ventaja es cambiar una línea en vez
+  de cuatro scripts cuando cambia el Mutante, y el simulador no mide eso; en
+  fuerza no añaden nada. El jugador de referencia **nunca los compra**: los
+  muros de las oleadas 14–16 se le llevan todas las estrellas en hardware.
+  Lo apunto en «A observar en el playtest»; no lo he forzado.
+- El reto de la 15 (memoria ≤ 8) está pensado para la biblioteca y por eso
+  el jugador de referencia no lo cumple.
+
 ## Siguiente
 
-Fase 9: métodos (una biblioteca de código compartida por todas las torretas
-que no gasta memoria, según el plan) y el Mutante. Cuando Yeray lo diga.
+Fase 10: try/catch, el Saboteador y el Jefe 2 (oleadas 17–20). Cuando Yeray
+lo diga.
 
 ## Decisiones por revisar
 
@@ -518,6 +556,10 @@ Propuestas mías aplicadas como PROVISIONAL (detalle en
   escrito yo; se revisa leyéndolo en el juego.
 - **D-55**: guardado automático (como mucho una vez por segundo mientras se
   escribe); la oleada en curso no se guarda.
+- **D-61**: fase 9 — sin sobrecargas, modificadores ni variables fuera de un
+  método en la biblioteca; 64 llamadas como máximo; Mutante con vida ×1,5,
+  100 u/s y un 80 % menos con la munición equivocada; precio de los métodos
+  (6); oleadas 14–16 y sus retos.
 - **D-60**: fase 8 — nombre «Recorrer (for)», orden de `enemigos()`, solo
   `size`/`get`/`isEmpty`, Corredor con vida ×0,5 y 8/10/12 por oleada, precio
   de for (4), de memoria y procesador, posición de los huecos 3 y 4.
@@ -535,6 +577,12 @@ Números de balance que no vienen del plan (D-12): están en la lista
 Preguntas de diseño que solo responde alguien jugando. Se apuntan aquí y se
 deciden con ese dato, no antes.
 
+- [ ] **Métodos contra el Mutante** (D-61): ¿compensa comprar los métodos
+  para no cambiar cuatro scripts en cada oleada? El simulador no lo puede
+  medir (0,19 en fuerza) y nunca los compra porque los muros se llevan las
+  estrellas. Si en el playtest tampoco se compran, opciones: bajarlos de
+  precio, suavizar las oleadas 14–16 o dar a la biblioteca algo que se note
+  en fuerza.
 - [ ] **for contra el Corredor** (D-60): ¿nota el jugador que for le ayuda
   en las oleadas 11–13? El simulador dice que no lo bastante (0,86, el plan
   pide 2). Si se nota poco, opciones: Corredores con menos vida o que solo
@@ -551,6 +599,21 @@ deciden con ese dato, no antes.
   así: empujan a programar «dispara solo si hay enemigos». D-05 cerrada.
 
 ## Pendiente de probar en local
+
+Fase 9 (`jugar.bat`):
+
+- [ ] Una partida guardada de antes carga bien y la biblioteca está vacía.
+- [ ] Comprar «Reutilizar código (métodos)»: aparece la pestaña «Biblioteca»
+  en el editor y la tarjeta dice que el ejemplo va allí.
+- [ ] Pegar en la biblioteca el ejemplo de la tarjeta y escribir `rafaga();`
+  en dos torretas: las dos disparan en ráfaga y la memoria cuenta 1 línea.
+- [ ] Romper la biblioteca (borrar una llave): las torretas siguen con la
+  última que compilaba; al usar un método nuevo sale «La biblioteca tiene
+  errores».
+- [ ] Un método que se llama a sí mismo: `StackOverflowError (biblioteca,
+  línea N)` encima de la torreta y en el informe.
+- [ ] El parte de las oleadas 14–16 dice «Mutante: débil a …» y cambia de
+  una oleada a otra. ¿Se distingue el Mutante (cian) en el camino?
 
 Fase 8 (`jugar.bat`):
 
