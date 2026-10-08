@@ -14,10 +14,13 @@ import io.github.yeray06.wavedefense.sim.data.Challenge;
 import io.github.yeray06.wavedefense.sim.data.EnemyKind;
 import io.github.yeray06.wavedefense.sim.data.GameData;
 import io.github.yeray06.wavedefense.sim.data.WaveTable;
+import io.github.yeray06.wavedefense.sim.progress.Career;
 import io.github.yeray06.wavedefense.sim.progress.Goal;
 import io.github.yeray06.wavedefense.sim.progress.Progress;
+import io.github.yeray06.wavedefense.sim.progress.WaveRecord;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.function.IntConsumer;
 
 /**
  * The wave briefing (plan, "Parte de oleada"): which enemies come and how many, before they leave,
@@ -33,6 +36,9 @@ public final class BriefingPanel extends Table {
   private final TextButton deploy;
   private int shownWave = -1;
   private int shownStars = -1;
+  private Career career;
+  private IntConsumer onTrial;
+  private WaveRecord shownRecord;
 
   public BriefingPanel(
       GameData data, Progress progress, ScriptTexts names, Skin skin, Runnable onDeploy) {
@@ -53,13 +59,27 @@ public final class BriefingPanel extends Table {
         });
   }
 
-  /** Shows wave {@code wave}; rebuilt only when the wave or the stars earned change. */
+  /** The player's records, shown under the goals (D-63). */
+  public void setCareer(Career career) {
+    this.career = career;
+  }
+
+  /** What «Probar» does with the wave shown (D-65); without it there is no button. */
+  public void setTrial(IntConsumer onTrial) {
+    this.onTrial = onTrial;
+  }
+
+  /** Shows wave {@code wave}; rebuilt only when the wave, the stars or the records change. */
   public void show(int wave) {
-    if (wave == shownWave && progress.starsEarned() == shownStars) {
+    WaveRecord record = career == null ? null : career.record(wave);
+    if (wave == shownWave
+        && progress.starsEarned() == shownStars
+        && java.util.Objects.equals(record, shownRecord)) {
       return;
     }
     shownWave = wave;
     shownStars = progress.starsEarned();
+    shownRecord = record;
     clearChildren();
     add(new Label(names.texts().format("briefing.title", wave), skin, "title"))
         .colspan(2)
@@ -115,8 +135,39 @@ public final class BriefingPanel extends Table {
       line.setWrap(true);
       add(line).colspan(2).left().width(390).padLeft(10).row();
     }
+    if (record != null) {
+      int tps = data.balance().ticksPerSecond();
+      Label records =
+          new Label(
+              names
+                  .texts()
+                  .format(
+                      "briefing.records",
+                      ReportLines.recordText(WaveRecord.Mark.TICKS, record, names, tps),
+                      ReportLines.recordText(WaveRecord.Mark.SHOTS, record, names, tps),
+                      ReportLines.recordText(WaveRecord.Mark.MEMORY, record, names, tps)),
+              skin,
+              "small");
+      records.setWrap(true);
+      add(records).colspan(2).left().width(390).padTop(8).row();
+    }
     deploy.setText(names.texts().format("hud.deploy", wave));
-    add(deploy).colspan(2).padTop(14);
+    Table buttons = new Table();
+    buttons.add(deploy);
+    if (onTrial != null) {
+      TextButton trial = new TextButton(names.texts().get("trial.button"), skin);
+      trial.pad(10, 18, 10, 18);
+      trial.addListener(
+          new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+              trial.setChecked(false);
+              onTrial.accept(shownWave);
+            }
+          });
+      buttons.add(trial).padLeft(10);
+    }
+    add(buttons).colspan(2).padTop(14);
     pack();
   }
 }

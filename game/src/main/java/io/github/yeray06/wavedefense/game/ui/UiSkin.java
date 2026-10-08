@@ -11,6 +11,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.ui.TextField;
 import com.badlogic.gdx.scenes.scene2d.ui.Window;
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
@@ -90,6 +91,21 @@ public final class UiSkin {
     Window.WindowStyle window = new Window.WindowStyle(font, TEXT, skin.getDrawable("panel"));
     window.stageBackground = tinted(region, 0f, 0f, 0f, 0.55f);
     skin.add("default", window);
+    // D-67: windows over the battlefield, with a title bar and no dimmed stage.
+    Window.WindowStyle floating =
+        new Window.WindowStyle(font, GOOD, tinted(region, 0.10f, 0.11f, 0.14f, 0.97f));
+    skin.add("floating", floating);
+    TextField.TextFieldStyle field =
+        new TextField.TextFieldStyle(
+            font,
+            TEXT,
+            tinted(region, 0.9f, 0.9f, 0.9f),
+            tinted(region, 0.25f, 0.35f, 0.55f, 0.8f),
+            tinted(region, 0.16f, 0.18f, 0.23f));
+    field.background.setLeftWidth(6);
+    field.background.setRightWidth(6);
+    field.messageFontColor = MUTED;
+    skin.add("default", field);
     ScrollPane.ScrollPaneStyle scroll = new ScrollPane.ScrollPaneStyle();
     scroll.vScrollKnob = tinted(region, 0.35f, 0.38f, 0.45f, 1f);
     scroll.hScrollKnob = scroll.vScrollKnob;

@@ -2,6 +2,7 @@ package io.github.yeray06.wavedefense.sim.progress;
 
 import io.github.yeray06.wavedefense.script.CompileResult;
 import io.github.yeray06.wavedefense.script.LibraryResult;
+import io.github.yeray06.wavedefense.script.check.DebugVar;
 import io.github.yeray06.wavedefense.script.check.Library;
 import io.github.yeray06.wavedefense.script.runtime.CompiledScript;
 import io.github.yeray06.wavedefense.sim.data.GameData;
@@ -58,6 +59,11 @@ public final class WaveLoop {
   private final List<BitSet> breakpoints;
 
   private final BitSet libraryBreakpoints = new BitSet();
+
+  /** The variables of each turret's script in the battle built, and of its library. */
+  private List<List<DebugVar>> battleVars = List.of();
+
+  private List<DebugVar> battleLibraryVars = List.of();
 
   /** The turret whose script stopped at a breakpoint, with the wave paused; -1 when running. */
   private int debugTurret = -1;
@@ -253,6 +259,16 @@ public final class WaveLoop {
   /** The turret whose recording the debugger shows while the wave is paused, or -1. */
   public int debugTurret() {
     return debugTurret;
+  }
+
+  /** The variables of a turret's script as the battle runs it, for the debugger. */
+  public List<DebugVar> debugVars(int turret) {
+    return turret < battleVars.size() ? battleVars.get(turret) : List.of();
+  }
+
+  /** The variables of the library's methods as the battle runs them. */
+  public List<DebugVar> libraryDebugVars() {
+    return battleLibraryVars;
   }
 
   /** Whether the wave is paused by the debugger. */
@@ -465,10 +481,12 @@ public final class WaveLoop {
 
   private void build(boolean wait) {
     List<CompiledScript> scripts = new ArrayList<>();
+    List<List<DebugVar>> vars = new ArrayList<>();
     memoryUsed = 0;
     for (int i = 0; i < progress.turretCount(); i++) {
       CompileResult compiled = compile(sources.get(i));
       scripts.add(compiled.script().orElse(null));
+      vars.add(compiled.debugVars());
       memoryUsed = Math.max(memoryUsed, compiled.memoryUsed());
     }
     battle =
@@ -477,6 +495,8 @@ public final class WaveLoop {
             new BattleSetup(
                 progress.currentWave(), scripts, progress.loadout(), 1.0, battlesBuilt++));
     state = wait ? State.AWAITING_DEPLOY : State.RUNNING;
+    battleVars = List.copyOf(vars);
+    battleLibraryVars = library.debugVars();
     debugTurret = -1;
     applyBreakpoints();
   }

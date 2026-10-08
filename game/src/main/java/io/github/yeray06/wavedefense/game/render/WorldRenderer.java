@@ -1,7 +1,9 @@
 package io.github.yeray06.wavedefense.game.render;
 
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Disposable;
+import io.github.yeray06.wavedefense.sim.data.CareerConfig;
 import io.github.yeray06.wavedefense.sim.world.Battle;
 
 /**
@@ -26,6 +28,15 @@ public interface WorldRenderer extends Disposable {
 
   /** The built turret under a screen point, or -1. */
   int turretAt(Battle battle, int screenX, int screenY);
+
+  /** The pool index of the live enemy under a screen point, or -1: for its tooltip. */
+  int enemyAt(Battle battle, int screenX, int screenY);
+
+  /**
+   * The hat a turret slot wears (D-63), drawn on top of it; {@code null} takes it off. Cosmetic
+   * state of the player's, not of the simulation.
+   */
+  void setHat(int slot, CareerConfig.HatShape shape, Color color);
 
   /** Where a world point lands on screen; writes into {@code out} and returns it. */
   Vector2 project(double worldX, double worldY, Vector2 out);

@@ -24,21 +24,28 @@ import io.github.yeray06.wavedefense.game.i18n.ScriptTexts;
 import io.github.yeray06.wavedefense.game.i18n.Texts;
 import io.github.yeray06.wavedefense.game.loop.FixedStepClock;
 import io.github.yeray06.wavedefense.game.panel.BriefingPanel;
+import io.github.yeray06.wavedefense.game.panel.CareerPanel;
+import io.github.yeray06.wavedefense.game.panel.DebuggerPanel;
 import io.github.yeray06.wavedefense.game.panel.EditorPanel;
 import io.github.yeray06.wavedefense.game.panel.ManualPanel;
 import io.github.yeray06.wavedefense.game.panel.MapPanel;
+import io.github.yeray06.wavedefense.game.panel.OutputPanel;
 import io.github.yeray06.wavedefense.game.panel.ReportLines;
 import io.github.yeray06.wavedefense.game.panel.ReportPanel;
 import io.github.yeray06.wavedefense.game.panel.SettingsPanel;
 import io.github.yeray06.wavedefense.game.panel.ShopPanel;
+import io.github.yeray06.wavedefense.game.panel.TurretNames;
 import io.github.yeray06.wavedefense.game.playtest.ReloadReactionLog;
 import io.github.yeray06.wavedefense.game.render.WorldRenderer;
 import io.github.yeray06.wavedefense.game.ui.SpeedSelector;
+import io.github.yeray06.wavedefense.game.ui.Windows;
+import io.github.yeray06.wavedefense.sim.data.CareerConfig;
 import io.github.yeray06.wavedefense.sim.data.GameData;
 import io.github.yeray06.wavedefense.sim.progress.Progress;
 import io.github.yeray06.wavedefense.sim.progress.WaveLoop;
 import io.github.yeray06.wavedefense.sim.progress.WaveOutcome;
 import io.github.yeray06.wavedefense.sim.world.Battle;
+import io.github.yeray06.wavedefense.sim.world.Enemy;
 import io.github.yeray06.wavedefense.sim.world.PathTrack;
 import io.github.yeray06.wavedefense.sim.world.Turret;
 
@@ -74,6 +81,20 @@ public final class BattleScreen extends ScreenAdapter {
   private final Label waveLabel;
   private final Label coreLabel;
   private final Label starsLabel;
+  private final Label streakLabel;
+  private final Label tooltip;
+  private final GameControls controls;
+  private final Skin skin;
+  private final Windows windows;
+  private final OutputPanel outputPanel;
+  private final DebuggerPanel debuggerPanel;
+  private final CareerPanel careerPanel;
+  private final ScrollPane careerScroll;
+  private final String[] shownHats;
+  private long shownCareer;
+  private long shownStreak = -1;
+  private boolean wasPaused;
+  private long shownTooltip = Long.MIN_VALUE;
   private final Label resultLabel;
   private final SpeedSelector speedSelector;
   private final TextButton autoButton;
@@ -118,6 +139,8 @@ public final class BattleScreen extends ScreenAdapter {
     this.data = data;
     this.texts = texts;
     this.loop = loop;
+    this.controls = controls;
+    this.skin = skin;
     this.world = world;
     this.reactions = reactions;
     this.clock = new FixedStepClock(data.balance().ticksPerSecond(), MAX_TICKS_PER_FRAME);
@@ -131,6 +154,9 @@ public final class BattleScreen extends ScreenAdapter {
     waveLabel = new Label("", skin);
     coreLabel = new Label("", skin);
     starsLabel = new Label("", skin);
+    streakLabel = new Label("", skin, "small");
+    tooltip = new Label("", skin, "body");
+    tooltip.setVisible(false);
     resultLabel = new Label("", skin, "small");
     autoButton = new TextButton("", skin);
     Label hint = new Label(texts.get("hud.hint.reload"), skin, "small");
@@ -140,7 +166,18 @@ public final class BattleScreen extends ScreenAdapter {
     autoButton.pad(4, BUTTON_PAD, 4, BUTTON_PAD);
     int slots = data.map().turretSlots().size();
     briefing = new BriefingPanel(data, loop.progress(), names, skin, loop::deploy);
+    briefing.setCareer(loop.career());
+    briefing.setTrial(this::trial);
     editorPanel = new EditorPanel(loop, names, skin, slots);
+    windows = new Windows(stage, skin);
+    editorPanel.setWindows(windows);
+    outputPanel = new OutputPanel(loop, names, skin);
+    debuggerPanel = new DebuggerPanel(loop, names, skin, editorPanel);
+    careerPanel = new CareerPanel(data, loop, names, skin);
+    careerScroll = new ScrollPane(careerPanel, skin);
+    careerScroll.setFadeScrollBars(false);
+    shownHats = new String[slots];
+    shownCareer = loop.careerChanges();
     shopPanel = new ShopPanel(data, loop.progress(), names, skin, this::purchased);
     mapPanel = new MapPanel(data, loop.progress(), texts, skin, this::chooseWave);
     reportPanel = new ReportPanel(skin, new Label(texts.get("report.none"), skin, "small"));
@@ -149,6 +186,7 @@ public final class BattleScreen extends ScreenAdapter {
     reportScroll = new ScrollPane(reportPanel, skin);
     reportScroll.setFadeScrollBars(false);
     manualPanel = new ManualPanel(data, loop.progress(), names, skin, Gdx.app.getClipboard());
+    manualPanel.setWindows(windows);
     manualScroll = new ScrollPane(manualPanel, skin);
     manualScroll.setFadeScrollBars(false);
     settingsPanel = new SettingsPanel(controls, texts, skin);
@@ -168,7 +206,8 @@ public final class BattleScreen extends ScreenAdapter {
     top.top().pad(PAD);
     top.add(waveLabel).left().padRight(30);
     top.add(coreLabel).left().padRight(30);
-    top.add(starsLabel).left().expandX();
+    top.add(starsLabel).left().padRight(20);
+    top.add(streakLabel).left().expandX();
     top.add(speedSelector).right().padRight(PAD);
     top.add(autoButton).right();
     top.row();
@@ -178,8 +217,11 @@ public final class BattleScreen extends ScreenAdapter {
     toolbar.add(panelButton(skin, "hud.panel.map", mapPanel)).padRight(6);
     toolbar.add(panelButton(skin, "hud.panel.report", reportScroll)).padRight(6);
     toolbar.add(panelButton(skin, "hud.panel.manual", manualScroll)).padRight(6);
+    toolbar.add(panelButton(skin, "hud.panel.career", careerScroll)).padRight(6);
+    toolbar.add(windowButton(skin, "hud.panel.output", this::toggleOutput)).padRight(6);
+    toolbar.add(windowButton(skin, "hud.panel.debug", this::toggleDebugger)).padRight(6);
     toolbar.add(panelButton(skin, "hud.panel.settings", settingsScroll));
-    top.add(toolbar).colspan(5).right().padTop(6);
+    top.add(toolbar).colspan(6).right().padTop(6);
     stage.addActor(top);
 
     Table middle = new Table();
@@ -197,6 +239,7 @@ public final class BattleScreen extends ScreenAdapter {
     bottom.add(hint);
     stage.addActor(bottom);
 
+    stage.addActor(tooltip);
     turretLabels = new Label[slots];
     turretLabelState = new int[slots];
     for (int i = 0; i < slots; i++) {
@@ -229,6 +272,82 @@ public final class BattleScreen extends ScreenAdapter {
     return button;
   }
 
+  private TextButton windowButton(Skin skin, String key, Runnable action) {
+    TextButton button = new TextButton(texts.get(key), skin);
+    button.pad(4, BUTTON_PAD, 4, BUTTON_PAD);
+    button.setProgrammaticChangeEvents(false);
+    button.addListener(
+        new ChangeListener() {
+          @Override
+          public void changed(ChangeEvent event, Actor actor) {
+            button.setChecked(false);
+            action.run();
+          }
+        });
+    return button;
+  }
+
+  /** The output window (D-67): opens it, or closes it if open. */
+  void toggleOutput() {
+    if (windows.isOpen("output")) {
+      windows.close("output");
+    } else {
+      windows.open("output", texts.get("output.title"), () -> outputPanel, 520, 260);
+    }
+  }
+
+  /** The debugger window (D-62): opens it, or closes it if open. */
+  void toggleDebugger() {
+    if (windows.isOpen("debug")) {
+      windows.close("debug");
+    } else {
+      openDebugger();
+    }
+  }
+
+  private void openDebugger() {
+    windows.open(
+        "debug",
+        texts.get("debug.title"),
+        () -> {
+          ScrollPane pane = new ScrollPane(debuggerPanel, skin);
+          pane.setFadeScrollBars(false);
+          return pane;
+        },
+        420,
+        420);
+  }
+
+  Windows windows() {
+    return windows;
+  }
+
+  OutputPanel outputPanel() {
+    return outputPanel;
+  }
+
+  DebuggerPanel debuggerPanel() {
+    return debuggerPanel;
+  }
+
+  CareerPanel careerPanel() {
+    return careerPanel;
+  }
+
+  ScrollPane careerScroll() {
+    return careerScroll;
+  }
+
+  /** «Probar» (D-65): plays the wave at once and shows its report, which pays nothing. */
+  void trial(int wave) {
+    var report = loop.trial(wave);
+    if (report == null) {
+      return;
+    }
+    reportPanel.show(ReportLines.trial(report, names, data.balance().ticksPerSecond(), pathLength));
+    open(reportScroll);
+  }
+
   /** Opens a side panel, or closes it if it is the one open. */
   void toggle(Actor panel) {
     open(openPanel == panel ? null : panel);
@@ -248,6 +367,9 @@ public final class BattleScreen extends ScreenAdapter {
     }
     if (panel == settingsScroll) {
       settingsPanel.rebuild();
+    }
+    if (panel == careerScroll) {
+      careerPanel.rebuild();
     }
     if (panel == editorPanel) {
       editorPanel.focus();
@@ -313,15 +435,25 @@ public final class BattleScreen extends ScreenAdapter {
   }
 
   private void waveFinished() {
-    reportPanel.show(
-        ReportLines.build(
-            loop.lastReport(),
-            loop.lastOutcome(),
-            loop.progress(),
-            data.waves().wave(loop.lastReport().wave()).challenge(),
+    java.util.List<ReportLines.Line> lines =
+        new java.util.ArrayList<>(
+            ReportLines.build(
+                loop.lastReport(),
+                loop.lastOutcome(),
+                loop.progress(),
+                data.waves().wave(loop.lastReport().wave()).challenge(),
+                names,
+                data.balance().ticksPerSecond(),
+                pathLength));
+    lines.addAll(
+        1,
+        ReportLines.career(
+            loop.lastCareer(),
+            loop.career(),
+            loop.lastReport().wave(),
             names,
-            data.balance().ticksPerSecond(),
-            pathLength));
+            data.balance().ticksPerSecond()));
+    reportPanel.show(lines);
     if (openPanel == null) {
       open(reportScroll);
     }
@@ -358,11 +490,14 @@ public final class BattleScreen extends ScreenAdapter {
     seconds += delta;
     speedSelector.setFastAllowed(loop.speedUpAllowed());
     int speed = speedSelector.speed();
-    if (loop.state() == WaveLoop.State.RUNNING) {
+    if (loop.state() == WaveLoop.State.RUNNING && !loop.debugPaused()) {
       int ticks = clock.advance(delta, speed);
-      for (int i = 0; i < ticks && loop.state() == WaveLoop.State.RUNNING; i++) {
+      for (int i = 0;
+          i < ticks && loop.state() == WaveLoop.State.RUNNING && !loop.debugPaused();
+          i++) {
         int finished = loop.wavesFinished();
         loop.tick();
+        outputPanel.read();
         if (loop.wavesFinished() != finished) {
           reactions.waveFinished(loop.lastOutcome().wave());
           waveFinished();
@@ -379,9 +514,15 @@ public final class BattleScreen extends ScreenAdapter {
         noticeLabel.setText("");
       }
     }
+    if (loop.debugPaused() && !wasPaused) {
+      openDebugger();
+    }
+    wasPaused = loop.debugPaused();
+    updateCareer();
     ScreenUtils.clear(BACKGROUND);
     world.render(loop.battle(), clock.alpha(), delta);
     updateHud();
+    updateTooltip();
     stage.act(delta);
     // The world letterboxes the GL viewport; the HUD covers the whole window, where clicks land.
     stage.getViewport().apply();
@@ -428,6 +569,90 @@ public final class BattleScreen extends ScreenAdapter {
     }
     for (int i = 0; i < turretLabels.length; i++) {
       updateTurretLabel(battle, i);
+    }
+  }
+
+  /** New achievements: a notice and the store; hats on the turrets. */
+  private void updateCareer() {
+    if (loop.careerChanges() != shownCareer) {
+      shownCareer = loop.careerChanges();
+      var outcome = loop.lastCareer();
+      if (outcome != null && !outcome.newAchievements().isEmpty()) {
+        StringBuilder notice = new StringBuilder();
+        for (String id : outcome.newAchievements()) {
+          controls.achievementUnlocked(id);
+          if (!notice.isEmpty()) {
+            notice.append('\n');
+          }
+          notice.append(texts.format("career.toast", texts.get("achievement." + id + ".name")));
+        }
+        showNotice(notice.toString());
+      }
+    }
+    for (int i = 0; i < shownHats.length; i++) {
+      String hat = loop.career().hat(i);
+      if (!hat.equals(shownHats[i])) {
+        shownHats[i] = hat;
+        CareerConfig.Achievement a = hat.isEmpty() ? null : data.career().achievement(hat);
+        world.setHat(i, a == null ? null : a.hat(), a == null ? null : Color.valueOf(a.hatColor()));
+      }
+    }
+    long streak = (long) loop.career().streak() << 32 | loop.career().streakScore();
+    if (streak != shownStreak) {
+      shownStreak = streak;
+      streakLabel.setText(
+          loop.career().streak() > 0
+              ? texts.format("hud.streak", loop.career().streak(), loop.career().streakScore())
+              : "");
+    }
+  }
+
+  /** What is under the mouse on the battlefield: an enemy or a turret, as a small label. */
+  private void updateTooltip() {
+    int mouseX = Gdx.input.getX();
+    int mouseY = Gdx.input.getY();
+    point.set(mouseX, mouseY);
+    stage.screenToStageCoordinates(point);
+    Battle battle = loop.battle();
+    long key = Long.MIN_VALUE;
+    int enemy = -1;
+    int turret = -1;
+    if (stage.hit(point.x, point.y, true) == null) {
+      turret = world.turretAt(battle, mouseX, mouseY);
+      enemy = turret >= 0 ? -1 : world.enemyAt(battle, mouseX, mouseY);
+    }
+    if (turret >= 0) {
+      Turret t = battle.turret(turret);
+      key = 1L << 40 | (long) turret << 32 | (long) t.ammo() << 16 | t.heat();
+    } else if (enemy >= 0) {
+      Enemy e = battle.enemies().get(enemy);
+      key = 2L << 40 | (long) enemy << 32 | (long) StrictMath.ceil(e.health());
+    }
+    if (key != shownTooltip) {
+      shownTooltip = key;
+      tooltip.setVisible(key != Long.MIN_VALUE);
+      if (turret >= 0) {
+        Turret t = battle.turret(turret);
+        tooltip.setText(
+            texts.format(
+                "tooltip.turret",
+                TurretNames.of(loop.career(), texts, turret),
+                t.ammo(),
+                t.heat()));
+      } else if (enemy >= 0) {
+        Enemy e = battle.enemies().get(enemy);
+        tooltip.setText(
+            texts.format(
+                e.armored() ? "tooltip.enemyArmored" : "tooltip.enemy",
+                names.enemyName(e.kind()),
+                (int) StrictMath.ceil(e.health()),
+                (int) StrictMath.ceil(e.maxHealth())));
+      }
+      tooltip.pack();
+    }
+    if (tooltip.isVisible()) {
+      tooltip.setPosition(point.x + 16, point.y + 8);
+      tooltip.toFront();
     }
   }
 

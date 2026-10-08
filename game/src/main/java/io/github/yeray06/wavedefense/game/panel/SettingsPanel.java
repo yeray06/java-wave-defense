@@ -91,10 +91,27 @@ public final class SettingsPanel extends Table {
           @Override
           public void changed(ChangeEvent event, Actor actor) {
             newGame.setChecked(false);
-            confirmNewGame();
+            confirmNewGame(false);
           }
         });
     add(newGame).left().padTop(6).row();
+    TextButton expertGame = new TextButton(texts.get("settings.expertGame"), skin);
+    expertGame.pad(4, 12, 4, 12);
+    expertGame.setProgrammaticChangeEvents(false);
+    expertGame.addListener(
+        new ChangeListener() {
+          @Override
+          public void changed(ChangeEvent event, Actor actor) {
+            expertGame.setChecked(false);
+            confirmNewGame(true);
+          }
+        });
+    add(expertGame).left().padTop(6).row();
+    add(wrapped(texts.get("settings.expertGame.hint"), "small"))
+        .left()
+        .width(WIDTH)
+        .padTop(2)
+        .row();
   }
 
   private Table choices(
@@ -120,7 +137,7 @@ public final class SettingsPanel extends Table {
     return row;
   }
 
-  private void confirmNewGame() {
+  private void confirmNewGame(boolean expert) {
     if (getStage() == null) {
       return;
     }
@@ -129,12 +146,13 @@ public final class SettingsPanel extends Table {
           @Override
           protected void result(Object start) {
             if (Boolean.TRUE.equals(start)) {
-              controls.newGame();
+              controls.newGame(expert);
             }
           }
         };
     dialog.pad(40, 20, 16, 20);
-    dialog.getContentTable().add(wrapped(texts.get("settings.newGame.text"), "default")).width(420);
+    String text = expert ? "settings.expertGame.text" : "settings.newGame.text";
+    dialog.getContentTable().add(wrapped(texts.get(text), "default")).width(420);
     TextButton yes = new TextButton(texts.get("settings.newGame.yes"), skin);
     yes.pad(6, 16, 6, 16);
     TextButton no = new TextButton(texts.get("settings.newGame.no"), skin);

@@ -95,6 +95,10 @@ public final class WaveDefenseGame extends Game implements GameControls {
     settings = store.loadSettings();
     GameStore.Start start = store.loadGame();
     loop = start.loop();
+    // The store may have missed some (another computer, an older version): tell it them all.
+    for (String id : loop.career().achievements()) {
+      platform.unlockAchievement(id);
+    }
     autoSaver = new AutoSaver(store::save, SAVE_INTERVAL_SECONDS);
     autoSaver.track(loop);
     if (!start.fromSave()) {
@@ -212,14 +216,19 @@ public final class WaveDefenseGame extends Game implements GameControls {
   }
 
   @Override
-  public void newGame() {
-    loop = store.newGame();
+  public void newGame(boolean expert) {
+    loop = store.newGame(expert);
     if (!store.save(loop)) {
       battle.showNotice(texts.get("save.failed"));
     }
     autoSaver.track(loop);
     rebuildPending = true;
     settingsOpenAfterRebuild = false;
+  }
+
+  @Override
+  public void achievementUnlocked(String id) {
+    platform.unlockAchievement(id);
   }
 
   @Override

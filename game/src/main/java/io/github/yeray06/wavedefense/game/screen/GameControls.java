@@ -10,8 +10,15 @@ public interface GameControls {
   /** Keeps and applies new settings; sizes take effect on the next frame. */
   void apply(Settings settings);
 
-  /** Replaces the game with a new one (the old save stays as the backup). */
-  void newGame();
+  /**
+   * Replaces the game with a new one (the old save stays as the backup).
+   *
+   * @param expert an expert game: all syntax from the start (D-64)
+   */
+  void newGame(boolean expert);
+
+  /** An achievement was unlocked (D-63): the store layer hears of it. */
+  void achievementUnlocked(String id);
 
   /** Where the game and the settings are saved, to show the player. */
   Path saveFolder();

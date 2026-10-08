@@ -35,6 +35,16 @@ public final class ScriptTexts {
     return texts;
   }
 
+  /** The game's data: names of calls, enemies and pieces come from it. */
+  public GameData data() {
+    return data;
+  }
+
+  /** The interpreter's names for calls and constants. */
+  public io.github.yeray06.wavedefense.script.api.ScriptApi api() {
+    return data.scriptApi().api();
+  }
+
   public String feature(Feature feature) {
     return texts.get("script.feature." + feature.name());
   }

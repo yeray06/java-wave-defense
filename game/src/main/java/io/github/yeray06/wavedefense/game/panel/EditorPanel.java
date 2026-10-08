@@ -12,8 +12,10 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import io.github.yeray06.wavedefense.game.editor.CodeEditor;
 import io.github.yeray06.wavedefense.game.editor.EditorDocument;
+import io.github.yeray06.wavedefense.game.editor.Vocabulary;
 import io.github.yeray06.wavedefense.game.i18n.ScriptTexts;
 import io.github.yeray06.wavedefense.game.ui.UiSkin;
+import io.github.yeray06.wavedefense.game.ui.Windows;
 import io.github.yeray06.wavedefense.script.CompileResult;
 import io.github.yeray06.wavedefense.script.LibraryResult;
 import io.github.yeray06.wavedefense.script.api.Feature;
@@ -30,6 +32,10 @@ import java.util.SortedMap;
  * compiles goes to the turret (the next wave, or the waiting one), code with errors stays in the
  * editor and the turret keeps its last compiling script (D-51). Shows the memory counter (D-06) and
  * the errors with their line. A change to the library recompiles every turret against it.
+ *
+ * <p>Phase 9b: «Separar» opens the open tab's code in a floating window (D-67) that edits the same
+ * text; closing it puts it back. Breakpoints set in either go to the wave loop, and the debugger
+ * shows its line in both. Every editor autocompletes with what the player owns (D-66).
  */
 public final class EditorPanel extends Table {
   private static final int ERRORS_SHOWN = 4;
@@ -60,6 +66,14 @@ public final class EditorPanel extends Table {
   private int followedColumn = -1;
   private int shownHover = -2;
 
+  /** Editors in floating windows, by tab; {@code null} where the tab is not popped out. */
+  private final CodeEditor[] popped;
+
+  private Windows windows;
+  private final TextureRegion white;
+  private String vocabularyLibrary;
+  private int vocabularyFeatures = -1;
+
   public EditorPanel(WaveLoop loop, ScriptTexts names, Skin skin, int slots) {
     this.loop = loop;
     this.names = names;
@@ -69,10 +83,11 @@ public final class EditorPanel extends Table {
     editors = new CodeEditor[slots + 1];
     compiledVersion = new int[slots + 1];
     results = new CompileResult[slots];
-    TextureRegion white = new TextureRegion(skin.get("white", Texture.class));
+    white = new TextureRegion(skin.get("white", Texture.class));
+    popped = new CodeEditor[slots + 1];
     for (int i = 0; i <= slots; i++) {
       documents[i] = new EditorDocument(i == library ? loop.libraryDraft() : loop.draft(i));
-      editors[i] = new CodeEditor(documents[i], skin.getFont("code"), white);
+      editors[i] = newEditor(i);
       compiledVersion[i] = -1;
     }
     scroll = new ScrollPane(editors[0], skin);
@@ -90,12 +105,163 @@ public final class EditorPanel extends Table {
     add(memory).left().width(WIDTH).padTop(6).row();
     add(status).left().width(WIDTH).padTop(2).row();
     add(errors).left().width(WIDTH).padTop(4).row();
+    Table actions = new Table();
+    actions.add(button("editor.popOut", () -> popOut(slot))).padRight(6);
+    actions.add(button("editor.stepCycle", this::stepCycle)).padRight(6);
+    add(actions).left().padTop(6).row();
     Label help = new Label(names.texts().get("editor.help"), skin, "small");
-    add(help).left().padTop(6).row();
+    help.setWrap(true);
+    add(help).left().width(WIDTH).padTop(6).row();
     Label rule = new Label(names.texts().get("script.memory.rule"), skin, "small");
     rule.setWrap(true);
     add(rule).left().width(WIDTH).padTop(2);
     rebuildTabs();
+  }
+
+  private CodeEditor newEditor(int index) {
+    CodeEditor editor = new CodeEditor(documents[index], skin.getFont("code"), white);
+    editor.onBreakpointsChanged(() -> breakpointsChanged(index, editor));
+    return editor;
+  }
+
+  private TextButton button(String key, Runnable action) {
+    TextButton button = new TextButton(names.texts().get(key), skin, "default");
+    button.pad(3, 10, 3, 10);
+    button.getLabel().setStyle(skin.get("body", Label.LabelStyle.class));
+    button.addListener(
+        new ChangeListener() {
+          @Override
+          public void changed(ChangeEvent event, Actor actor) {
+            button.setChecked(false);
+            action.run();
+          }
+        });
+    return button;
+  }
+
+  /** Where popped-out code goes; without it «Separar» does nothing (tests). */
+  public void setWindows(Windows windows) {
+    this.windows = windows;
+  }
+
+  /** Opens a tab's code in a floating window, or brings that window to the front. */
+  public void popOut(int index) {
+    if (windows == null) {
+      return;
+    }
+    String title =
+        index == library
+            ? names.texts().get("editor.library.tab")
+            : names.texts().format("editor.turret", index + 1);
+    windows
+        .open(
+            "code-" + index,
+            title,
+            () -> {
+              CodeEditor editor = newEditor(index);
+              editor.setBreakpoints(editors[index].breakpoints());
+              editor.setVocabulary(vocabulary());
+              popped[index] = editor;
+              compiledVersion[index] = -1;
+              ScrollPane pane = new ScrollPane(editor, skin);
+              pane.setFadeScrollBars(false);
+              return pane;
+            },
+            WIDTH,
+            360)
+        .onClose(() -> popped[index] = null);
+  }
+
+  /** The editor in a tab's floating window, or {@code null}. */
+  public CodeEditor popped(int index) {
+    return popped[index];
+  }
+
+  /** The tab's editor in the panel. */
+  public CodeEditor editor(int index) {
+    return editors[index];
+  }
+
+  public int librarySlot() {
+    return library;
+  }
+
+  private void breakpointsChanged(int index, CodeEditor from) {
+    java.util.BitSet lines = from.breakpoints();
+    editors[index].setBreakpoints(lines);
+    if (popped[index] != null) {
+      popped[index].setBreakpoints(lines);
+    }
+    if (index == library) {
+      loop.setLibraryBreakpoints(lines);
+    } else {
+      loop.setBreakpoints(index, lines);
+    }
+  }
+
+  /** «Pausar en el siguiente ciclo» for the open turret, or the first one from the library. */
+  private void stepCycle() {
+    loop.stepCycle(slot == library ? 0 : slot);
+  }
+
+  /**
+   * The debugger shows a line: the turret's tab (or the library's) opens and the line is marked in
+   * yellow; -1 clears the mark everywhere.
+   */
+  public void showDebugLine(int turret, boolean inLibrary, int line) {
+    for (int i = 0; i < editors.length; i++) {
+      editors[i].setDebugLine(-1);
+      if (popped[i] != null) {
+        popped[i].setDebugLine(-1);
+      }
+    }
+    if (line < 0) {
+      return;
+    }
+    int index = inLibrary ? library : turret;
+    if (index != slot && (index < tabCount || index == library && libraryShown)) {
+      select(index);
+    }
+    editors[index].setDebugLine(line);
+    if (popped[index] != null) {
+      popped[index].setDebugLine(line);
+    }
+    if (index == slot) {
+      float lineHeight = skin.getFont("code").getLineHeight();
+      scroll.layout();
+      scroll.scrollTo(0, editors[index].getHeight() - (line + 1) * lineHeight, 1, lineHeight * 3);
+    }
+  }
+
+  /** The word under the mouse in any editor, or "": the debugger shows its value. */
+  public String hoveredWord(int index) {
+    String word = editors[index].hoveredWord();
+    if (word.isEmpty() && popped[index] != null) {
+      word = popped[index].hoveredWord();
+    }
+    return word;
+  }
+
+  private Vocabulary vocabulary() {
+    return Vocabulary.of(names.api(), loop.progress().unlocks(), loop.library());
+  }
+
+  /** Keeps every editor's suggestions in step with what is owned and the library's methods. */
+  private void refreshVocabulary() {
+    int features =
+        loop.progress().features().hashCode() * 31 + loop.progress().highestWaveReached();
+    if (features == vocabularyFeatures && loop.library().equals(vocabularyLibrary)) {
+      return;
+    }
+    vocabularyFeatures = features;
+    vocabularyLibrary = loop.library();
+    Vocabulary vocabulary = vocabulary();
+    for (int i = 0; i < editors.length; i++) {
+      editors[i].setVocabulary(vocabulary);
+      if (popped[i] != null) {
+        popped[i].setVocabulary(vocabulary);
+      }
+    }
   }
 
   /** The draft of a turret slot, as the player is writing it. */
@@ -141,6 +307,7 @@ public final class EditorPanel extends Table {
   @Override
   public void act(float delta) {
     super.act(delta);
+    refreshVocabulary();
     if (tabCount != loop.progress().turretCount() || libraryShown != ownsMethods()) {
       rebuildTabs();
     }
@@ -244,6 +411,9 @@ public final class EditorPanel extends Table {
       errorColumns.putIfAbsent(error.line(), error.column());
     }
     editors[index].setDiagnostics(memoryByLine, errorColumns);
+    if (popped[index] != null) {
+      popped[index].setDiagnostics(memoryByLine, errorColumns);
+    }
     if (index == slot) {
       showStatus();
       showErrors();

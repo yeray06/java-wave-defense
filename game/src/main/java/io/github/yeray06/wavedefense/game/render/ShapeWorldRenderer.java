@@ -8,6 +8,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import io.github.yeray06.wavedefense.script.api.AmmoType;
+import io.github.yeray06.wavedefense.sim.data.CareerConfig;
 import io.github.yeray06.wavedefense.sim.data.GameData;
 import io.github.yeray06.wavedefense.sim.data.MapConfig;
 import io.github.yeray06.wavedefense.sim.world.Battle;
@@ -90,6 +91,8 @@ public final class ShapeWorldRenderer implements WorldRenderer {
   private final int maxHeat;
   private final int maxLives;
 
+  private final CareerConfig.HatShape[] hats;
+  private final Color[] hatColors;
   private final int[] effect = new int[MAX_EFFECTS];
   private final float[] effectX = new float[MAX_EFFECTS];
   private final float[] effectY = new float[MAX_EFFECTS];
@@ -100,6 +103,11 @@ public final class ShapeWorldRenderer implements WorldRenderer {
   public ShapeWorldRenderer(GameData data) {
     path = data.map().path();
     slots = data.map().turretSlots();
+    hats = new CareerConfig.HatShape[slots.size()];
+    hatColors = new Color[slots.size()];
+    for (int i = 0; i < hatColors.length; i++) {
+      hatColors[i] = new Color();
+    }
     range = data.turret().rangeUnits();
     maxHeat = data.turret().maxHeat();
     maxLives = data.balance().coreLivesPerWave();
@@ -137,12 +145,14 @@ public final class ShapeWorldRenderer implements WorldRenderer {
     drawPath();
     drawCore(battle);
     drawTurrets(battle);
+    drawHats(battle);
     drawEnemies(battle, alpha);
     drawBullets(battle, alpha);
     shapes.end();
 
     shapes.begin(ShapeRenderer.ShapeType.Line);
     drawRanges(battle);
+    drawHalos(battle);
     drawArmor(battle, alpha);
     drawEffects(deltaSeconds);
     shapes.end();
@@ -263,6 +273,73 @@ public final class ShapeWorldRenderer implements WorldRenderer {
     }
   }
 
+  @Override
+  public void setHat(int slot, CareerConfig.HatShape shape, Color color) {
+    hats[slot] = shape;
+    if (color != null) {
+      hatColors[slot].set(color);
+    }
+  }
+
+  /** Every hat but the halo, which is a line: on top of the turret's square. */
+  private void drawHats(Battle battle) {
+    for (int i = 0; i < battle.turretCount(); i++) {
+      CareerConfig.HatShape hat = hats[i];
+      if (hat == null || hat == CareerConfig.HatShape.HALO) {
+        continue;
+      }
+      Turret turret = battle.turret(i);
+      float x = (float) turret.x();
+      float top = (float) turret.y() + TURRET_HALF;
+      float h = TURRET_HALF;
+      shapes.setColor(hatColors[i]);
+      switch (hat) {
+        case CAP -> {
+          shapes.rect(x - h * 0.6f, top, h * 1.2f, h * 0.45f);
+          shapes.rect(x - h * 0.6f, top, h * 1.6f, h * 0.15f);
+        }
+        case BOW -> {
+          shapes.triangle(x, top + h * 0.2f, x - h * 0.6f, top, x - h * 0.6f, top + h * 0.45f);
+          shapes.triangle(x, top + h * 0.2f, x + h * 0.6f, top, x + h * 0.6f, top + h * 0.45f);
+          shapes.circle(x, top + h * 0.2f, h * 0.15f, 12);
+        }
+        case HELMET -> shapes.arc(x, top, h * 0.8f, 0, 180, 20);
+        case PARTY -> shapes.triangle(x - h * 0.5f, top, x + h * 0.5f, top, x, top + h * 1.2f);
+        case WIZARD -> {
+          shapes.rect(x - h * 0.9f, top, h * 1.8f, h * 0.15f);
+          shapes.triangle(x - h * 0.55f, top, x + h * 0.55f, top, x + h * 0.25f, top + h * 1.5f);
+        }
+        case TOP_HAT -> {
+          shapes.rect(x - h * 0.85f, top, h * 1.7f, h * 0.15f);
+          shapes.rect(x - h * 0.55f, top, h * 1.1f, h * 1.0f);
+        }
+        case CROWN -> {
+          shapes.rect(x - h * 0.7f, top, h * 1.4f, h * 0.35f);
+          for (int p = -1; p <= 1; p++) {
+            float px = x + p * h * 0.5f;
+            shapes.triangle(
+                px - h * 0.22f, top + h * 0.3f, px + h * 0.22f, top + h * 0.3f, px, top + h * 0.8f);
+          }
+        }
+        case HALO -> {}
+      }
+    }
+  }
+
+  /** The halo: a ring floating over the turret. */
+  private void drawHalos(Battle battle) {
+    for (int i = 0; i < battle.turretCount(); i++) {
+      if (hats[i] == CareerConfig.HatShape.HALO) {
+        Turret turret = battle.turret(i);
+        shapes.setColor(hatColors[i]);
+        float x = (float) turret.x();
+        float y = (float) turret.y() + TURRET_HALF * 1.6f;
+        shapes.ellipse(x - TURRET_HALF * 0.8f, y, TURRET_HALF * 1.6f, TURRET_HALF * 0.5f, 24);
+        shapes.ellipse(x - TURRET_HALF * 0.75f, y + 1, TURRET_HALF * 1.5f, TURRET_HALF * 0.4f, 24);
+      }
+    }
+  }
+
   private void drawArmor(Battle battle, float alpha) {
     shapes.setColor(ARMOR_RING);
     for (int i = 0; i < battle.enemies().capacity(); i++) {
@@ -354,6 +431,29 @@ public final class ShapeWorldRenderer implements WorldRenderer {
       }
     }
     return -1;
+  }
+
+  @Override
+  public int enemyAt(Battle battle, int screenX, int screenY) {
+    float worldX = left() + (screenX - viewport.getScreenX()) * scaleX();
+    float worldY = bottom() + (windowHeight - screenY - viewport.getScreenY()) * scaleY();
+    int found = -1;
+    double best = Double.MAX_VALUE;
+    for (int i = 0; i < battle.enemies().capacity(); i++) {
+      Enemy enemy = battle.enemies().get(i);
+      if (!enemy.active()) {
+        continue;
+      }
+      double reach = EnemyPalette.radius(enemy.kind()) + PICK_SLACK;
+      double dx = worldX - enemy.x();
+      double dy = worldY - enemy.y();
+      double distance = dx * dx + dy * dy;
+      if (distance <= reach * reach && distance < best) {
+        best = distance;
+        found = i;
+      }
+    }
+    return found;
   }
 
   @Override
