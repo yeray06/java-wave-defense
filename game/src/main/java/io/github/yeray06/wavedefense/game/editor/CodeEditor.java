@@ -23,6 +23,10 @@ import java.util.TreeMap;
  * memory each line takes (D-06), a red mark and underline on lines with errors, cursor, selection,
  * clipboard and undo. The text itself lives in {@link EditorDocument}; this class only draws it and
  * turns keys and clicks into document operations. Put it in a {@code ScrollPane}.
+ *
+ * <p>Phase 9b: a click on a line number sets or clears a breakpoint (red dot); the debugger marks
+ * the line it shows in yellow; and typing a name opens the {@link Completer}'s suggestions (Tab
+ * accepts, arrows choose, Esc closes, Ctrl+Space opens them by hand).
  */
 public final class CodeEditor extends Widget {
   private static final float PAD = 6;
@@ -39,6 +43,12 @@ public final class CodeEditor extends Widget {
   private static final Color ERROR_LINE = new Color(0.55f, 0.15f, 0.15f, 0.35f);
   private static final Color ERROR_MARK = new Color(0.95f, 0.35f, 0.35f, 1f);
   private static final Color CURSOR = new Color(0.95f, 0.95f, 0.95f, 1f);
+  private static final Color BREAKPOINT = new Color(0.9f, 0.25f, 0.25f, 1f);
+  private static final Color DEBUG_LINE = new Color(0.85f, 0.75f, 0.2f, 0.35f);
+  private static final Color POPUP = new Color(0.16f, 0.18f, 0.23f, 0.97f);
+  private static final Color POPUP_BORDER = new Color(0.45f, 0.5f, 0.6f, 1f);
+  private static final Color POPUP_CHOSEN = new Color(0.25f, 0.35f, 0.55f, 1f);
+  private static final Color POPUP_TEXT = new Color(0.92f, 0.92f, 0.92f, 1f);
 
   private final EditorDocument document;
   private final BitmapFont font;
@@ -60,6 +70,16 @@ public final class CodeEditor extends Widget {
   private float repeatTimer;
   private int longestLine;
   private int lineCount;
+  private int hoveredColumn = -1;
+
+  private final java.util.BitSet breakpoints = new java.util.BitSet();
+  private Runnable breakpointsChanged = () -> {};
+  private int debugLine = -1;
+
+  private Vocabulary vocabulary;
+  private List<String> suggestions = List.of();
+  private Completer.Context completing;
+  private int chosen;
 
   public CodeEditor(EditorDocument document, BitmapFont font, TextureRegion white) {
     this.document = document;
@@ -85,6 +105,97 @@ public final class CodeEditor extends Widget {
   public void setDiagnostics(SortedMap<Integer, Integer> memory, Map<Integer, Integer> errors) {
     this.memoryByLine = memory;
     this.errorColumns = errors;
+  }
+
+  // --------------------------------------------------------------- phase 9b
+
+  /** Where completions come from; {@code null} turns autocompletion off. */
+  public void setVocabulary(Vocabulary vocabulary) {
+    this.vocabulary = vocabulary;
+    closeSuggestions();
+  }
+
+  /** Suggestions shown now, empty when the list is closed. */
+  public List<String> suggestions() {
+    return suggestions;
+  }
+
+  /** The breakpoints, 1-based lines. A copy. */
+  public java.util.BitSet breakpoints() {
+    return (java.util.BitSet) breakpoints.clone();
+  }
+
+  /** Replaces the breakpoints (1-based lines) without telling the listener. */
+  public void setBreakpoints(java.util.BitSet lines) {
+    breakpoints.clear();
+    breakpoints.or(lines);
+  }
+
+  /** Called whenever a click sets or clears a breakpoint. */
+  public void onBreakpointsChanged(Runnable listener) {
+    this.breakpointsChanged = listener;
+  }
+
+  /** Sets or clears a breakpoint on a 1-based line, as a click on its number does. */
+  public void toggleBreakpoint(int line) {
+    breakpoints.flip(line);
+    breakpointsChanged.run();
+  }
+
+  /** The 1-based line the debugger shows, or -1. */
+  public void setDebugLine(int line) {
+    debugLine = line;
+  }
+
+  /** The word under the mouse, or "": for the debugger's value on hover. */
+  public String hoveredWord() {
+    if (hoveredLine < 0 || hoveredColumn < 0 || hoveredLine >= document.lineCount()) {
+      return "";
+    }
+    CharSequence line = document.lineChars(hoveredLine);
+    if (hoveredColumn >= line.length()
+        || !Character.isJavaIdentifierPart(line.charAt(hoveredColumn))) {
+      return "";
+    }
+    int from = hoveredColumn;
+    int to = hoveredColumn;
+    while (from > 0 && Character.isJavaIdentifierPart(line.charAt(from - 1))) {
+      from--;
+    }
+    while (to < line.length() && Character.isJavaIdentifierPart(line.charAt(to))) {
+      to++;
+    }
+    return line.subSequence(from, to).toString();
+  }
+
+  /** Recomputes the suggestions for the word at the cursor; opens or closes the list. */
+  public void suggest() {
+    if (vocabulary == null) {
+      return;
+    }
+    completing =
+        Completer.context(document.lineChars(document.cursorLine()), document.cursorColumn());
+    suggestions =
+        Completer.suggest(completing, vocabulary.words(), vocabulary.members(), document.text());
+    chosen = 0;
+  }
+
+  /** Writes the chosen suggestion over the word being written. */
+  public void acceptSuggestion() {
+    if (suggestions.isEmpty()) {
+      return;
+    }
+    String word = suggestions.get(chosen);
+    int line = document.cursorLine();
+    document.moveTo(line, completing.start(), false);
+    document.moveTo(line, completing.start() + completing.prefix().length(), true);
+    document.insert(word);
+    closeSuggestions();
+  }
+
+  private void closeSuggestions() {
+    suggestions = List.of();
+    completing = null;
   }
 
   /** The 0-based line under the mouse, or -1. */
@@ -170,6 +281,27 @@ public final class CodeEditor extends Widget {
     drawSelection(batch, x, y, parentAlpha);
     for (int line = 0; line < document.lineCount(); line++) {
       float top = y + lineTop(line);
+      if (line + 1 == debugLine) {
+        rect(
+            batch,
+            DEBUG_LINE,
+            x + gutterWidth,
+            top - lineHeight,
+            getWidth() - gutterWidth,
+            lineHeight,
+            parentAlpha);
+      }
+      if (breakpoints.get(line + 1)) {
+        float size = Math.min(lineHeight - 4, charWidth * 1.2f);
+        rect(
+            batch,
+            BREAKPOINT,
+            x + 4,
+            top - lineHeight + (lineHeight - size) / 2,
+            size,
+            size,
+            parentAlpha);
+      }
       Integer errorColumn = errorColumns.get(line + 1);
       if (errorColumn != null) {
         rect(
@@ -242,7 +374,44 @@ public final class CodeEditor extends Widget {
           lineHeight,
           parentAlpha);
     }
+    drawSuggestions(batch, x, y, parentAlpha);
     batch.setColor(batchColor);
+  }
+
+  /** The suggestion list, under the cursor's line. */
+  private void drawSuggestions(Batch batch, float x, float y, float parentAlpha) {
+    if (suggestions.isEmpty() || !hasKeyboardFocus()) {
+      return;
+    }
+    int widest = 0;
+    for (String word : suggestions) {
+      widest = Math.max(widest, word.length());
+    }
+    float width = (widest + 2) * charWidth;
+    float height = suggestions.size() * lineHeight + 4;
+    float left = x + textX() + completing.start() * charWidth;
+    float top = y + lineTop(document.cursorLine()) - lineHeight;
+    if (top - height < y) {
+      // No room below: above the line instead.
+      top = y + lineTop(document.cursorLine()) + height;
+    }
+    rect(batch, POPUP_BORDER, left - 1, top - height - 1, width + 2, height + 2, parentAlpha);
+    rect(batch, POPUP, left, top - height, width, height, parentAlpha);
+    for (int i = 0; i < suggestions.size(); i++) {
+      float rowTop = top - 2 - i * lineHeight;
+      if (i == chosen) {
+        rect(batch, POPUP_CHOSEN, left, rowTop - lineHeight, width, lineHeight, parentAlpha);
+      }
+      font.setColor(POPUP_TEXT);
+      font.draw(
+          batch,
+          suggestions.get(i),
+          left + charWidth,
+          rowTop - (lineHeight - font.getCapHeight()) / 2,
+          0,
+          Align.left,
+          false);
+    }
   }
 
   /** The underline runs to the end of the coloured run the error starts in. */
@@ -315,6 +484,13 @@ public final class CodeEditor extends Widget {
       if (getStage() != null) {
         getStage().setKeyboardFocus(CodeEditor.this);
       }
+      closeSuggestions();
+      if (x < gutterWidth
+          && y <= getHeight() - PAD
+          && y >= getHeight() - PAD - lineCount * lineHeight) {
+        toggleBreakpoint(lineAt(y) + 1);
+        return true;
+      }
       document.moveTo(lineAt(y), columnAt(x), UIUtils.shift());
       blink = 0;
       return true;
@@ -328,6 +504,7 @@ public final class CodeEditor extends Widget {
     @Override
     public boolean mouseMoved(InputEvent event, float x, float y) {
       hoveredLine = lineAt(y);
+      hoveredColumn = x < textX() ? -1 : (int) ((x - textX()) / charWidth);
       return false;
     }
 
@@ -345,6 +522,29 @@ public final class CodeEditor extends Widget {
 
     @Override
     public boolean keyDown(InputEvent event, int keycode) {
+      if (!suggestions.isEmpty()) {
+        switch (keycode) {
+          case Input.Keys.UP -> {
+            chosen = (chosen + suggestions.size() - 1) % suggestions.size();
+            return true;
+          }
+          case Input.Keys.DOWN -> {
+            chosen = (chosen + 1) % suggestions.size();
+            return true;
+          }
+          case Input.Keys.ESCAPE -> {
+            closeSuggestions();
+            return true;
+          }
+          case Input.Keys.LEFT, Input.Keys.RIGHT, Input.Keys.HOME, Input.Keys.END ->
+              closeSuggestions();
+          default -> {}
+        }
+      }
+      if (UIUtils.ctrl() && keycode == Input.Keys.SPACE) {
+        suggest();
+        return true;
+      }
       if (UIUtils.ctrl()) {
         switch (keycode) {
           case Input.Keys.A -> document.selectAll();
@@ -397,6 +597,14 @@ public final class CodeEditor extends Widget {
       if (UIUtils.ctrl()) {
         return true;
       }
+      if (character == '\t' && !suggestions.isEmpty()) {
+        acceptSuggestion();
+        blink = 0;
+        return true;
+      }
+      if (character == '\r' || character == '\n') {
+        closeSuggestions();
+      }
       switch (character) {
         case '\b' -> document.backspace();
         case 127 -> document.delete();
@@ -406,6 +614,15 @@ public final class CodeEditor extends Widget {
           if (character >= ' ') {
             document.insert(String.valueOf(character));
           }
+        }
+      }
+      if (Character.isJavaIdentifierPart(character) || character == '.') {
+        suggest();
+      } else if (character != '\b' || !suggestions.isEmpty()) {
+        if (character == '\b') {
+          suggest();
+        } else {
+          closeSuggestions();
         }
       }
       blink = 0;
