@@ -39,7 +39,12 @@ final class ReferencePlayer {
    * The script a player with these unlocks runs in the campaign: the first of {@link #variants}.
    */
   ChosenScript script(Unlocks unlocks) {
-    return variants(unlocks).get(0);
+    return script(unlocks, data.turret().memoryLines());
+  }
+
+  /** The campaign script for these unlocks and {@code memory} lines (memory upgrades). */
+  ChosenScript script(Unlocks unlocks, int memory) {
+    return variants(unlocks, memory).get(0);
   }
 
   /**
@@ -48,6 +53,10 @@ final class ReferencePlayer {
    * double rule tries each choice so the comparison is fair.
    */
   List<ChosenScript> variants(Unlocks unlocks) {
+    return variants(unlocks, data.turret().memoryLines());
+  }
+
+  List<ChosenScript> variants(Unlocks unlocks, int memory) {
     for (String base : candidates(level(unlocks))) {
       List<ChosenScript> found = new ArrayList<>();
       for (String suffix : new String[] {"", "-b", "-c"}) {
@@ -56,7 +65,7 @@ final class ReferencePlayer {
         if (source == null) {
           continue;
         }
-        CompileResult result = compiler.compile(source, unlocks, data.turret().memoryLines());
+        CompileResult result = compiler.compile(source, unlocks, memory);
         if (result.succeeded()) {
           found.add(new ChosenScript(name, source, result.memoryUsed(), unlocks));
         }
@@ -73,6 +82,10 @@ final class ReferencePlayer {
    * code challenge asks for something else than the best script.
    */
   List<ChosenScript> allScripts(Unlocks unlocks) {
+    return allScripts(unlocks, data.turret().memoryLines());
+  }
+
+  List<ChosenScript> allScripts(Unlocks unlocks, int memory) {
     List<ChosenScript> found = new ArrayList<>();
     for (String base : candidates(level(unlocks))) {
       for (String suffix : new String[] {"", "-b", "-c"}) {
@@ -80,7 +93,7 @@ final class ReferencePlayer {
         if (source == null) {
           continue;
         }
-        CompileResult result = compiler.compile(source, unlocks, data.turret().memoryLines());
+        CompileResult result = compiler.compile(source, unlocks, memory);
         if (result.succeeded()) {
           found.add(new ChosenScript(base + suffix, source, result.memoryUsed(), unlocks));
         }
@@ -124,7 +137,10 @@ final class ReferencePlayer {
       // One compiled instance per turret: a CompiledScript is not shared between turrets.
       scripts.add(
           compiler
-              .compile(script.source(), script.unlocks(), data.turret().memoryLines())
+              .compile(
+                  script.source(),
+                  script.unlocks(),
+                  Math.max(data.turret().memoryLines(), script.memoryUsed()))
               .script()
               .orElseThrow());
     }

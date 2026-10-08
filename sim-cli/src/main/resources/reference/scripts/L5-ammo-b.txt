@@ -1,0 +1,15 @@
+if (municion() == 0 || calor() >= 70) {
+    recargar();
+} else {
+    Enemigo o = null;
+    for (Enemigo e : enemigos()) {
+        if (o == null || e.distanciaAlNucleo() < o.distanciaAlNucleo()) {
+            o = e;
+        }
+    }
+    if (o != null) {
+        apuntar(o);
+        if (o.blindado()) usarMunicion(PERFORANTE); else usarMunicion(NORMAL);
+        disparar();
+    }
+}

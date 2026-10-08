@@ -26,7 +26,8 @@ import java.util.Optional;
  * <ol>
  *   <li>Play the current wave with the best script. Won but the code challenge missed: if some
  *       script the player can write wins and meets it, play the wave again with that one.
- *   <li>Buy the next syntax piece as soon as it is affordable; with all of it, spend on hardware.
+ *   <li>Buy the next syntax piece as soon as it is affordable, and save for it from the wave before
+ *       it arrives (shop.json); otherwise spend on the hardware that helps most.
  *   <li>Stuck behind a wall (a defeat): buy syntax if affordable, else the extra turret, else the
  *       cheapest hardware, and retry. With nothing affordable, replay the first earlier wave that
  *       can still give a star (no leaks, or its challenge). With no such wave, the game is locked.
@@ -38,7 +39,12 @@ import java.util.Optional;
  */
 final class ProgressionRun {
   private static final HardwareKind[] HARDWARE_BY_PREFERENCE = {
-    HardwareKind.EXTRA_TURRET, HardwareKind.DAMAGE, HardwareKind.MAGAZINE, HardwareKind.HEAT_SINK
+    HardwareKind.EXTRA_TURRET,
+    HardwareKind.DAMAGE,
+    HardwareKind.MAGAZINE,
+    HardwareKind.HEAT_SINK,
+    HardwareKind.PROCESSOR,
+    HardwareKind.MEMORY
   };
 
   /** Why a wave was played. */
@@ -82,7 +88,10 @@ final class ProgressionRun {
       double playSeconds,
       Progress finalProgress,
       Map<Integer, String> challengeAtTheEnd,
-      int starsSpentBeforeTheBoss) {}
+      int starsSpentBeforeTheBoss,
+      boolean reachedTheEnd,
+      int wavesToTheBoss,
+      double secondsToTheBoss) {}
 
   private final GameData data;
   private final ReferencePlayer player;
@@ -118,14 +127,18 @@ final class ProgressionRun {
     Integer locked = null;
     double seconds = 0;
     int lastWave = data.balance().lastWave();
+    int bossWave = data.balance().boss().everyWaves();
     int spentBeforeTheBoss = 0;
+    int wavesToTheBoss = 0;
+    double secondsToTheBoss = 0;
 
-    while (rows.size() < config.maxWavesPlayed() && !progress.bossKilled(lastWave)) {
+    while (rows.size() < config.maxWavesPlayed() && !progress.beaten(lastWave)) {
       progress.setAutoAdvance(true); // the player switches it back on after a defeat
       int wave = progress.currentWave();
       Purpose purpose = wall == null ? Purpose.ADVANCE : Purpose.WALL;
       boolean firstTime = !progress.beaten(wave);
-      ReferencePlayer.ChosenScript script = player.script(progress.unlocks());
+      ReferencePlayer.ChosenScript script =
+          player.script(progress.unlocks(), progress.memoryLines(data));
       Row row = play(rows.size() + 1, progress, wave, script, purpose);
       seconds += row.seconds();
 
@@ -153,10 +166,17 @@ final class ProgressionRun {
           rows.add(withPurchases(retry, progress, null, beforeBuying));
         }
       }
-      if (progress.bossKilled(lastWave)) {
+      if (progress.bossKilled(bossWave)) {
+        if (wavesToTheBoss == 0) {
+          wavesToTheBoss = rows.size();
+          secondsToTheBoss = seconds;
+        }
+      } else {
+        spentBeforeTheBoss = progress.starsEarned() - progress.stars();
+      }
+      if (progress.beaten(lastWave)) {
         break;
       }
-      spentBeforeTheBoss = progress.starsEarned() - progress.stars();
       if (wall == null) {
         continue;
       }
@@ -214,12 +234,15 @@ final class ProgressionRun {
         rows,
         wallList,
         beforeBuying,
-        progress.bossKilled(lastWave),
+        progress.bossKilled(bossWave),
         locked,
         seconds,
         progress,
         challengeAtTheEnd(progress),
-        spentBeforeTheBoss);
+        spentBeforeTheBoss,
+        progress.beaten(lastWave),
+        wavesToTheBoss,
+        secondsToTheBoss);
   }
 
   /** Per wave, the first script that meets its challenge with what was owned at the end. */
@@ -287,7 +310,8 @@ final class ProgressionRun {
       return Optional.empty();
     }
     Challenge challenge = data.waves().wave(wave).challenge();
-    for (ReferencePlayer.ChosenScript script : player.allScripts(progress.unlocks())) {
+    for (ReferencePlayer.ChosenScript script :
+        player.allScripts(progress.unlocks(), progress.memoryLines(data))) {
       WaveReport report =
           player.play(wave, script, progress.turretCount(), progress.loadout(), 1.0);
       if (ChallengeJudge.met(challenge, report, script.memoryUsed())) {
@@ -303,7 +327,8 @@ final class ProgressionRun {
   private Optional<Revisit> revisit(Progress progress, int wall) {
     for (int wave = 1; wave < wall; wave++) {
       if (!progress.met(wave, Goal.PERFECT)) {
-        ReferencePlayer.ChosenScript best = player.script(progress.unlocks());
+        ReferencePlayer.ChosenScript best =
+            player.script(progress.unlocks(), progress.memoryLines(data));
         if (player.play(wave, best, progress.turretCount(), progress.loadout(), 1.0).perfect()) {
           return Optional.of(new Revisit(wave, best));
         }
@@ -377,7 +402,7 @@ final class ProgressionRun {
         bought.add(next.get().name());
         continue;
       }
-      if (next.isPresent() && !stuck) {
+      if (next.isPresent() && !stuck && due(progress, next.get())) {
         return bought; // saving for the next piece
       }
       Optional<HardwareKind> hardware =
@@ -393,6 +418,14 @@ final class ProgressionRun {
         return bought; // one thing at a time, then try the wall again
       }
     }
+  }
+
+  /**
+   * Whether the player saves for {@code feature} now: from the wave before the one it "arrives
+   * around" (shop.json). Before that, stars go to hardware for the waves at hand.
+   */
+  private boolean due(Progress progress, Feature feature) {
+    return progress.highestWaveReached() >= data.shop().syntax(feature).arrivesAroundWave() - 1;
   }
 
   private Optional<Feature> nextSyntax(Progress progress) {
@@ -427,7 +460,8 @@ final class ProgressionRun {
 
   /** Largest enemy-health multiplier the campaign script still wins the wave with. */
   private double strength(int wave, Progress progress) {
-    ReferencePlayer.ChosenScript script = player.script(progress.unlocks());
+    ReferencePlayer.ChosenScript script =
+        player.script(progress.unlocks(), progress.memoryLines(data));
     PlayerConfig.Search search = config.healthScaleSearch();
     double lo = StrictMath.log(search.min());
     double hi = StrictMath.log(search.max());

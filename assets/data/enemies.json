@@ -71,7 +71,7 @@
     },
     "RUNNER": {
       "speed": 300,
-      "healthMultiplier": 1,
+      "healthMultiplier": 0.5,
       "armored": false,
       "regenDelaySeconds": 0,
       "regenFractionPerSecond": 0,

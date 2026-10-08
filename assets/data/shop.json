@@ -40,7 +40,7 @@
     },
     {
       "feature": "FOR",
-      "price": 5,
+      "price": 4,
       "requires": "WHILE",
       "arrivesAroundWave": 11,
       "inMvp": true,
