@@ -67,13 +67,20 @@ public record ManualConfig(List<String> notFromPlan, List<Chapter> chapters) {
   }
 
   /**
-   * @param code a script that compiles with what its page needs plus {@code needs}
+   * @param code a script that compiles with what its page needs plus {@code needs}, calling the
+   *     methods of the page's library examples
    * @param needs what this example uses beyond its page
+   * @param library whether the code goes in the library rather than in a turret; absent is false
    */
-  public record Example(String code, List<Topic> needs) {
+  public record Example(String code, List<Topic> needs, Boolean library) {
     public Example {
       Check.present("example code", code);
       needs = needs == null ? List.of() : List.copyOf(needs);
+      library = library != null && library;
+    }
+
+    public boolean inLibrary() {
+      return library;
     }
   }
 

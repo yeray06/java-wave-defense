@@ -24,6 +24,7 @@
     { "id": "HEALTH", "name": "vida", "unlock": { "feature": "VARIABLES" } },
     { "id": "SPEED", "name": "velocidad", "unlock": { "feature": "VARIABLES" } },
     { "id": "ARMORED", "name": "blindado", "unlock": { "feature": "VARIABLES" } },
+    { "id": "MUTANT", "name": "mutante", "unlock": { "feature": "VARIABLES" } },
     { "id": "DISTANCE_TO_CORE", "name": "distanciaAlNucleo", "unlock": { "feature": "VARIABLES" } }
   ],
   "ammo": [

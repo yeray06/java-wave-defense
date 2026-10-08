@@ -53,6 +53,8 @@ class SaveCodecTest {
             copy.snapshot(),
             List.of(IF_SCRIPT, "disparar();"),
             List.of(IF_SCRIPT, "if (hayEnemigos() {"),
+            "",
+            "void a() {",
             7);
     SaveCodec codec = SaveCodec.standard();
     String json = codec.write(save);
@@ -67,6 +69,41 @@ class SaveCodecTest {
     assertEquals("if (hayEnemigos() {", restored.draft(1), "the broken draft is kept");
     assertEquals("disparar();", restored.script(1));
     assertEquals(8, restored.battlesBuilt(), "the restored wave is battle 7");
+    assertEquals("void a() {", restored.libraryDraft(), "the library's draft is kept too");
+  }
+
+  @Test
+  void theLibraryIsSavedAndTurretsCallItAfterLoading() {
+    GameData data = data();
+    Progress rich = Progress.newGame(data).copyWithStars(1000);
+    Shop shop = new Shop(data);
+    for (Feature f : Feature.values()) {
+      if (data.shop().syntax(f).inMvp()) {
+        shop.buy(rich, f);
+      }
+    }
+    WaveLoop loop = new WaveLoop(data, rich);
+    String library = "void rafaga() {\n  disparar();\n  disparar();\n}";
+    assertTrue(loop.setLibrary(library).succeeded());
+    assertTrue(loop.setScript(0, "rafaga();").succeeded());
+    SaveCodec codec = SaveCodec.standard();
+    WaveLoop restored = codec.read(codec.write(SaveGame.of(loop))).restore(data);
+    assertEquals(library, restored.library());
+    assertEquals("rafaga();", restored.script(0), "it compiles against the restored library");
+  }
+
+  @Test
+  void aVersionTwoSaveStartsWithAnEmptyLibrary() {
+    SaveCodec codec = SaveCodec.standard();
+    String json = codec.write(SaveGame.of(new WaveLoop(data(), Progress.newGame(data()))));
+    String v2 =
+        json.replace("\"version\" : " + SaveCodec.VERSION, "\"version\" : 2")
+            .replaceAll(",\\s*\"library\" : \"\"", "")
+            .replaceAll(",\\s*\"libraryDraft\" : \"\"", "");
+    assertTrue(!v2.contains("library"), v2);
+    SaveGame read = codec.read(v2);
+    assertEquals("", read.library());
+    assertEquals("", read.libraryDraft());
   }
 
   @Test
@@ -89,10 +126,14 @@ class SaveCodecTest {
             progress.snapshot(),
             List.of("while (true) disparar();"),
             List.of("while (true) disparar();"),
+            "void a() {\n}",
+            "void a() {\n}",
             0);
     WaveLoop restored = save.restore(data);
     assertEquals(data.turret().initialScript(), restored.script(0));
     assertEquals("while (true) disparar();", restored.draft(0));
+    assertEquals("", restored.library(), "methods are not bought: the library falls back too");
+    assertEquals("void a() {\n}", restored.libraryDraft());
   }
 
   @Test
@@ -199,7 +240,7 @@ class SaveCodecTest {
   }
 
   private static void assertRejected(GameData data, Progress.Snapshot snapshot, String part) {
-    SaveGame save = new SaveGame(SaveCodec.VERSION, snapshot, List.of(), List.of(), 0);
+    SaveGame save = new SaveGame(SaveCodec.VERSION, snapshot, List.of(), List.of(), "", "", 0);
     IllegalArgumentException e =
         assertThrows(IllegalArgumentException.class, () -> save.restore(data));
     assertTrue(e.getMessage().contains(part), e.getMessage());
@@ -250,7 +291,7 @@ class SaveCodecTest {
         };
     // A new game has no waves beaten, so 1 to 2 gives it the same 0 stars it already has.
     SaveCodec withMigration =
-        new SaveCodec(SaveCodec.VERSION, List.of(renameCode, new MoneyToStars()));
+        new SaveCodec(SaveCodec.VERSION, List.of(renameCode, new MoneyToStars(), new AddLibrary()));
     assertEquals(current.read(json), withMigration.read(old));
   }
 }

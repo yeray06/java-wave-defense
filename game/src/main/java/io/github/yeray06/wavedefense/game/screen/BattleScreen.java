@@ -457,7 +457,11 @@ public final class BattleScreen extends ScreenAdapter {
     Turret turret = battle.turret(i);
     int state;
     if (turret.hung()) {
-      state = 1000 + turret.lastFault().ordinal() * 100 + Math.min(99, turret.lastFaultLine());
+      state =
+          1000
+              + (turret.lastFaultInLibrary() ? 100_000 : 0)
+              + turret.lastFault().ordinal() * 100
+              + Math.min(99, turret.lastFaultLine());
     } else if (turret.reloading()) {
       state = 2;
     } else if (turret.ammo() == 0 && loop.state() == WaveLoop.State.RUNNING) {
@@ -469,9 +473,8 @@ public final class BattleScreen extends ScreenAdapter {
       turretLabelState[i] = state;
       label.setVisible(state != 0);
       if (state >= 1000) {
-        label.setText(
-            texts.format(
-                "hud.turret.fault", names.fault(turret.lastFault()), turret.lastFaultLine()));
+        String key = turret.lastFaultInLibrary() ? "hud.turret.faultLibrary" : "hud.turret.fault";
+        label.setText(texts.format(key, names.fault(turret.lastFault()), turret.lastFaultLine()));
       } else if (state == 2) {
         label.setText(texts.get("hud.turret.reloading"));
       } else if (state == 1) {

@@ -251,6 +251,27 @@ class MethodTest {
   }
 
   @Test
+  void oneLineOfTheLibraryChoosesTheAmmoForTheMutantInEveryTurret() {
+    String library =
+        """
+        void municionPara(Enemigo e) {
+          if (e.mutante()) {
+            usarMunicion(PERFORANTE);
+          } else {
+            usarMunicion(NORMAL);
+          }
+        }
+        """;
+    CompiledScript script =
+        ok("Enemigo e = enemigoMasCercano();\nmunicionPara(e);\napuntar(e);", library);
+    FakeTurret turret = new FakeTurret();
+    turret.nearest = turret.addEnemy(1, 10, 100, false, 500);
+    turret.mutant[1] = true;
+    runs(script, turret);
+    assertEquals(io.github.yeray06.wavedefense.script.api.AmmoType.PIERCING, turret.ammoType);
+  }
+
+  @Test
   void methodsAreLockedUntilBought() {
     var result = Scripts.COMPILER.compileLibrary("void a() {\n}", Scripts.ALL);
     assertEquals(ErrorCode.FEATURE_LOCKED, result.errors().get(0).code());

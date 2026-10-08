@@ -433,7 +433,7 @@ class PanelsTest {
                           3,
                           0,
                           360,
-                          List.of(new WaveReport.FaultCount(FaultType.NO_AMMO, 1, 2)))));
+                          List.of(new WaveReport.FaultCount(FaultType.NO_AMMO, 1, false, 2)))));
           WaveOutcome outcome = new WaveOutcome(4, false, false, false, 30, List.of(), 0, 3);
           var challenge =
               new io.github.yeray06.wavedefense.sim.data.Challenge(

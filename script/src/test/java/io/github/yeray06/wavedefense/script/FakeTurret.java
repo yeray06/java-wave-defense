@@ -32,6 +32,7 @@ final class FakeTurret implements TurretApi {
   final int[] health = new int[MAX_ENEMIES + 1];
   final int[] speed = new int[MAX_ENEMIES + 1];
   final boolean[] armored = new boolean[MAX_ENEMIES + 1];
+  final boolean[] mutant = new boolean[MAX_ENEMIES + 1];
   final int[] distance = new int[MAX_ENEMIES + 1];
 
   /** Adds a living enemy and returns its handle. */
@@ -154,6 +155,11 @@ final class FakeTurret implements TurretApi {
   @Override
   public boolean armored(long enemy) {
     return armored[(int) enemy];
+  }
+
+  @Override
+  public boolean mutant(long enemy) {
+    return mutant[(int) enemy];
   }
 
   @Override

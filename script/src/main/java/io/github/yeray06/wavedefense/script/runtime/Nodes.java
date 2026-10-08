@@ -416,6 +416,10 @@ public final class Nodes {
     return frame -> frame.api.armored(frame.enemy(enemy.eval(frame), line));
   }
 
+  public static BoolEval mutant(RefEval enemy, int line) {
+    return frame -> frame.api.mutant(frame.enemy(enemy.eval(frame), line));
+  }
+
   // ------------------------------------------------------------- expressions
 
   public static IntEval intConst(int value) {

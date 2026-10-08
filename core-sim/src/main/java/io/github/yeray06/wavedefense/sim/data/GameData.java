@@ -1,11 +1,13 @@
 package io.github.yeray06.wavedefense.sim.data;
 
 import io.github.yeray06.wavedefense.script.CompileResult;
+import io.github.yeray06.wavedefense.script.LibraryResult;
 import io.github.yeray06.wavedefense.script.ScriptCompiler;
 import io.github.yeray06.wavedefense.script.api.ApiFunction;
 import io.github.yeray06.wavedefense.script.api.Feature;
 import io.github.yeray06.wavedefense.script.api.Requirement;
 import io.github.yeray06.wavedefense.script.api.Unlocks;
+import io.github.yeray06.wavedefense.script.diag.CompileError;
 import io.github.yeray06.wavedefense.script.diag.FaultType;
 import io.github.yeray06.wavedefense.sim.data.ScriptApiLoader.ScriptApiData;
 import io.github.yeray06.wavedefense.sim.economy.Formulas;
@@ -182,11 +184,13 @@ public record GameData(
             SHOP,
             item.feature() + " needs an example of at most " + shop.exampleLines() + " lines");
       }
-      CompileResult example =
-          compiler().compile(item.example(), new Unlocks(owned, 1), turret.memoryLines());
-      if (!example.succeeded()) {
-        throw new DataException(
-            SHOP, item.feature() + " example does not compile: " + example.errors());
+      Unlocks unlocks = new Unlocks(owned, 1);
+      List<CompileError> errors =
+          item.exampleInLibrary()
+              ? compiler().compileLibrary(item.example(), unlocks).errors()
+              : compiler().compile(item.example(), unlocks, turret.memoryLines()).errors();
+      if (!errors.isEmpty()) {
+        throw new DataException(SHOP, item.feature() + " example does not compile: " + errors);
       }
     }
     checkManual();
@@ -232,15 +236,31 @@ public record GameData(
           throw new DataException(MANUAL, page.id() + ": " + topic.enemy() + " is in no wave");
         }
       }
+      List<ManualConfig.Topic> pageTopics = new ArrayList<>(page.topics());
+      StringBuilder libraryCode = new StringBuilder();
+      for (ManualConfig.Example example : page.examples()) {
+        pageTopics.addAll(example.needs());
+        if (example.inLibrary()) {
+          libraryCode.append(example.code()).append('\n');
+        }
+      }
+      // The page's library examples together are the library its scripts call.
+      LibraryResult library =
+          compiler().compileLibrary(libraryCode.toString(), unlocksFor(pageTopics));
       for (int i = 0; i < page.examples().size(); i++) {
         ManualConfig.Example example = page.examples().get(i);
         List<ManualConfig.Topic> topics = new ArrayList<>(page.topics());
         topics.addAll(example.needs());
-        CompileResult result =
-            compiler().compile(example.code(), unlocksFor(topics), turret.memoryLines());
-        if (!result.succeeded()) {
+        List<CompileError> errors =
+            example.inLibrary()
+                ? library.errors()
+                : compiler()
+                    .compile(
+                        example.code(), library.library(), unlocksFor(topics), turret.memoryLines())
+                    .errors();
+        if (!errors.isEmpty()) {
           throw new DataException(
-              MANUAL, page.id() + " example " + (i + 1) + " does not compile: " + result.errors());
+              MANUAL, page.id() + " example " + (i + 1) + " does not compile: " + errors);
         }
       }
     }

@@ -286,6 +286,22 @@
           ]
         },
         {
+          "id": "CALL_MUTANT",
+          "about": {
+            "call": "MUTANT"
+          },
+          "examples": [
+            {
+              "code": "Enemigo e = enemigoMasCercano();\nif (e != null) {\n  // en esta oleada es debil a PERFORANTE\n  if (e.mutante()) usarMunicion(PERFORANTE);\n  else usarMunicion(NORMAL);\n  apuntar(e);\n  disparar();\n}",
+              "needs": [
+                {
+                  "call": "USE_AMMO"
+                }
+              ]
+            }
+          ]
+        },
+        {
           "id": "CALL_DISTANCE_TO_CORE",
           "about": {
             "call": "DISTANCE_TO_CORE"
@@ -415,6 +431,42 @@
                   "feature": "FOR"
                 }
               ]
+            }
+          ]
+        },
+        {
+          "id": "SYNTAX_METHODS",
+          "about": {
+            "feature": "METHODS"
+          },
+          "examples": [
+            {
+              "code": "// en la biblioteca: una orden nueva\n// que se llama rafaga\nvoid rafaga() {\n  while (hayEnemigos() && municion() > 0\n      && calor() < 60) {\n    disparar();\n  }\n}",
+              "library": true
+            },
+            {
+              "code": "// en cada torreta: una linea la usa\nif (municion() == 0) {\n  recargar();\n} else {\n  rafaga();\n}"
+            }
+          ]
+        },
+        {
+          "id": "SYNTAX_RETURN",
+          "needs": [
+            {
+              "feature": "METHODS"
+            }
+          ],
+          "examples": [
+            {
+              "code": "// recibe un enemigo (e) y responde\n// true si esta cerca del nucleo\nboolean peligroso(Enemigo e) {\n  return e.distanciaAlNucleo() < 300;\n}",
+              "library": true
+            },
+            {
+              "code": "// devuelve el mas cercano al nucleo,\n// o null si no hay nadie a tiro\nEnemigo masPeligroso() {\n  Enemigo peligro = null;\n  for (Enemigo e : enemigos()) {\n    if (peligro == null || e.distanciaAlNucleo()\n        < peligro.distanciaAlNucleo()) {\n      peligro = e;\n    }\n  }\n  return peligro;\n}",
+              "library": true
+            },
+            {
+              "code": "Enemigo e = masPeligroso();\nif (e != null && peligroso(e)) {\n  apuntar(e);\n  disparar();\n}"
             }
           ]
         }
@@ -559,6 +611,27 @@
               ]
             }
           ]
+        },
+        {
+          "id": "FAULT_STACK_OVERFLOW",
+          "about": {
+            "fault": "STACK_OVERFLOW"
+          },
+          "needs": [
+            {
+              "feature": "METHODS"
+            }
+          ],
+          "examples": [
+            {
+              "code": "// mal: se llama a si mismo y nunca para\nvoid otraVez() {\n  disparar();\n  otraVez();\n}",
+              "library": true
+            },
+            {
+              "code": "// bien: n es cada vez mas pequeno\n// y en 0 se para\nvoid rafagaDe(int n) {\n  if (n <= 0) {\n    return;\n  }\n  disparar();\n  rafagaDe(n - 1);\n}",
+              "library": true
+            }
+          ]
         }
       ]
     },
@@ -651,6 +724,40 @@
               "needs": [
                 {
                   "feature": "FOR"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ENEMY_MUTANT",
+          "about": {
+            "enemy": "MUTANT"
+          },
+          "examples": [
+            {
+              "code": "// la unica linea que cambias en cada oleada:\n// la municion a la que es debil el Mutante\nvoid contraMutante() {\n  usarMunicion(PERFORANTE);\n}",
+              "library": true,
+              "needs": [
+                {
+                  "feature": "METHODS"
+                },
+                {
+                  "call": "USE_AMMO"
+                }
+              ]
+            },
+            {
+              "code": "Enemigo e = enemigoMasCercano();\nif (e != null) {\n  if (e.mutante()) contraMutante();\n  else usarMunicion(NORMAL);\n  apuntar(e);\n  disparar();\n}",
+              "needs": [
+                {
+                  "feature": "METHODS"
+                },
+                {
+                  "call": "USE_AMMO"
+                },
+                {
+                  "call": "MUTANT"
                 }
               ]
             }
@@ -774,6 +881,29 @@
                   "feature": "FOR"
                 }
               ]
+            }
+          ]
+        },
+        {
+          "id": "RECIPE_MUTANT",
+          "needs": [
+            {
+              "feature": "METHODS"
+            },
+            {
+              "call": "USE_AMMO"
+            },
+            {
+              "call": "MUTANT"
+            }
+          ],
+          "examples": [
+            {
+              "code": "// cambia solo esta linea en cada oleada\nvoid contraMutante() {\n  usarMunicion(NORMAL);\n}\n\n// la municion para cada enemigo\nvoid elegirMunicion(Enemigo e) {\n  if (e.mutante()) {\n    contraMutante();\n  } else if (e.blindado()) {\n    usarMunicion(PERFORANTE);\n  } else {\n    usarMunicion(NORMAL);\n  }\n}",
+              "library": true
+            },
+            {
+              "code": "if (municion() == 0) {\n  recargar();\n}\nEnemigo e = enemigoMasCercano();\nif (e != null) {\n  elegirMunicion(e);\n  apuntar(e);\n  disparar();\n}"
             }
           ]
         }

@@ -12,6 +12,7 @@
       "requires": null,
       "arrivesAroundWave": 2,
       "inMvp": true,
+      "exampleInLibrary": false,
       "example": "if (municion() == 0) {\n  recargar();\n} else if (hayEnemigos()) {\n  disparar();\n}"
     },
     {
@@ -20,6 +21,7 @@
       "requires": "IF_ELSE",
       "arrivesAroundWave": 4,
       "inMvp": true,
+      "exampleInLibrary": false,
       "example": "Enemigo e = objetivo();\nif (e == null) e = enemigoMasCercano();\nif (e != null) apuntar(e);\nif (municion() == 0) recargar();\nelse if (e != null) disparar();"
     },
     {
@@ -28,6 +30,7 @@
       "requires": "VARIABLES",
       "arrivesAroundWave": 6,
       "inMvp": true,
+      "exampleInLibrary": false,
       "example": "if (municion() == 0 || !hayEnemigos()) {\n  recargar();\n} else if (calor() < 80 && hayEnemigos()) {\n  disparar();\n}"
     },
     {
@@ -36,6 +39,7 @@
       "requires": "LOGIC_OPS",
       "arrivesAroundWave": 8,
       "inMvp": true,
+      "exampleInLibrary": false,
       "example": "if (municion() == 0) recargar();\nwhile (hayEnemigos() && municion() > 0 && calor() < 80) {\n  disparar();\n}"
     },
     {
@@ -44,6 +48,7 @@
       "requires": "WHILE",
       "arrivesAroundWave": 11,
       "inMvp": true,
+      "exampleInLibrary": false,
       "example": "for (Enemigo e : enemigos()) {\n  if (e.velocidad() > 200) apuntar(e);\n}\nif (municion() == 0) recargar();\nelse disparar();"
     },
     {
@@ -51,8 +56,9 @@
       "price": 6,
       "requires": "FOR",
       "arrivesAroundWave": 15,
-      "inMvp": false,
-      "example": null
+      "inMvp": true,
+      "exampleInLibrary": true,
+      "example": "void rafaga() {\n  while (hayEnemigos() && municion() > 0 && calor() < 60) {\n    disparar();\n  }\n}"
     },
     {
       "feature": "TRY_CATCH",
@@ -60,6 +66,7 @@
       "requires": "METHODS",
       "arrivesAroundWave": 18,
       "inMvp": false,
+      "exampleInLibrary": false,
       "example": null
     },
     {
@@ -68,6 +75,7 @@
       "requires": "TRY_CATCH",
       "arrivesAroundWave": 23,
       "inMvp": false,
+      "exampleInLibrary": false,
       "example": null
     }
   ],

@@ -21,6 +21,8 @@ public enum ApiFunction {
   HEALTH(Receiver.ENEMY, ValueType.INT),
   SPEED(Receiver.ENEMY, ValueType.INT),
   ARMORED(Receiver.ENEMY, ValueType.BOOLEAN),
+  /** Whether the enemy is a Mutant, whose weak ammo changes every wave. */
+  MUTANT(Receiver.ENEMY, ValueType.BOOLEAN),
   DISTANCE_TO_CORE(Receiver.ENEMY, ValueType.INT);
 
   /** Whether the call is written bare ({@code disparar()}) or on an enemy ({@code e.vida()}). */

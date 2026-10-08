@@ -50,5 +50,7 @@ public interface TurretApi {
 
   boolean armored(long enemy);
 
+  boolean mutant(long enemy);
+
   int distanceToCore(long enemy);
 }

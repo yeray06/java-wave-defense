@@ -110,7 +110,10 @@ public final class ReportLines {
         lines.add(
             new Line(
                 texts.format(
-                    "report.turret.fault", names.fault(fault.type()), fault.line(), fault.count()),
+                    fault.inLibrary() ? "report.turret.faultLibrary" : "report.turret.fault",
+                    names.fault(fault.type()),
+                    fault.line(),
+                    fault.count()),
                 Kind.WARNING,
                 true));
       }

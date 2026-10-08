@@ -737,7 +737,7 @@ public final class Checker {
       case ENEMIES -> new Typed(Type.ENEMY_LIST, Nodes.enemies());
       case AIM -> new Typed(Type.VOID, Nodes.aim(args.get(0).asRef(), line));
       case USE_AMMO -> new Typed(Type.VOID, Nodes.useAmmo((AmmoType) args.get(0).node()));
-      case HEALTH, SPEED, ARMORED, DISTANCE_TO_CORE ->
+      case HEALTH, SPEED, ARMORED, MUTANT, DISTANCE_TO_CORE ->
           throw new IllegalStateException("Enemy call resolved as turret call: " + function);
     };
   }
@@ -819,6 +819,7 @@ public final class Checker {
       case SPEED -> new Typed(Type.INT, Nodes.speed(enemy, line));
       case DISTANCE_TO_CORE -> new Typed(Type.INT, Nodes.distanceToCore(enemy, line));
       case ARMORED -> new Typed(Type.BOOLEAN, Nodes.armored(enemy, line));
+      case MUTANT -> new Typed(Type.BOOLEAN, Nodes.mutant(enemy, line));
       default -> throw new IllegalStateException("Turret call resolved as enemy call: " + function);
     };
   }

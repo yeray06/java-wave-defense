@@ -34,7 +34,7 @@ class ChallengeJudgeTest {
 
     TurretReport faulty =
         new TurretReport(
-            30, 0, 0, 3, 0, 0, List.of(new WaveReport.FaultCount(FaultType.NO_AMMO, 1, 1)));
+            30, 0, 0, 3, 0, 0, List.of(new WaveReport.FaultCount(FaultType.NO_AMMO, 1, false, 1)));
     assertTrue(met(Type.NO_FAULTS, 0, CLEAN, 12));
     assertFalse(met(Type.NO_FAULTS, 0, faulty, 12));
 

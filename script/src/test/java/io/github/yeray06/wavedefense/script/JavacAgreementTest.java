@@ -34,6 +34,7 @@ class JavacAgreementTest {
         int vida() { return 1; }
         int velocidad() { return 1; }
         boolean blindado() { return false; }
+        boolean mutante() { return false; }
         int distanciaAlNucleo() { return 1; }
       }
       enum Municion { NORMAL, PERFORANTE }
