@@ -1,0 +1,23 @@
+Enemigo masPeligroso() {
+    Enemigo o = null;
+    for (Enemigo e : enemigos()) {
+        if (o == null || e.distanciaAlNucleo() < o.distanciaAlNucleo()) {
+            o = e;
+        }
+    }
+    return o;
+}
+
+void elegirMunicion(Enemigo o) {
+    if ({PERFORANTE_SI}) {
+        usarMunicion(PERFORANTE);
+    } else {
+        usarMunicion(NORMAL);
+    }
+}
+
+void rafaga() {
+    while (municion() > 0 && calor() < 60 && objetivo() != null) {
+        disparar();
+    }
+}

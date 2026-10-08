@@ -1,0 +1,10 @@
+if (municion() == 0 || calor() >= 70) {
+    recargar();
+} else {
+    Enemigo o = masPeligroso();
+    if (o != null) {
+        apuntar(o);
+        elegirMunicion(o);
+        rafaga();
+    }
+}

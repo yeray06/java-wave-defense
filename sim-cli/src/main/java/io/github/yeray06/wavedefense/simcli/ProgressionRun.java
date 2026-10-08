@@ -402,6 +402,10 @@ final class ProgressionRun {
         bought.add(next.get().name());
         continue;
       }
+      if (next.isPresent() && due(progress, next.get())) {
+        // Where the double rule starts if the piece is never bought: the first time it was due.
+        beforeBuying.putIfAbsent(next.get(), progress.copy());
+      }
       if (next.isPresent() && !stuck && due(progress, next.get())) {
         return bought; // saving for the next piece
       }
