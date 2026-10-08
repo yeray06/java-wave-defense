@@ -81,9 +81,9 @@ class BattleScreenTest {
                   controls,
                   1);
           screen.resize(1280, 720);
-          screen.toggle(screen.editorPanel());
-          assertTrue(screen.openPanel() == screen.editorPanel());
-          screen.toggle(screen.editorPanel());
+          screen.toggle(screen.editorScroll());
+          assertTrue(screen.openPanel() == screen.editorScroll());
+          screen.toggle(screen.editorScroll());
           assertTrue(screen.openPanel() == null);
           screen.toggle(screen.manualScroll());
           assertTrue(screen.openPanel() == screen.manualScroll(), "the manual opens");

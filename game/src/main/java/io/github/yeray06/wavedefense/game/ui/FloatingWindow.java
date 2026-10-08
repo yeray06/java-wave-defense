@@ -14,6 +14,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
  */
 public final class FloatingWindow extends Window {
   private static final float BUTTON_PAD = 6;
+  private static final float TITLE_HEIGHT = 34;
 
   private final Actor content;
   private final Cell<Actor> contentCell;
@@ -30,7 +31,8 @@ public final class FloatingWindow extends Window {
     setResizable(true);
     setResizeBorder(10);
     setKeepWithinStage(true);
-    pad(getPadTop(), 8, 8, 8);
+    // The title bar's height: the background has none of its own.
+    pad(TITLE_HEIGHT, 8, 8, 8);
     getTitleLabel().setEllipsis(true);
     TextButton fold = new TextButton("–", skin);
     fold.pad(0, BUTTON_PAD, 0, BUTTON_PAD);

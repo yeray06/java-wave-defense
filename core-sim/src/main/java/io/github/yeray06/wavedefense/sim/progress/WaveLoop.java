@@ -132,6 +132,8 @@ public final class WaveLoop {
       loop.drafts.set(i, i < drafts.size() ? drafts.get(i) : loop.sources.get(i));
     }
     loop.battlesBuilt = battles;
+    // Achievements the game already reached (an older save, or new ones in the data) unlock now.
+    career.unlock(progress);
     loop.build(true);
     return loop;
   }

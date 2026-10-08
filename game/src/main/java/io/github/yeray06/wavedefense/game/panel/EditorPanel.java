@@ -14,6 +14,7 @@ import io.github.yeray06.wavedefense.game.editor.CodeEditor;
 import io.github.yeray06.wavedefense.game.editor.EditorDocument;
 import io.github.yeray06.wavedefense.game.editor.Vocabulary;
 import io.github.yeray06.wavedefense.game.i18n.ScriptTexts;
+import io.github.yeray06.wavedefense.game.ui.FloatingWindow;
 import io.github.yeray06.wavedefense.game.ui.UiSkin;
 import io.github.yeray06.wavedefense.game.ui.Windows;
 import io.github.yeray06.wavedefense.script.CompileResult;
@@ -101,7 +102,7 @@ public final class EditorPanel extends Table {
 
     top().left();
     add(tabs).left().padBottom(6).row();
-    add(scroll).width(WIDTH).height(330).row();
+    add(scroll).width(WIDTH).height(290).row();
     add(memory).left().width(WIDTH).padTop(6).row();
     add(status).left().width(WIDTH).padTop(2).row();
     add(errors).left().width(WIDTH).padTop(4).row();
@@ -153,8 +154,9 @@ public final class EditorPanel extends Table {
         index == library
             ? names.texts().get("editor.library.tab")
             : names.texts().format("editor.turret", index + 1);
-    windows
-        .open(
+    boolean created = !windows.isOpen("code-" + index);
+    FloatingWindow window =
+        windows.open(
             "code-" + index,
             title,
             () -> {
@@ -168,8 +170,10 @@ public final class EditorPanel extends Table {
               return pane;
             },
             WIDTH,
-            360)
-        .onClose(() -> popped[index] = null);
+            360);
+    if (created) {
+      window.onClose(() -> popped[index] = null);
+    }
   }
 
   /** The editor in a tab's floating window, or {@code null}. */

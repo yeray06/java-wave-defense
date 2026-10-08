@@ -3,6 +3,7 @@ package io.github.yeray06.wavedefense.game.panel;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
@@ -35,10 +36,20 @@ public final class BriefingPanel extends Table {
   private final Skin skin;
   private final TextButton deploy;
   private int shownWave = -1;
+  private int lastWave;
   private int shownStars = -1;
   private Career career;
   private IntConsumer onTrial;
   private WaveRecord shownRecord;
+
+  /** Enemies, goals and records; they scroll in a small window, the buttons never do. */
+  private final Table details = new Table();
+
+  private final ScrollPane detailsScroll;
+  private float maxHeight = Float.MAX_VALUE;
+
+  /** Room for the deploy and trial buttons under the details. */
+  private static final float BUTTONS_HEIGHT = 80;
 
   public BriefingPanel(
       GameData data, Progress progress, ScriptTexts names, Skin skin, Runnable onDeploy) {
@@ -48,6 +59,10 @@ public final class BriefingPanel extends Table {
     this.skin = skin;
     setBackground(skin.getDrawable("panel"));
     pad(16);
+    detailsScroll = new ScrollPane(details, skin);
+    detailsScroll.setFadeScrollBars(false);
+    detailsScroll.setScrollingDisabled(true, false);
+    details.padRight(14);
     deploy = new TextButton("", skin);
     deploy.pad(10, 24, 10, 24);
     deploy.addListener(
@@ -57,6 +72,21 @@ public final class BriefingPanel extends Table {
             onDeploy.run();
           }
         });
+  }
+
+  /** The tallest the briefing may be: the space between the toolbar and the hints. */
+  public void setMaxHeight(float height) {
+    if (height != maxHeight) {
+      maxHeight = height;
+      shownWave = -1;
+      if (lastWave > 0) {
+        show(lastWave);
+      }
+    }
+  }
+
+  private float maxDetailsHeight() {
+    return Math.max(120, maxHeight - BUTTONS_HEIGHT);
   }
 
   /** The player's records, shown under the goals (D-63). */
@@ -78,10 +108,13 @@ public final class BriefingPanel extends Table {
       return;
     }
     shownWave = wave;
+    lastWave = wave;
     shownStars = progress.starsEarned();
     shownRecord = record;
     clearChildren();
-    add(new Label(names.texts().format("briefing.title", wave), skin, "title"))
+    details.clearChildren();
+    details
+        .add(new Label(names.texts().format("briefing.title", wave), skin, "title"))
         .colspan(2)
         .left()
         .padBottom(10)
@@ -95,7 +128,7 @@ public final class BriefingPanel extends Table {
     for (Map.Entry<EnemyKind, Integer> entry : counts.entrySet()) {
       Image swatch = new Image(skin.getDrawable("circle"));
       swatch.setColor(EnemyPalette.color(entry.getKey()));
-      add(swatch).size(SWATCH).padRight(10).left().top().padTop(3);
+      details.add(swatch).size(SWATCH).padRight(10).left().top().padTop(3);
       Table text = new Table();
       text.add(
               new Label(
@@ -117,23 +150,30 @@ public final class BriefingPanel extends Table {
             .left()
             .padTop(2);
       }
-      add(text).left().expandX().padBottom(8).row();
+      details.add(text).left().expandX().padBottom(8).row();
     }
-    add(new Label(
-            names.texts().format("briefing.total", total, data.balance().coreLivesPerWave()),
-            skin,
-            "small"))
+    details
+        .add(
+            new Label(
+                names.texts().format("briefing.total", total, data.balance().coreLivesPerWave()),
+                skin,
+                "small"))
         .colspan(2)
         .left()
         .padTop(4)
         .row();
-    add(new Label(names.texts().get("briefing.goals"), skin)).colspan(2).left().padTop(12).row();
+    details
+        .add(new Label(names.texts().get("briefing.goals"), skin))
+        .colspan(2)
+        .left()
+        .padTop(12)
+        .row();
     Challenge challenge = data.waves().wave(wave).challenge();
     for (Goal goal : Goal.values()) {
       boolean met = progress.met(wave, goal);
       Label line = new Label(names.goalLine(goal, challenge, met), skin, met ? "good" : "default");
       line.setWrap(true);
-      add(line).colspan(2).left().width(390).padLeft(10).row();
+      details.add(line).colspan(2).left().width(390).padLeft(10).row();
     }
     if (record != null) {
       int tps = data.balance().ticksPerSecond();
@@ -149,7 +189,7 @@ public final class BriefingPanel extends Table {
               skin,
               "small");
       records.setWrap(true);
-      add(records).colspan(2).left().width(390).padTop(8).row();
+      details.add(records).colspan(2).left().width(390).padTop(8).row();
     }
     deploy.setText(names.texts().format("hud.deploy", wave));
     Table buttons = new Table();
@@ -167,7 +207,9 @@ public final class BriefingPanel extends Table {
           });
       buttons.add(trial).padLeft(10);
     }
-    add(buttons).colspan(2).padTop(14);
+    detailsScroll.setActor(details);
+    add(detailsScroll).maxHeight(maxDetailsHeight()).row();
+    add(buttons).padTop(14);
     pack();
   }
 }

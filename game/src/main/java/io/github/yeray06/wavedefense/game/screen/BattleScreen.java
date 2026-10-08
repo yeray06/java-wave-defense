@@ -37,6 +37,7 @@ import io.github.yeray06.wavedefense.game.panel.ShopPanel;
 import io.github.yeray06.wavedefense.game.panel.TurretNames;
 import io.github.yeray06.wavedefense.game.playtest.ReloadReactionLog;
 import io.github.yeray06.wavedefense.game.render.WorldRenderer;
+import io.github.yeray06.wavedefense.game.ui.FloatingWindow;
 import io.github.yeray06.wavedefense.game.ui.SpeedSelector;
 import io.github.yeray06.wavedefense.game.ui.Windows;
 import io.github.yeray06.wavedefense.sim.data.CareerConfig;
@@ -99,7 +100,9 @@ public final class BattleScreen extends ScreenAdapter {
   private final SpeedSelector speedSelector;
   private final TextButton autoButton;
   private final BriefingPanel briefing;
+
   private final EditorPanel editorPanel;
+  private final ScrollPane editorScroll;
   private final ShopPanel shopPanel;
   private final MapPanel mapPanel;
   private final ReportPanel reportPanel;
@@ -168,9 +171,15 @@ public final class BattleScreen extends ScreenAdapter {
     briefing = new BriefingPanel(data, loop.progress(), names, skin, loop::deploy);
     briefing.setCareer(loop.career());
     briefing.setTrial(this::trial);
+
     editorPanel = new EditorPanel(loop, names, skin, slots);
     windows = new Windows(stage, skin);
     editorPanel.setWindows(windows);
+    // Long error lists scroll instead of covering the toolbar; dragging selects text, not scrolls.
+    editorScroll = new ScrollPane(editorPanel, skin);
+    editorScroll.setFadeScrollBars(false);
+    editorScroll.setFlickScroll(false);
+    editorScroll.setScrollingDisabled(true, false);
     outputPanel = new OutputPanel(loop, names, skin);
     debuggerPanel = new DebuggerPanel(loop, names, skin, editorPanel);
     careerPanel = new CareerPanel(data, loop, names, skin);
@@ -212,7 +221,7 @@ public final class BattleScreen extends ScreenAdapter {
     top.add(autoButton).right();
     top.row();
     Table toolbar = new Table();
-    toolbar.add(panelButton(skin, "hud.panel.code", editorPanel)).padRight(6);
+    toolbar.add(panelButton(skin, "hud.panel.code", editorScroll)).padRight(6);
     toolbar.add(panelButton(skin, "hud.panel.shop", shopScroll)).padRight(6);
     toolbar.add(panelButton(skin, "hud.panel.map", mapPanel)).padRight(6);
     toolbar.add(panelButton(skin, "hud.panel.report", reportScroll)).padRight(6);
@@ -306,16 +315,23 @@ public final class BattleScreen extends ScreenAdapter {
   }
 
   private void openDebugger() {
-    windows.open(
-        "debug",
-        texts.get("debug.title"),
-        () -> {
-          ScrollPane pane = new ScrollPane(debuggerPanel, skin);
-          pane.setFadeScrollBars(false);
-          return pane;
-        },
-        420,
-        420);
+    boolean created = !windows.isOpen("debug");
+    FloatingWindow window =
+        windows.open(
+            "debug",
+            texts.get("debug.title"),
+            () -> {
+              ScrollPane pane = new ScrollPane(debuggerPanel, skin);
+              pane.setFadeScrollBars(false);
+              pane.setScrollingDisabled(true, false);
+              return pane;
+            },
+            420,
+            420);
+    if (created) {
+      // Closing the debugger is done debugging: a paused wave goes on.
+      window.onClose(loop::resumeDebug);
+    }
   }
 
   Windows windows() {
@@ -371,7 +387,7 @@ public final class BattleScreen extends ScreenAdapter {
     if (panel == careerScroll) {
       careerPanel.rebuild();
     }
-    if (panel == editorPanel) {
+    if (panel == editorScroll) {
       editorPanel.focus();
     } else {
       stage.setKeyboardFocus(null);
@@ -385,6 +401,10 @@ public final class BattleScreen extends ScreenAdapter {
 
   EditorPanel editorPanel() {
     return editorPanel;
+  }
+
+  ScrollPane editorScroll() {
+    return editorScroll;
   }
 
   ShopPanel shopPanel() {
@@ -718,6 +738,8 @@ public final class BattleScreen extends ScreenAdapter {
   public void resize(int width, int height) {
     world.resize(width, height);
     stage.getViewport().update(width, height, true);
+    // The middle row is padded 100 above (HUD and toolbar) and 54 below (result and hint).
+    briefing.setMaxHeight(stage.getHeight() - 160);
   }
 
   @Override

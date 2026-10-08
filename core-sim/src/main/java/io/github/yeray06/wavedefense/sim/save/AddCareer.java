@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
  * Version 3 to 4: the career (phase 9b, D-63). Older games had no records, streak, achievements,
- * hats or names, and were never expert games. Achievements already earned unlock on the next wave.
+ * hats or names, and were never expert games. Achievements already earned unlock on loading.
  */
 final class AddCareer implements SaveCodec.Migration {
   @Override

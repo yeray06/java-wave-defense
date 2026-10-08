@@ -51,17 +51,17 @@ public final class DebuggerPanel extends Table {
     variables = new Label("", skin, "code");
     variables.setWrap(true);
     hover = wrapped(skin, "small");
-    back = button(skin, "debug.back", () -> go(step - 1));
-    forward = button(skin, "debug.forward", () -> go(step + 1));
-    resume = button(skin, "debug.resume", this::resume);
-    TextButton next = button(skin, "debug.nextCycle", this::nextCycle);
+    back = button(skin, texts.get("debug.back"), () -> go(step - 1));
+    forward = button(skin, texts.get("debug.forward"), () -> go(step + 1));
+    resume = button(skin, texts.get("debug.resume"), this::resume);
+    TextButton next = button(skin, texts.get("debug.nextCycle"), this::nextCycle);
     top().left();
     add(status).width(WIDTH).left().row();
     Table buttons = new Table();
-    buttons.add(back).padRight(4);
-    buttons.add(forward).padRight(10);
-    buttons.add(resume).padRight(4);
-    buttons.add(next);
+    buttons.add(back).left().padRight(4);
+    buttons.add(forward).left().row();
+    buttons.add(resume).left().padRight(4).padTop(4);
+    buttons.add(next).left().padTop(4);
     add(buttons).left().padTop(6).row();
     add(stepLabel).left().padTop(4).row();
     add(new Label(texts.get("debug.variables"), skin, "title")).left().padTop(8).row();
@@ -75,9 +75,8 @@ public final class DebuggerPanel extends Table {
     return label;
   }
 
-  private static TextButton button(Skin skin, String key, Runnable action) {
-    TextButton button = new TextButton("", skin);
-    button.setName(key);
+  private static TextButton button(Skin skin, String text, Runnable action) {
+    TextButton button = new TextButton(text, skin);
     button.pad(3, 10, 3, 10);
     button.addListener(
         new ChangeListener() {
@@ -152,9 +151,6 @@ public final class DebuggerPanel extends Table {
   }
 
   private void show() {
-    back.setText(texts.get("debug.back"));
-    forward.setText(texts.get("debug.forward"));
-    resume.setText(texts.get("debug.resume"));
     Tracer trace = trace();
     boolean paused = trace != null && trace.steps() > 0;
     back.setDisabled(!paused || step == 0);

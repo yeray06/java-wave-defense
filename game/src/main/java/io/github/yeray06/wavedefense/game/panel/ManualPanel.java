@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.actions.Actions;
+import com.badlogic.gdx.scenes.scene2d.ui.Container;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
@@ -171,10 +172,10 @@ public final class ManualPanel extends Table {
     TextButton next = button(texts.get("manual.next"), () -> showPage(current + 1));
     next.setDisabled(index == pages.size() - 1);
     nav.add(next);
+    add(nav).left().padBottom(windows == null ? 8 : 4).row();
     if (windows != null) {
-      nav.add(button(texts.get("manual.popOut"), () -> popOut(page.id()))).padLeft(6);
+      add(button(texts.get("manual.popOut"), () -> popOut(page.id()))).left().padBottom(8).row();
     }
-    add(nav).left().padBottom(8).row();
 
     add(wrapped(title(page), "title")).left().width(WIDTH).row();
     for (String reason : lockReasons(page)) {
@@ -191,18 +192,20 @@ public final class ManualPanel extends Table {
     String hintKey = "manual.page." + page.id() + ".hint";
     if (texts.has(hintKey)) {
       Label hint = wrapped(texts.format("manual.hint", facts.fill(texts.get(hintKey))), "good");
-      hint.setVisible(false);
+      // Empty, it takes no room: the hint appears where the button was.
+      Container<Actor> holder = new Container<>();
       TextButton show = button(texts.get("manual.hint.show"), () -> {});
       show.addListener(
           new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-              hint.setVisible(true);
-              show.setVisible(false);
+              holder.fillX();
+              holder.setActor(hint);
             }
           });
-      add(show).left().padTop(10).row();
-      add(hint).left().width(WIDTH).padTop(4).row();
+      holder.setActor(show);
+      holder.left();
+      add(holder).left().width(WIDTH).padTop(10).row();
     }
     if (!page.seeAlso().isEmpty()) {
       add(new Label(texts.get("manual.seeAlso"), skin, "small")).left().padTop(12).row();

@@ -328,10 +328,7 @@ class SaveCodecTest {
     SaveGame read = codec.read(v3);
     assertEquals(Career.Snapshot.empty(), read.career());
     WaveLoop restored = read.restore(data());
-    assertTrue(
-        restored.career().achievements().isEmpty(), "earned ones unlock on the next wave or buy");
-    restored.purchased();
-    assertTrue(restored.career().unlocked("FIRST_WAVE"));
+    assertTrue(restored.career().unlocked("FIRST_WAVE"), "what was earned unlocks on loading");
   }
 
   @Test

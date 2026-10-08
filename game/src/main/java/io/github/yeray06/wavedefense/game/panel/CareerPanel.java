@@ -179,7 +179,8 @@ public final class CareerPanel extends Table {
     TextButton button = new TextButton(label, skin);
     button.pad(3, 8, 3, 8);
     if (color != null) {
-      button.getLabel().setColor(color);
+      // Lighter than the hat itself: dark hats must still read on a dark button.
+      button.getLabel().setColor(color.cpy().lerp(Color.WHITE, 0.45f));
     }
     button.setChecked(loop.career().hat(slot).equals(hat));
     group.add(button);
