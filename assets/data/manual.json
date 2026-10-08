@@ -10,6 +10,10 @@
             {
               "code": "disparar();\nrecargar();"
             }
+          ],
+          "seeAlso": [
+            "START_CYCLE",
+            "WORDS_SYMBOLS"
           ]
         },
         {
@@ -18,6 +22,10 @@
             {
               "code": "disparar();"
             }
+          ],
+          "seeAlso": [
+            "START_PROGRAM",
+            "START_MEMORY"
           ]
         },
         {
@@ -31,6 +39,10 @@
                 }
               ]
             }
+          ],
+          "seeAlso": [
+            "SYNTAX_IF_ELSE",
+            "CALL_AMMO"
           ]
         },
         {
@@ -39,6 +51,10 @@
             {
               "code": "// Esto es un comentario: el juego no lo lee\ndisparar();"
             }
+          ],
+          "seeAlso": [
+            "TOOLS_WINDOWS",
+            "ERRORS_COMMON"
           ]
         },
         {
@@ -52,6 +68,10 @@
                 }
               ]
             }
+          ],
+          "seeAlso": [
+            "START_EDITOR",
+            "SYNTAX_METHODS"
           ]
         },
         {
@@ -62,6 +82,66 @@
         },
         {
           "id": "START_SHOP"
+        }
+      ]
+    },
+    {
+      "id": "TOOLS",
+      "pages": [
+        {
+          "id": "TOOLS_WINDOWS",
+          "seeAlso": [
+            "START_EDITOR",
+            "TOOLS_OUTPUT"
+          ]
+        },
+        {
+          "id": "TOOLS_OUTPUT",
+          "examples": [
+            {
+              "code": "// Escribe cuántas balas quedan en cada ciclo.\nimprimir(municion());\ndisparar();",
+              "needs": [
+                {
+                  "feature": "IF_ELSE"
+                }
+              ]
+            }
+          ],
+          "seeAlso": [
+            "CALL_PRINT",
+            "TOOLS_DEBUGGER"
+          ]
+        },
+        {
+          "id": "TOOLS_DEBUGGER",
+          "examples": [
+            {
+              "code": "int balas = municion();  // pon aquí un punto de parada\nif (balas == 0) {\n  recargar();\n} else {\n  disparar();\n}",
+              "needs": [
+                {
+                  "feature": "VARIABLES"
+                }
+              ]
+            }
+          ],
+          "seeAlso": [
+            "SYNTAX_VARIABLES",
+            "TOOLS_OUTPUT"
+          ]
+        },
+        {
+          "id": "TOOLS_TRIAL",
+          "seeAlso": [
+            "START_STARS",
+            "TOOLS_ACHIEVEMENTS"
+          ]
+        },
+        {
+          "id": "TOOLS_ACHIEVEMENTS",
+          "seeAlso": [
+            "CALL_GREET",
+            "TOOLS_TRIAL"
+          ]
         }
       ]
     },
@@ -109,6 +189,11 @@
             {
               "code": "// tres disparos en el mismo ciclo\ndisparar();\ndisparar();\ndisparar();"
             }
+          ],
+          "seeAlso": [
+            "CALL_RELOAD",
+            "CALL_AIM",
+            "RECIPE_NO_AIR"
           ]
         },
         {
@@ -128,6 +213,11 @@
                 }
               ]
             }
+          ],
+          "seeAlso": [
+            "CALL_AMMO",
+            "FAULT_NO_AMMO",
+            "RECIPE_IDLE_RELOAD"
           ]
         },
         {
@@ -139,6 +229,10 @@
             {
               "code": "// Si no quedan balas...\nif (municion() == 0) {\n  recargar();  // ...recarga.\n} else if (hayEnemigos()) {\n  disparar();  // Si hay alguien, dispara.\n}"
             }
+          ],
+          "seeAlso": [
+            "CALL_RELOAD",
+            "FAULT_NO_AMMO"
           ]
         },
         {
@@ -150,6 +244,10 @@
             {
               "code": "if (municion() == 0) {\n  recargar();\n} else if (calor() < 100) {\n  disparar();  // solo si no esta al maximo\n}"
             }
+          ],
+          "seeAlso": [
+            "FAULT_OVERHEAT",
+            "RECIPE_BURST"
           ]
         },
         {
@@ -161,6 +259,10 @@
             {
               "code": "if (hayEnemigos()) {\n  disparar();\n}"
             }
+          ],
+          "seeAlso": [
+            "RECIPE_NO_AIR",
+            "CALL_NEAREST_ENEMY"
           ]
         },
         {
@@ -172,6 +274,10 @@
             {
               "code": "if (municion() == 0) recargar();\n// e es el enemigo mas cercano, o null\nEnemigo e = enemigoMasCercano();\nif (e != null) {\n  apuntar(e);\n  disparar();\n}"
             }
+          ],
+          "seeAlso": [
+            "CALL_AIM",
+            "FAULT_NULL_POINTER"
           ]
         },
         {
@@ -183,6 +289,10 @@
             {
               "code": "if (municion() == 0) recargar();\n// e guarda al enemigo que ya apuntabas\nEnemigo e = objetivo();\n// si no habia ninguno, coge el mas cercano\nif (e == null) e = enemigoMasCercano();\nif (e != null) {\n  apuntar(e);\n  disparar();\n}"
             }
+          ],
+          "seeAlso": [
+            "CALL_AIM",
+            "RECIPE_FOCUS"
           ]
         },
         {
@@ -197,6 +307,10 @@
             {
               "code": "// mira a cada enemigo de la lista\nfor (Enemigo e : enemigos()) {\n  if (e.blindado()) {\n    apuntar(e);\n  }\n}\ndisparar();"
             }
+          ],
+          "seeAlso": [
+            "SYNTAX_FOR",
+            "SYNTAX_LISTS"
           ]
         },
         {
@@ -211,6 +325,10 @@
             {
               "code": "Enemigo e = enemigoMasCercano();\napuntar(e);  // falla si no hay nadie"
             }
+          ],
+          "seeAlso": [
+            "CALL_NEAREST_ENEMY",
+            "RECIPE_CLOSEST_TO_CORE"
           ]
         },
         {
@@ -227,6 +345,11 @@
                 }
               ]
             }
+          ],
+          "seeAlso": [
+            "ENEMY_ARMORED",
+            "ENEMY_MUTANT",
+            "RECIPE_ARMOR"
           ]
         },
         {
@@ -251,6 +374,10 @@
                 }
               ]
             }
+          ],
+          "seeAlso": [
+            "TOOLS_OUTPUT",
+            "TOOLS_DEBUGGER"
           ]
         },
         {
@@ -267,6 +394,10 @@
                 }
               ]
             }
+          ],
+          "seeAlso": [
+            "ENEMY_MUTANT",
+            "RECIPE_MUTANT"
           ]
         },
         {
@@ -278,6 +409,9 @@
             {
               "code": "// una vuelta para celebrar\nsaludar();\ndisparar();"
             }
+          ],
+          "seeAlso": [
+            "TOOLS_ACHIEVEMENTS"
           ]
         }
       ]
@@ -334,6 +468,10 @@
                 }
               ]
             }
+          ],
+          "seeAlso": [
+            "ENEMY_ARMORED",
+            "RECIPE_ARMOR"
           ]
         },
         {
@@ -350,6 +488,10 @@
                 }
               ]
             }
+          ],
+          "seeAlso": [
+            "ENEMY_MUTANT",
+            "RECIPE_MUTANT"
           ]
         },
         {
@@ -361,6 +503,9 @@
             {
               "code": "Enemigo e = objetivo();\nEnemigo cerca = enemigoMasCercano();\nif (e == null) e = cerca;\nif (cerca != null) {\n  // muy cerca del nucleo: prioridad\n  if (cerca.distanciaAlNucleo() < 300) e = cerca;\n}\nif (e != null) apuntar(e);"
             }
+          ],
+          "seeAlso": [
+            "RECIPE_CLOSEST_TO_CORE"
           ]
         }
       ]
@@ -394,6 +539,10 @@
             {
               "code": "if (municion() == 0) recargar();\nelse if (hayEnemigos()) disparar();"
             }
+          ],
+          "seeAlso": [
+            "SYNTAX_LOGIC_OPS",
+            "WORDS_READ_ALOUD"
           ]
         },
         {
@@ -411,6 +560,10 @@
             {
               "code": "int n = municion();  // n vale las balas\nn = n * 2 + 1;        // el doble mas uno\nn++;                  // suma 1\nn += 10;              // suma 10\nn = n % 7;            // el resto de dividir"
             }
+          ],
+          "seeAlso": [
+            "SYNTAX_IF_ELSE",
+            "TOOLS_DEBUGGER"
           ]
         },
         {
@@ -428,6 +581,10 @@
             {
               "code": "Enemigo e = enemigoMasCercano();\nif (e != null && e.vida() > 10) {\n  apuntar(e);\n}"
             }
+          ],
+          "seeAlso": [
+            "SYNTAX_IF_ELSE",
+            "RECIPE_ARMOR"
           ]
         },
         {
@@ -445,6 +602,10 @@
             {
               "code": "while (hayEnemigos()) {\n  disparar();  // acaba sin balas\n}"
             }
+          ],
+          "seeAlso": [
+            "FAULT_INFINITE_LOOP",
+            "SYNTAX_FOR"
           ]
         },
         {
@@ -462,6 +623,11 @@
             {
               "code": "// mal: i nunca llega a 3, porque no se suma\nfor (int i = 0; i < 3; ) {\n  municion();\n}"
             }
+          ],
+          "seeAlso": [
+            "SYNTAX_LISTS",
+            "SYNTAX_WHILE",
+            "FAULT_INDEX_OUT_OF_BOUNDS"
           ]
         },
         {
@@ -483,6 +649,10 @@
                 }
               ]
             }
+          ],
+          "seeAlso": [
+            "CALL_ENEMIES",
+            "FAULT_INDEX_OUT_OF_BOUNDS"
           ]
         },
         {
@@ -498,6 +668,10 @@
             {
               "code": "// en cada torreta: una linea la usa\nif (municion() == 0) {\n  recargar();\n} else {\n  rafaga();\n}"
             }
+          ],
+          "seeAlso": [
+            "SYNTAX_RETURN",
+            "FAULT_STACK_OVERFLOW"
           ]
         },
         {
@@ -519,6 +693,10 @@
             {
               "code": "Enemigo e = masPeligroso();\nif (e != null && peligroso(e)) {\n  apuntar(e);\n  disparar();\n}"
             }
+          ],
+          "seeAlso": [
+            "SYNTAX_METHODS",
+            "TOOLS_DEBUGGER"
           ]
         }
       ]
@@ -527,7 +705,11 @@
       "id": "FAULTS",
       "pages": [
         {
-          "id": "FAULTS_INTRO"
+          "id": "FAULTS_INTRO",
+          "seeAlso": [
+            "TOOLS_OUTPUT",
+            "TOOLS_DEBUGGER"
+          ]
         },
         {
           "id": "FAULT_NO_AMMO",
@@ -589,6 +771,10 @@
                 }
               ]
             }
+          ],
+          "seeAlso": [
+            "CALL_NEAREST_ENEMY",
+            "TOOLS_DEBUGGER"
           ]
         },
         {
@@ -613,6 +799,10 @@
                 }
               ]
             }
+          ],
+          "seeAlso": [
+            "SYNTAX_WHILE",
+            "TOOLS_DEBUGGER"
           ]
         },
         {
@@ -661,6 +851,9 @@
                 }
               ]
             }
+          ],
+          "seeAlso": [
+            "SYNTAX_LISTS"
           ]
         },
         {
@@ -682,6 +875,10 @@
               "code": "// bien: n es cada vez mas pequeno\n// y en 0 se para\nvoid rafagaDe(int n) {\n  if (n <= 0) {\n    return;\n  }\n  disparar();\n  rafagaDe(n - 1);\n}",
               "library": true
             }
+          ],
+          "seeAlso": [
+            "SYNTAX_METHODS",
+            "SYNTAX_RETURN"
           ]
         }
       ]
@@ -746,6 +943,10 @@
                 }
               ]
             }
+          ],
+          "seeAlso": [
+            "CALL_ARMORED",
+            "RECIPE_ARMOR"
           ]
         },
         {
@@ -812,6 +1013,11 @@
                 }
               ]
             }
+          ],
+          "seeAlso": [
+            "CALL_MUTANT",
+            "RECIPE_MUTANT",
+            "SYNTAX_METHODS"
           ]
         },
         {
@@ -831,6 +1037,10 @@
                 }
               ]
             }
+          ],
+          "seeAlso": [
+            "RECIPE_FOCUS",
+            "TOOLS_TRIAL"
           ]
         }
       ]
@@ -920,6 +1130,10 @@
             {
               "code": "if (municion() == 0) recargar();\nEnemigo e = objetivo();\nif (e == null) e = enemigoMasCercano();\nif (e != null) {\n  apuntar(e);\n  if (e.blindado()) usarMunicion(PERFORANTE);\n  else usarMunicion(NORMAL);\n  while (municion() > 0 && calor() < 80) {\n    disparar();\n  }\n}"
             }
+          ],
+          "seeAlso": [
+            "TOOLS_TRIAL",
+            "TOOLS_DEBUGGER"
           ]
         },
         {
@@ -956,6 +1170,10 @@
             {
               "code": "if (municion() == 0) {\n  recargar();\n}\nEnemigo e = enemigoMasCercano();\nif (e != null) {\n  elegirMunicion(e);\n  apuntar(e);\n  disparar();\n}"
             }
+          ],
+          "seeAlso": [
+            "ENEMY_MUTANT",
+            "SYNTAX_METHODS"
           ]
         }
       ]

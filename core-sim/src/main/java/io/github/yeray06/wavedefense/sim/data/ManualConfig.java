@@ -28,13 +28,19 @@ public record ManualConfig(List<String> notFromPlan, List<Chapter> chapters) {
    *     for a general page. It also locks the page until the player has it.
    * @param needs anything else the page uses (a recipe with {@code while} and {@code
    *     usarMunicion()})
+   * @param seeAlso ids of related pages, shown as links at its end (phase 9b)
    */
-  public record Page(String id, Topic about, List<Topic> needs, List<Example> examples) {
+  public record Page(
+      String id, Topic about, List<Topic> needs, List<Example> examples, List<String> seeAlso) {
     public Page {
       Check.present("page id", id);
       about = about == null ? Topic.NONE : about;
       needs = needs == null ? List.of() : List.copyOf(needs);
       examples = examples == null ? List.of() : List.copyOf(examples);
+      seeAlso = seeAlso == null ? List.of() : List.copyOf(seeAlso);
+      if (seeAlso.contains(id)) {
+        throw new IllegalArgumentException(id + " links to itself");
+      }
       for (Topic need : needs) {
         if (need.fault() != null || need.equals(Topic.NONE)) {
           throw new IllegalArgumentException(id + ": needs lists calls, pieces or enemies only");
@@ -95,6 +101,15 @@ public record ManualConfig(List<String> notFromPlan, List<Chapter> chapters) {
       for (Page page : chapter.pages()) {
         if (!ids.add(page.id())) {
           throw new IllegalArgumentException("id used twice: " + page.id());
+        }
+      }
+    }
+    for (Chapter chapter : chapters) {
+      for (Page page : chapter.pages()) {
+        for (String link : page.seeAlso()) {
+          if (!ids.contains(link) || chapters.stream().anyMatch(c -> c.id().equals(link))) {
+            throw new IllegalArgumentException(page.id() + " links to no page: " + link);
+          }
         }
       }
     }
