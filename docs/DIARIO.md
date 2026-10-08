@@ -282,3 +282,10 @@ instalar Java ni Gradle, y dejar escrito cómo llevarlo a Steam.
 | ¿Funciona de verdad el Java recortado (solo 4 módulos)? | Probado aquí: el zip de Linux, en una carpeta limpia, arranca, guarda la partida, escribe el log y juega una oleada. |
 | `jugar.bat` hace `git pull`, que puede cambiar el propio `jugar.bat` mientras se ejecuta; Windows lee los `.bat` a trozos y ejecutaría comandos a medias. | El lanzador se copia a la carpeta temporal y sigue desde la copia. |
 | No puedo abrir los de Windows ni macOS. | Se generan y su contenido es el esperado (`.exe`, `.app` con `Info.plist`); probarlos queda en «Pendiente de probar en local». |
+
+## Versiones en Releases · 7 de octubre
+
+| Problema | Solución |
+|---|---|
+| Yeray no encontraba el zip: está dentro de *Actions* → la ejecución → *Summary* → *Artifacts*, y además viene un zip dentro de otro y caduca a los 14 días. | Con una etiqueta `v*`, el workflow `Package` publica una **Release**: sale en la portada, con los cuatro zips, nombres claros (`JavaWaveDefense-Windows.zip`) e instrucciones para jugar. No caduca. |
+| GitHub avisaba de que `upload-artifact@v5` usa Node 20, que está obsoleto. | Subido a `upload-artifact@v6` (Node 24). |

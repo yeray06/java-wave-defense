@@ -6,6 +6,13 @@ Arquitectura: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Estado:
 [`docs/PROGRESS.md`](docs/PROGRESS.md). Historia del proyecto, con capturas:
 [`docs/DIARIO.md`](docs/DIARIO.md). Balance: [`docs/BALANCE.md`](docs/BALANCE.md).
 
+## Jugar sin instalar nada
+
+En la portada del repositorio, a la derecha, **Releases** → la última versión
+→ en *Assets*, el zip de tu sistema (`JavaWaveDefense-Windows.zip`…).
+Descomprimir y abrir el juego; cada zip lleva su propio Java. Las instrucciones
+completas salen en la propia versión.
+
 ## Requisitos
 
 - JDK 21 (Temurin recomendado). La versión está en [`.java-version`](.java-version);
@@ -54,8 +61,12 @@ Los zips quedan en `build/dist/`. Para jugar: descomprimir y abrir
 Abrir).
 
 Sin compilar nada: en GitHub, *Actions* → *Package* → *Run workflow*. Al acabar,
-los zips están en *Artifacts* de esa ejecución (14 días). También se lanza
-solo al subir una etiqueta `v*`.
+los zips están en *Artifacts* de esa ejecución (14 días).
+
+**Publicar una versión**: subir una etiqueta `v*` (por ejemplo
+`git tag v0.2.0 && git push origin v0.2.0`). El mismo workflow empaqueta con esa
+versión (`-PgameVersion=0.2.0`) y crea una **Release** con los cuatro zips y las
+instrucciones de `.github/release-notes.md`; las Releases no caducan.
 
 El Java que va dentro es Temurin, descargado de sus *releases* de GitHub; su
 versión exacta está en `lwjgl3/build.gradle.kts` (`runtimeRelease`) y tiene

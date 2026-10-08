@@ -54,10 +54,13 @@ fun temurin(file: String) =
     "jdk-${runtimeRelease.replace("+", "%2B")}/" +
     "OpenJDK${javaVersion}U-jdk_${file}_hotspot_${runtimeRelease.replace('+', '_')}"
 
+// The release tag gives it (Package workflow: v0.2.0 → 0.2.0); by hand, a development one.
+val gameVersion = providers.gradleProperty("gameVersion").getOrElse("0.0.0-dev")
+
 construo {
   name = "java-wave-defense"
   humanName = "Java Wave Defense"
-  version = "0.1.0"
+  version = gameVersion
   mainClass = launcher
   jarTask = distJar.name
   outputDir = rootProject.layout.buildDirectory.dir("dist")

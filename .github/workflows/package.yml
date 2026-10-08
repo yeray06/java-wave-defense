@@ -1,8 +1,9 @@
 name: Package
 
 # Builds the game with its own Java runtime for Windows, Linux and macOS (Construo, from Linux).
-# Only by hand (Actions > Package > Run workflow) or with a version tag: never on every commit,
-# Actions minutes are limited.
+# By hand (Actions > Package > Run workflow): the zips stay as artifacts for 14 days.
+# With a version tag (v0.1.0…): also a GitHub Release with the zips, on the repo's front page.
+# Never on every commit: Actions minutes are limited.
 on:
   workflow_dispatch:
   push:
@@ -16,6 +17,8 @@ jobs:
     name: Package
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: write # only used by the release step, on tags
     steps:
       - uses: actions/checkout@v5
 
@@ -28,34 +31,63 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v5
 
+      - name: Version from the tag
+        id: version
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "game=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "game=0.0.0-dev" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Test before packaging
         run: ./gradlew build --stacktrace
 
       - name: Package every target
         run: >-
-          ./gradlew --stacktrace
+          ./gradlew --stacktrace -PgameVersion=${{ steps.version.outputs.game }}
           :lwjgl3:packageWinX64 :lwjgl3:packageLinuxX64
           :lwjgl3:packageMacM1 :lwjgl3:packageMacX64
 
+      - name: Name the zips for players
+        shell: bash
+        run: |
+          cd build/dist
+          mv java-wave-defense-winX64.zip JavaWaveDefense-Windows.zip
+          mv java-wave-defense-linuxX64.zip JavaWaveDefense-Linux.zip
+          mv java-wave-defense-macM1.zip JavaWaveDefense-Mac-AppleSilicon.zip
+          mv java-wave-defense-macX64.zip JavaWaveDefense-Mac-Intel.zip
+
       - name: Upload Windows
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
-          name: java-wave-defense-windows
-          path: build/dist/java-wave-defense-winX64.zip
+          name: JavaWaveDefense-Windows
+          path: build/dist/JavaWaveDefense-Windows.zip
           retention-days: 14
 
       - name: Upload Linux
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
-          name: java-wave-defense-linux
-          path: build/dist/java-wave-defense-linuxX64.zip
+          name: JavaWaveDefense-Linux
+          path: build/dist/JavaWaveDefense-Linux.zip
           retention-days: 14
 
       - name: Upload macOS
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
-          name: java-wave-defense-macos
-          path: |
-            build/dist/java-wave-defense-macM1.zip
-            build/dist/java-wave-defense-macX64.zip
+          name: JavaWaveDefense-Mac
+          path: build/dist/JavaWaveDefense-Mac-*.zip
           retention-days: 14
+
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: >-
+          gh release create "$GITHUB_REF_NAME"
+          --title "Java Wave Defense $GITHUB_REF_NAME"
+          --notes-file .github/release-notes.md
+          --generate-notes
+          build/dist/*.zip

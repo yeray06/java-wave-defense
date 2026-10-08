@@ -512,6 +512,11 @@ deciden con ese dato, no antes.
 
 ## Pendiente de probar en local
 
+Releases:
+
+- [ ] Tras subir la etiqueta `v0.1.0`: la portada muestra la Release con los
+  cuatro zips y las instrucciones; el de Windows se descarga y se juega.
+
 Fase 7 (Windows, sin usar Gradle):
 
 - [ ] Doble clic en `jugar.bat` (en la carpeta del repo): baja lo último y
