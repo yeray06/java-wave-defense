@@ -1,9 +1,10 @@
 {
-  "notFromPlan": ["limits.maxStepsPerCycle", "limits.maxNestingDepth"],
+  "notFromPlan": ["limits.maxStepsPerCycle", "limits.maxNestingDepth", "limits.maxCallDepth"],
   "limits": {
     "maxLoopIterations": 1000,
     "maxStepsPerCycle": 100000,
-    "maxNestingDepth": 64
+    "maxNestingDepth": 64,
+    "maxCallDepth": 64
   },
   "types": {
     "enemy": "Enemigo",
@@ -20,9 +21,13 @@
     { "id": "ENEMIES", "name": "enemigos", "unlock": { "feature": "FOR" } },
     { "id": "AIM", "name": "apuntar", "unlock": { "feature": "VARIABLES" } },
     { "id": "USE_AMMO", "name": "usarMunicion", "unlock": { "wave": 6 } },
+    { "id": "PRINT", "name": "imprimir", "unlock": {} },
+    { "id": "GREET", "name": "saludar", "unlock": {} },
+    { "id": "WAVE", "name": "oleada", "unlock": { "feature": "VARIABLES" } },
     { "id": "HEALTH", "name": "vida", "unlock": { "feature": "VARIABLES" } },
     { "id": "SPEED", "name": "velocidad", "unlock": { "feature": "VARIABLES" } },
     { "id": "ARMORED", "name": "blindado", "unlock": { "feature": "VARIABLES" } },
+    { "id": "MUTANT", "name": "mutante", "unlock": { "feature": "VARIABLES" } },
     { "id": "DISTANCE_TO_CORE", "name": "distanciaAlNucleo", "unlock": { "feature": "VARIABLES" } }
   ],
   "ammo": [

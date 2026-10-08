@@ -39,6 +39,21 @@ public interface TurretApi {
 
   void aim(long enemy);
 
+  /**
+   * {@code imprimir(x)}: one line for the output window.
+   *
+   * @param value see {@link PrintKind}
+   * @param line where it was printed
+   * @param inLibrary whether {@code line} is a line of the library
+   */
+  void print(PrintKind kind, long value, int line, boolean inLibrary);
+
+  /** {@code saludar()}: the turret spins round, just for fun. */
+  void greet();
+
+  /** The number of the wave being played. */
+  int wave();
+
   void useAmmo(AmmoType type);
 
   /** Whether the handle still refers to a living enemy. Never called with {@code NONE}. */
@@ -49,6 +64,8 @@ public interface TurretApi {
   int speed(long enemy);
 
   boolean armored(long enemy);
+
+  boolean mutant(long enemy);
 
   int distanceToCore(long enemy);
 }

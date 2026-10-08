@@ -1,5 +1,6 @@
 package io.github.yeray06.wavedefense.sim.data;
 
+import io.github.yeray06.wavedefense.script.api.AmmoType;
 import java.util.List;
 
 /** {@code data/waves.json}: who comes in each wave, in spawn order. */
@@ -14,12 +15,24 @@ public record WaveTable(List<String> notFromPlan, double spawnWindowSeconds, Lis
 
   /**
    * @param challenge the code challenge for the wave's third star (D-57)
+   * @param mutantWeakness the ammo the wave's Mutants are weak to; {@code null} in a wave without
+   *     them
    */
-  public record WaveSpec(int wave, List<Group> groups, Challenge challenge) {
+  public record WaveSpec(
+      int wave, List<Group> groups, Challenge challenge, AmmoType mutantWeakness) {
     public WaveSpec {
       Check.positive("wave", wave);
       groups = List.copyOf(Check.notEmpty("groups", groups));
       Check.present("challenge of wave " + wave, challenge);
+      boolean mutants = groups.stream().anyMatch(g -> g.type() == EnemyKind.MUTANT);
+      if (mutants != (mutantWeakness != null)) {
+        throw new IllegalArgumentException(
+            "wave "
+                + wave
+                + (mutants
+                    ? " has Mutants: it needs mutantWeakness"
+                    : ": mutantWeakness is only for waves with Mutants"));
+      }
     }
 
     /** Enemies the plan's formula counts: everyone but the boss. */

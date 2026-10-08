@@ -20,6 +20,8 @@ public record ShopConfig(
    * @param price in stars (D-57)
    * @param arrivesAroundWave first wave of the plan's "Llega hacia la oleada" range
    * @param inMvp whether the MVP sells it (the others are shown, locked)
+   * @param exampleInLibrary whether the example goes in the library (methods) rather than in a
+   *     turret's script
    * @param example the purchase card's example (plan: five lines that work as they are); {@code
    *     null} for pieces the MVP does not sell
    */
@@ -29,6 +31,7 @@ public record ShopConfig(
       Feature requires,
       int arrivesAroundWave,
       boolean inMvp,
+      boolean exampleInLibrary,
       String example) {
     public SyntaxItem {
       Check.present("feature", feature);

@@ -5,8 +5,15 @@ import java.util.List;
 import java.util.Map;
 
 /** {@code data/enemies.json}. */
+/**
+ * @param armorDamageReduction share of a normal bullet's damage that armor stops
+ * @param mutantDamageReduction share of damage a Mutant takes off with the ammo it is not weak to
+ */
 public record EnemyCatalog(
-    List<String> notFromPlan, double armorDamageReduction, Map<EnemyKind, EnemyType> types) {
+    List<String> notFromPlan,
+    double armorDamageReduction,
+    double mutantDamageReduction,
+    Map<EnemyKind, EnemyType> types) {
 
   /**
    * One enemy type. Abilities a type does not have are written as 0 / false, never left out.
@@ -19,11 +26,13 @@ public record EnemyCatalog(
    * @param spawnGapFactor the spawn gap after an enemy (or group) of this type, relative to the
    *     even split of the spawn window; 1 everywhere spreads every wave evenly
    * @param armorToggleSeconds the boss alternates armor this often (0 = never)
+   * @param mutant weak to one ammo, which each wave chooses ({@code waves.json})
    */
   public record EnemyType(
       int speed,
       double healthMultiplier,
       boolean armored,
+      boolean mutant,
       double regenDelaySeconds,
       double regenFractionPerSecond,
       int groupSize,
@@ -58,6 +67,7 @@ public record EnemyCatalog(
   public EnemyCatalog {
     notFromPlan = List.copyOf(Check.present("notFromPlan", notFromPlan));
     Check.fraction("armorDamageReduction", armorDamageReduction);
+    Check.fraction("mutantDamageReduction", mutantDamageReduction);
     Check.present("types", types);
     for (EnemyKind kind : EnemyKind.values()) {
       Check.present("types." + kind, types.get(kind));

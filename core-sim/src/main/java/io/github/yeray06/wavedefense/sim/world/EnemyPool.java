@@ -43,7 +43,7 @@ public final class EnemyPool {
   }
 
   /** The living enemy a script handle refers to, or {@code null}. */
-  Enemy resolve(long handle) {
+  public Enemy resolve(long handle) {
     int slot = (int) (handle & 0xFFFF_FFFFL) - 1;
     if (slot < 0 || slot >= enemies.length) {
       return null;

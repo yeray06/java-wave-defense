@@ -47,6 +47,8 @@ class ScriptApiLoaderTest {
           ApiFunction.HEALTH,
           ApiFunction.SPEED,
           ApiFunction.ARMORED,
+          ApiFunction.MUTANT,
+          ApiFunction.WAVE,
           ApiFunction.DISTANCE_TO_CORE
         }) {
       assertEquals(new Requirement.NeedsFeature(Feature.VARIABLES), data.api().requirement(f));

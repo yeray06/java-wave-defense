@@ -49,6 +49,8 @@ public final class ManualFacts {
     put("velocidadMax", Collections.max(balance.speeds()));
     put("camino", Math.round(new PathTrack(data.map().path()).length()));
     put("blindaje", data.enemies().armorDamageReduction() * 100);
+    put("mutante", data.enemies().mutantDamageReduction() * 100);
+    put("profundidad", data.scriptApi().limits().maxCallDepth());
     if (data.scriptApi().api().requirement(ApiFunction.USE_AMMO)
         instanceof Requirement.NeedsWave wave) {
       put("oleadaMunicion", wave.wave());

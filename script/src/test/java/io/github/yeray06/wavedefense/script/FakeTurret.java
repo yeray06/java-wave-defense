@@ -3,6 +3,7 @@ package io.github.yeray06.wavedefense.script;
 import io.github.yeray06.wavedefense.script.api.AmmoType;
 import io.github.yeray06.wavedefense.script.api.EnemyHandle;
 import io.github.yeray06.wavedefense.script.api.FireResult;
+import io.github.yeray06.wavedefense.script.api.PrintKind;
 import io.github.yeray06.wavedefense.script.api.TurretApi;
 
 /**
@@ -16,6 +17,7 @@ final class FakeTurret implements TurretApi {
 
   int ammo = 12;
   int heat;
+  int heatPerShot = HEAT_PER_SHOT;
   long nearest = EnemyHandle.NONE;
   long target = EnemyHandle.NONE;
   AmmoType ammoType = AmmoType.NORMAL;
@@ -26,11 +28,19 @@ final class FakeTurret implements TurretApi {
   int reloadCalls;
   int hasEnemiesCalls;
   long lastAimed = EnemyHandle.NONE;
+  int wave = 1;
+  int greetings;
+  int prints;
+  PrintKind lastPrintKind;
+  long lastPrintValue;
+  int lastPrintLine;
+  boolean lastPrintInLibrary;
 
   final boolean[] alive = new boolean[MAX_ENEMIES + 1];
   final int[] health = new int[MAX_ENEMIES + 1];
   final int[] speed = new int[MAX_ENEMIES + 1];
   final boolean[] armored = new boolean[MAX_ENEMIES + 1];
+  final boolean[] mutant = new boolean[MAX_ENEMIES + 1];
   final int[] distance = new int[MAX_ENEMIES + 1];
 
   /** Adds a living enemy and returns its handle. */
@@ -58,7 +68,7 @@ final class FakeTurret implements TurretApi {
       return FireResult.OVERHEATED;
     }
     ammo--;
-    heat = Math.min(MAX_HEAT, heat + HEAT_PER_SHOT);
+    heat = Math.min(MAX_HEAT, heat + heatPerShot);
     shotsFired++;
     return FireResult.FIRED;
   }
@@ -136,6 +146,25 @@ final class FakeTurret implements TurretApi {
   }
 
   @Override
+  public void print(PrintKind kind, long value, int line, boolean inLibrary) {
+    prints++;
+    lastPrintKind = kind;
+    lastPrintValue = value;
+    lastPrintLine = line;
+    lastPrintInLibrary = inLibrary;
+  }
+
+  @Override
+  public void greet() {
+    greetings++;
+  }
+
+  @Override
+  public int wave() {
+    return wave;
+  }
+
+  @Override
   public boolean exists(long enemy) {
     return enemy > 0 && enemy <= MAX_ENEMIES && alive[(int) enemy];
   }
@@ -153,6 +182,11 @@ final class FakeTurret implements TurretApi {
   @Override
   public boolean armored(long enemy) {
     return armored[(int) enemy];
+  }
+
+  @Override
+  public boolean mutant(long enemy) {
+    return mutant[(int) enemy];
   }
 
   @Override

@@ -35,9 +35,20 @@ class BattleTest {
             d.waves().spawnWindowSeconds(),
             List.of(
                 new WaveTable.WaveSpec(
-                    1, List.of(groups), new Challenge(Challenge.Type.NO_FAULTS, 0))));
+                    1,
+                    List.of(groups),
+                    new Challenge(Challenge.Type.NO_FAULTS, 0),
+                    BattleTestData.weaknessFor(List.of(groups)))));
     return new GameData(
-        d.balance(), d.turret(), d.enemies(), waves, d.shop(), d.map(), d.scriptApi(), d.manual());
+        d.balance(),
+        d.turret(),
+        d.enemies(),
+        waves,
+        d.shop(),
+        d.map(),
+        d.scriptApi(),
+        d.manual(),
+        d.career());
   }
 
   private static Battle battle(GameData data, int wave, String... scripts) {
@@ -200,6 +211,39 @@ class BattleTest {
   }
 
   @Test
+  void theMutantTakesEightyPercentLessFromTheAmmoItIsNotWeakTo() {
+    // Test waves make Mutants weak to piercing ammo.
+    GameData mutantOnly = waveOneOf(new WaveTable.Group(EnemyKind.MUTANT, 1));
+    WaveReport normal = battle(mutantOnly, 1, IF_SCRIPT).runToEnd();
+    WaveReport weakSpot =
+        battle(
+                mutantOnly,
+                1,
+                """
+                Enemigo e = enemigoMasCercano();
+                if (e != null && e.mutante()) usarMunicion(PERFORANTE);
+                if (municion() == 0) recargar(); else if (hayEnemigos()) disparar();""")
+            .runToEnd();
+    assertEquals(1, weakSpot.kills());
+    double health = 10 * data().enemies().type(EnemyKind.MUTANT).healthMultiplier();
+    WaveReport.TurretReport w = weakSpot.turrets().get(0);
+    WaveReport.TurretReport n = normal.turrets().get(0);
+    assertEquals((int) Math.ceil(health / 5), w.shots() - w.airShots());
+    assertEquals((int) Math.ceil(health / 1), n.shots() - n.airShots() - n.wastedOnDead());
+  }
+
+  @Test
+  void mutantsAreWeakToWhatEachWaveSays() {
+    GameData data = data();
+    for (int wave = 1; wave <= data.waves().waves().size(); wave++) {
+      boolean mutants =
+          data.waves().wave(wave).groups().stream().anyMatch(g -> g.type() == EnemyKind.MUTANT);
+      assertEquals(mutants, data.waves().wave(wave).mutantWeakness() != null, "wave " + wave);
+    }
+    assertEquals(14, data.waves().firstWave(EnemyKind.MUTANT));
+  }
+
+  @Test
   void regeneratorHealsAfterOneSecondWithoutDamage() {
     GameData regenOnly = waveOneOf(new WaveTable.Group(EnemyKind.REGENERATOR, 1));
     // Fires exactly once, when the enemy first comes into range.
@@ -302,7 +346,15 @@ class BattleTest {
             mode,
             t.initialScript());
     return new GameData(
-        d.balance(), turret, d.enemies(), d.waves(), d.shop(), d.map(), d.scriptApi(), d.manual());
+        d.balance(),
+        turret,
+        d.enemies(),
+        d.waves(),
+        d.shop(),
+        d.map(),
+        d.scriptApi(),
+        d.manual(),
+        d.career());
   }
 
   @Test

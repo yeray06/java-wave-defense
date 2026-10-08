@@ -2,6 +2,7 @@ package io.github.yeray06.wavedefense.game.i18n;
 
 import io.github.yeray06.wavedefense.script.api.Feature;
 import io.github.yeray06.wavedefense.script.diag.CompileError;
+import io.github.yeray06.wavedefense.script.diag.ErrorCode;
 import io.github.yeray06.wavedefense.script.diag.FaultType;
 import io.github.yeray06.wavedefense.sim.data.Challenge;
 import io.github.yeray06.wavedefense.sim.data.EnemyCatalog;
@@ -34,6 +35,16 @@ public final class ScriptTexts {
     return texts;
   }
 
+  /** The game's data: names of calls, enemies and pieces come from it. */
+  public GameData data() {
+    return data;
+  }
+
+  /** The interpreter's names for calls and constants. */
+  public io.github.yeray06.wavedefense.script.api.ScriptApi api() {
+    return data.scriptApi().api();
+  }
+
   public String feature(Feature feature) {
     return texts.get("script.feature." + feature.name());
   }
@@ -47,6 +58,13 @@ public final class ScriptTexts {
   }
 
   /** A compile error's message; features among its arguments are named in Spanish. */
+  private static final java.util.Set<ErrorCode> SUGGESTS =
+      java.util.EnumSet.of(
+          ErrorCode.UNKNOWN_SYMBOL,
+          ErrorCode.UNKNOWN_TYPE,
+          ErrorCode.UNKNOWN_METHOD,
+          ErrorCode.UNKNOWN_ENEMY_METHOD);
+
   public String error(CompileError error) {
     Object[] args = error.args().toArray();
     for (int i = 0; i < args.length; i++) {
@@ -56,7 +74,15 @@ public final class ScriptTexts {
         args[i] = texts.get("script.token.EOF");
       }
     }
-    return texts.format("script.error." + error.code().name(), args);
+    String key = "script.error." + error.code().name();
+    // «¿Quisiste decir…?»: the last argument of an unknown name is the closest known one, if any.
+    if (SUGGESTS.contains(error.code())
+        && args.length > 0
+        && args[args.length - 1] instanceof String suggestion
+        && !suggestion.isEmpty()) {
+      key += ".suggest";
+    }
+    return texts.format(key, args);
   }
 
   public String enemyName(EnemyKind kind) {
@@ -70,6 +96,7 @@ public final class ScriptTexts {
         switch (kind) {
           case REGENERATOR -> decimal(type.regenDelaySeconds());
           case ARMORED -> decimal(data.enemies().armorDamageReduction() * 100);
+          case MUTANT -> decimal(data.enemies().mutantDamageReduction() * 100);
           case SWARM -> type.groupSize();
           case BOSS -> decimal(type.armorToggleSeconds());
           case BASIC, RUNNER -> "";

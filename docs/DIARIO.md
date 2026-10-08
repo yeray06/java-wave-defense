@@ -319,3 +319,79 @@ posterior», por fases. Esta es la primera: for.
 | Las oleadas 11–13 se pasaban sin comprar for. | El Corredor pasa a tener la mitad de vida y viene en más cantidad. Aun así, for rinde 0,86 frente al plan, que pide 2: lo dejo apuntado para Yeray en vez de forzar los números. |
 | El mejor script con for ocupa 13 líneas. | Necesita la mejora de memoria; el simulador la compra cambiando un nivel de daño (la devolución de D-59 en acción). |
 | El índice del manual se desplazaba en horizontal por un título largo. | Título más corto: «IndexOutOfBoundsException · fuera de la lista». |
+
+## Fase 9 · 8 de octubre · métodos, el Mutante y las oleadas 14–16
+
+**Lo que pidió Yeray**: la siguiente pieza, «Reutilizar código (métodos)».
+Eligió cómo es el Mutante (débil a una munición que cambia cada oleada) y que
+un método pueda llamarse a sí mismo, con un límite, como en Java.
+
+- La **biblioteca**: una pestaña más del editor, compartida por todas las
+  torretas, donde se escriben los métodos. No gasta memoria (lo dice el plan).
+- Métodos con datos (`boolean peligroso(Enemigo e)`), `return`, recursión y
+  su fallo, `StackOverflowError`.
+- El **Mutante**: el parte de la oleada dice a qué munición es débil, y
+  cambia de una oleada a otra. Con la biblioteca se cambia una línea en vez
+  de cuatro scripts. `e.mutante()` lo reconoce.
+- Oleadas 14–16, guardado versión 3 y seis páginas nuevas en el manual.
+
+![Parte de la oleada 14: el Mutante es débil a PERFORANTE](capturas/fase9-01-parte-oleada-14-mutante.png)
+![La pestaña Biblioteca con tres métodos](capturas/fase9-02-editor-biblioteca.png)
+![Una torreta que usa la biblioteca: 7 líneas de memoria](capturas/fase9-03-torreta-llama-a-la-biblioteca.png)
+![Los Mutantes (cian) en el camino](capturas/fase9-04-mutantes-en-el-camino.png)
+![El manual de métodos; detrás, la oleada 15 ya es débil a NORMAL](capturas/fase9-05-manual-metodos-y-oleada-15-debil-a-normal.png)
+
+| Problema | Solución |
+|---|---|
+| Cada llamada necesita sus propias variables, y crear un objeto por llamada rompería la regla de no reservar memoria en el bucle del juego. | Las variables van en una pila de ranuras creada al compilar, con sitio para 64 llamadas a la vez; cada llamada usa la zona de encima de la de quien la hace. La prueba de memoria da 0 bytes, también con recursión. |
+| En `resta(9, cinco())`, la llamada a `cinco()` pisaba el 9, que ya estaba evaluado. | Los argumentos se guardan primero en ranuras de quien llama y solo después se copian al método. Hay una prueba para eso. |
+| javac exige que un método que devuelve algo llegue siempre a un `return`. | El comprobador sigue las reglas de javac: un `if` sin `else` puede acabar; un `while (true)` no. Sabe también que una rama que acaba en `return` no deja variables sin valor. |
+| Un fallo dentro de un método decía una línea que no estaba en el script de la torreta. | El fallo sabe si salió de la biblioteca: «StackOverflowError (biblioteca, línea 2)», también en el informe. |
+| Los ejemplos del manual y de la tienda se compilaban como scripts de torreta. | Un ejemplo puede ir marcado como de biblioteca; los de una página forman su biblioteca y los demás se compilan contra ella. |
+| Con cuatro torretas, la pestaña «Biblioteca» se salía del panel, y su aviso, más ancho que el panel, lo descuadraba. | Va en una segunda fila; el aviso se ajusta al ancho. |
+| Al añadir el Mutante a los scripts del simulador, ocupaban dos líneas más, no cabían en 12 y la partida se bloqueaba en la oleada 13. | El jugador de referencia reescribe en cada oleada la condición del perforante (mismas líneas). Con métodos, esa línea va en la biblioteca. |
+| El jugador de referencia nunca compra los métodos, ni a 4 estrellas: los muros de las oleadas 14–16 se le llevan todo en hardware, y en fuerza los métodos no le dan nada (0,19 frente a una torreta más). | Es un dato para Yeray, no lo he forzado: su ventaja es no tener que cambiar cuatro scripts, y eso el simulador no lo mide. Queda en «A observar en el playtest». |
+
+## Fase 9b · 8 de octubre · ideas de The Farmer Was Replaced
+
+**Lo que pidió Yeray**: investigar *The Farmer Was Replaced* y traer al
+juego lo que encaje: el manual, las varias pantallas de código como
+ventanas, la jugabilidad y el avance. Con el informe que me pasó hice una
+lista de 20 cambios y me dijo «haz todo y de la manera que creas mejor».
+
+- **Ver qué pasa dentro**: `imprimir(x)` (no gasta memoria) y la ventana
+  «Salida»; el **depurador** con puntos de parada, paso a paso y el valor de
+  cada variable; «¿Quisiste decir disparar()?» cuando un nombre está mal
+  escrito; y **autocompletado** en el editor.
+- **Ventanas**: el código de una torreta, una página del manual, la salida y
+  el depurador, varias a la vez, que se mueven, cambian de tamaño, se
+  pliegan y se cierran.
+- **Metas propias que no tocan las estrellas**: récords por oleada, una
+  racha con puntos, 16 logros con 8 sombreros, nombres de torreta (el
+  Taller) y «Probar» en el parte.
+- **Manual**: capítulo «Herramientas», historias, pistas que se destapan y
+  «Ver también».
+- **Partida experta** para quien ya programa. `saludar()` y `oleada()`.
+  Avisos al pasar el ratón por enemigos y torretas. Guardado versión 4.
+
+![El parte con «Probar»; las torretas con sombreros](capturas/fase9b-01-parte-con-probar-y-sombreros.png)
+![La prueba de la oleada 15: «la perderías»](capturas/fase9b-02-prueba-de-la-oleada.png)
+![Logros y racha](capturas/fase9b-03-logros-y-racha.png)
+![El Taller: nombres y sombreros](capturas/fase9b-04-taller-nombres-y-sombreros.png)
+![Autocompletado tras «o.»](capturas/fase9b-05-autocompletar.png)
+![El depurador parado en la línea 7, con el valor de o](capturas/fase9b-06-depurador-paso-a-paso.png)
+![La ventana de salida con lo que imprime Lola](capturas/fase9b-07-ventana-de-salida.png)
+![Una página del manual en ventana; al lado, la pista del Jefe](capturas/fase9b-08-manual-en-ventana-y-pista.png)
+
+| Problema | Solución |
+|---|---|
+| Grabar cada paso de un ciclo para el depurador no puede reservar memoria en el bucle del juego. | La grabación (`Tracer`) se crea al poner el primer punto de parada, con sitio para 4.096 pasos; luego solo copia ranuras en arrays. Sin puntos de parada no graba nada. `AllocationTest` da 0 bytes. |
+| Volver a ejecutar un paso para enseñarlo cambiaría la partida. | No se vuelve a ejecutar: el mundo no se mueve mientras corre el código de una torreta, así que la grabación ya es exactamente lo que pasó. Un test comprueba que depurar no cambia el resultado de la oleada. |
+| Si cerrabas la ventana del depurador, la oleada se quedaba en pausa para siempre. | Cerrarla es «he terminado»: la oleada sigue. |
+| Lo que imprimía una torreta en el último tick de una oleada se perdía, porque la oleada siguiente se crea en ese mismo tick. | La salida lee después de cada tick y, cuando cambia la batalla, acaba de leer la anterior. |
+| Al cerrar una ventana de código, la ventana se llamaba a sí misma para cerrarse sin fin (`StackOverflowError` en un test). | Cerrar es idempotente y cada ventana admite varios avisos de cierre. |
+| A 720 px, el parte de la oleada 15 y el panel de código con errores tapaban la barra de botones. | Los datos del parte y el panel de código se desplazan; los botones «Desplegar» y «Probar» se quedan siempre a la vista. |
+| Una partida cargada no tenía los logros que ya le tocaban («Políglota: 6 de 6» sin conseguir). | Al cargar se desbloquean los que ya se cumplen, y al arrancar se mandan todos a Steam. |
+| Los sombreros oscuros no se leían en los botones del Taller. | El nombre va en un tono más claro que el sombrero. |
+| «Mostrar pista» dejaba un hueco vacío del tamaño de la pista. | La pista ocupa el sitio del botón al pulsarlo. |
+| ¿`comprar()` y `estrellas()` desde el código, como en el juego investigado? | No: un bucle podría gastar todas las estrellas sin pensar y se saltaría la tienda, que es parte del diseño. Queda explicado en D-68. |

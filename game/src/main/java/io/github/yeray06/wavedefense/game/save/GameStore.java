@@ -3,6 +3,7 @@ package io.github.yeray06.wavedefense.game.save;
 import io.github.yeray06.wavedefense.game.settings.Settings;
 import io.github.yeray06.wavedefense.platform.AtomicFileStore;
 import io.github.yeray06.wavedefense.sim.data.GameData;
+import io.github.yeray06.wavedefense.sim.progress.Career;
 import io.github.yeray06.wavedefense.sim.progress.Progress;
 import io.github.yeray06.wavedefense.sim.progress.WaveLoop;
 import io.github.yeray06.wavedefense.sim.save.SaveCodec;
@@ -73,7 +74,15 @@ public final class GameStore {
   }
 
   public WaveLoop newGame() {
-    return new WaveLoop(data, Progress.newGame(data));
+    return newGame(false);
+  }
+
+  /** A new game; an expert one starts with all syntax (D-64). */
+  public WaveLoop newGame(boolean expert) {
+    return new WaveLoop(
+        data,
+        expert ? Progress.newExpertGame(data) : Progress.newGame(data),
+        Career.newGame(data, expert));
   }
 
   /**

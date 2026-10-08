@@ -22,7 +22,7 @@ class GameDataTest {
   @Test
   void loadsEveryShippedFile() {
     GameData data = TestData.load();
-    assertEquals(13, data.balance().lastWave());
+    assertEquals(16, data.balance().lastWave());
     assertEquals(20, data.turret().heatPerShot().get(AmmoType.NORMAL));
     assertEquals(40, data.turret().heatPerShot().get(AmmoType.PIERCING));
     assertEquals(0.8, data.enemies().armorDamageReduction());
@@ -83,7 +83,22 @@ class GameDataTest {
         "\"initialScript\": \"disparar();\"",
         "\"initialScript\": \"while (true) disparar();\"",
         "initialScript");
-    assertRejected(GameData.BALANCE, "\"lastWave\": 13", "\"lastWave\": 12", "lastWave");
+    assertRejected(GameData.BALANCE, "\"lastWave\": 16", "\"lastWave\": 15", "lastWave");
+    assertRejected(
+        GameData.WAVES,
+        "\"mutantWeakness\": \"NORMAL\"",
+        "\"mutantWeakness\": null",
+        "needs mutantWeakness");
+    assertRejected(
+        GameData.WAVES,
+        "\"NO_AIR_SHOTS\", \"limit\": 0 }, \"mutantWeakness\": null",
+        "\"NO_AIR_SHOTS\", \"limit\": 0 }, \"mutantWeakness\": \"NORMAL\"",
+        "only for waves with Mutants");
+    assertRejected(
+        GameData.SHOP,
+        "\"exampleInLibrary\": true",
+        "\"exampleInLibrary\": false",
+        "example does not compile");
     assertRejected(GameData.BALANCE, "\"startingTurrets\": 1", "\"startingTurrets\": 5", "slots");
     assertRejected(GameData.BALANCE, "\"speeds\": [1, 2, 3]", "\"speeds\": [2, 3]", "start at 1");
     assertRejected(GameData.BALANCE, "\"speeds\": [1, 2, 3]", "\"speeds\": [1, 3, 2]", "grow");
@@ -97,7 +112,7 @@ class GameDataTest {
     assertRejected(
         GameData.SHOP,
         "\"untilFeature\": \"WHILE\"",
-        "\"untilFeature\": \"METHODS\"",
+        "\"untilFeature\": \"TRY_CATCH\"",
         "outside the MVP");
     assertRejected(
         GameData.MAP, "{ \"x\": 1000, \"y\": 560 },", "{ \"x\": 0, \"y\": 560 },", "zero-length");

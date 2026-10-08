@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.actions.Actions;
+import com.badlogic.gdx.scenes.scene2d.ui.Container;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
@@ -18,9 +19,11 @@ import io.github.yeray06.wavedefense.game.i18n.ManualFacts;
 import io.github.yeray06.wavedefense.game.i18n.ScriptTexts;
 import io.github.yeray06.wavedefense.game.i18n.Texts;
 import io.github.yeray06.wavedefense.game.ui.UiSkin;
+import io.github.yeray06.wavedefense.game.ui.Windows;
 import io.github.yeray06.wavedefense.script.CompileResult;
 import io.github.yeray06.wavedefense.script.api.Requirement;
 import io.github.yeray06.wavedefense.script.api.Unlocks;
+import io.github.yeray06.wavedefense.script.check.Library;
 import io.github.yeray06.wavedefense.sim.data.GameData;
 import io.github.yeray06.wavedefense.sim.data.ManualConfig;
 import io.github.yeray06.wavedefense.sim.progress.Progress;
@@ -34,6 +37,10 @@ import java.util.Set;
  * copy into the editor. Pages the player does not have yet are shown with a lock and what brings
  * them, like the shop and the map. Structure and code from {@code data/manual.json}, texts from
  * {@code manual.*}, numbers from the data ({@link ManualFacts}).
+ *
+ * <p>Phase 9b: a page may open with a short story ({@code .story}), hide a hint behind «Mostrar
+ * pista» ({@code .hint}) and end with links to related pages; «Abrir en ventana» keeps a page in
+ * view in a floating window (D-67).
  */
 public final class ManualPanel extends Table {
   private static final float WIDTH = 470;
@@ -54,6 +61,7 @@ public final class ManualPanel extends Table {
   private int current = -1;
 
   private Unlocks shownUnlocks;
+  private Windows windows;
 
   /**
    * @param clipboard where «Copiar» puts an example, for the editor's Ctrl+V
@@ -70,6 +78,32 @@ public final class ManualPanel extends Table {
     this.white = new TextureRegion(skin.get("white", Texture.class));
     this.clipboard = clipboard;
     showIndex();
+  }
+
+  /** Where «Abrir en ventana» puts pages; without it there is no such button. */
+  public void setWindows(Windows windows) {
+    this.windows = windows;
+  }
+
+  /** Opens a page in its own floating window, which stays on that page. */
+  public void popOut(String id) {
+    if (windows == null) {
+      return;
+    }
+    ManualConfig.Page page =
+        pages.stream().filter(p -> p.id().equals(id)).findFirst().orElseThrow();
+    windows.open(
+        "manual-" + id,
+        title(page),
+        () -> {
+          ManualPanel copy = new ManualPanel(data, progress, names, skin, clipboard);
+          ScrollPane pane = new ScrollPane(copy, skin);
+          pane.setFadeScrollBars(false);
+          copy.showPage(id);
+          return pane;
+        },
+        WIDTH + 40,
+        420);
   }
 
   @Override
@@ -138,15 +172,55 @@ public final class ManualPanel extends Table {
     TextButton next = button(texts.get("manual.next"), () -> showPage(current + 1));
     next.setDisabled(index == pages.size() - 1);
     nav.add(next);
-    add(nav).left().padBottom(8).row();
+    add(nav).left().padBottom(windows == null ? 8 : 4).row();
+    if (windows != null) {
+      add(button(texts.get("manual.popOut"), () -> popOut(page.id()))).left().padBottom(8).row();
+    }
 
     add(wrapped(title(page), "title")).left().width(WIDTH).row();
     for (String reason : lockReasons(page)) {
       add(wrapped(reason, "warning")).left().width(WIDTH).padTop(2).row();
     }
+    String story = "manual.page." + page.id() + ".story";
+    if (texts.has(story)) {
+      add(wrapped(facts.fill(texts.get(story)), "small")).left().width(WIDTH).padTop(6).row();
+    }
     add(wrapped(text(page, "body"), "body")).left().width(WIDTH).padTop(6).row();
     for (int i = 0; i < page.examples().size(); i++) {
       add(example(page, i)).left().width(WIDTH).padTop(10).row();
+    }
+    String hintKey = "manual.page." + page.id() + ".hint";
+    if (texts.has(hintKey)) {
+      Label hint = wrapped(texts.format("manual.hint", facts.fill(texts.get(hintKey))), "good");
+      // Empty, it takes no room: the hint appears where the button was.
+      Container<Actor> holder = new Container<>();
+      TextButton show = button(texts.get("manual.hint.show"), () -> {});
+      show.addListener(
+          new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+              holder.fillX();
+              holder.setActor(hint);
+            }
+          });
+      holder.setActor(show);
+      holder.left();
+      add(holder).left().width(WIDTH).padTop(10).row();
+    }
+    if (!page.seeAlso().isEmpty()) {
+      add(new Label(texts.get("manual.seeAlso"), skin, "small")).left().padTop(12).row();
+      Table links = new Table();
+      int inRow = 0;
+      for (String link : page.seeAlso()) {
+        ManualConfig.Page target =
+            pages.stream().filter(p -> p.id().equals(link)).findFirst().orElseThrow();
+        if (inRow++ == 2) {
+          links.row();
+          inRow = 1;
+        }
+        links.add(button(title(target), () -> showPage(link))).left().padRight(4).padTop(4);
+      }
+      add(links).left().row();
     }
     scrollToTop();
   }
@@ -211,16 +285,14 @@ public final class ManualPanel extends Table {
     code.setScrollingDisabled(false, true);
     code.setFadeScrollBars(false);
     box.add(code).left().width(WIDTH).colspan(2).padTop(4).row();
-    CompileResult compiled = compile(page, example);
-    box.add(
-            wrapped(
-                texts.format(
-                    "manual.example.memory", compiled.memoryUsed(), compiled.memoryLimit()),
-                "small"))
-        .left()
-        .expandX()
-        .fillX()
-        .padTop(4);
+    String where;
+    if (example.inLibrary()) {
+      where = texts.get("manual.example.library");
+    } else {
+      CompileResult compiled = compile(page, example);
+      where = texts.format("manual.example.memory", compiled.memoryUsed(), compiled.memoryLimit());
+    }
+    box.add(wrapped(where, "small")).left().expandX().fillX().padTop(4);
     TextButton copy = button(texts.get("manual.copy"), () -> {});
     copy.addListener(
         new ChangeListener() {
@@ -239,12 +311,23 @@ public final class ManualPanel extends Table {
     return box;
   }
 
-  /** The example compiled as the page's owner would: for its memory count. */
+  /**
+   * The example compiled as the page's owner would, against the page's library examples: for its
+   * memory count.
+   */
   private CompileResult compile(ManualConfig.Page page, ManualConfig.Example example) {
     List<ManualConfig.Topic> topics = new ArrayList<>(page.topics());
+    StringBuilder libraryCode = new StringBuilder();
+    for (ManualConfig.Example other : page.examples()) {
+      if (other.inLibrary()) {
+        libraryCode.append(other.code()).append('\n');
+        topics.addAll(other.needs());
+      }
+    }
     topics.addAll(example.needs());
-    return data.compiler()
-        .compile(example.code(), data.unlocksFor(topics), data.turret().memoryLines());
+    Unlocks unlocks = data.unlocksFor(topics);
+    Library library = data.compiler().compileLibrary(libraryCode.toString(), unlocks).library();
+    return data.compiler().compile(example.code(), library, unlocks, data.turret().memoryLines());
   }
 
   private Label wrapped(String text, String style) {

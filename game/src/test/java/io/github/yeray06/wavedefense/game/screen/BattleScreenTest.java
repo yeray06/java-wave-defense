@@ -81,9 +81,9 @@ class BattleScreenTest {
                   controls,
                   1);
           screen.resize(1280, 720);
-          screen.toggle(screen.editorPanel());
-          assertTrue(screen.openPanel() == screen.editorPanel());
-          screen.toggle(screen.editorPanel());
+          screen.toggle(screen.editorScroll());
+          assertTrue(screen.openPanel() == screen.editorScroll());
+          screen.toggle(screen.editorScroll());
           assertTrue(screen.openPanel() == null);
           screen.toggle(screen.manualScroll());
           assertTrue(screen.openPanel() == screen.manualScroll(), "the manual opens");
@@ -160,6 +160,64 @@ class BattleScreenTest {
           } finally {
             Gdx.gl = Gdx.gl20 = real;
           }
+          screen.dispose();
+          world.dispose();
+          skin.dispose();
+        });
+  }
+
+  @Test
+  void aBreakpointOpensTheDebuggerAndAnAchievementReachesTheStore() {
+    Headless.run(
+        () -> {
+          GameData data = GameTestData.load();
+          Texts texts = Texts.load(Gdx.files.internal("i18n/messages"));
+          Skin skin = UiSkin.create(Gdx.files.internal("fonts/JetBrainsMono-Regular.ttf"));
+          ShapeWorldRenderer world = new ShapeWorldRenderer(data);
+          WaveLoop loop = new WaveLoop(data, Progress.newGame(data));
+          FakeControls controls = new FakeControls();
+          BattleScreen screen =
+              new BattleScreen(
+                  data,
+                  texts,
+                  skin,
+                  loop,
+                  world,
+                  new ReloadReactionLog(1, 2, line -> {}),
+                  controls,
+                  1);
+          screen.resize(1280, 720);
+          screen.toggleOutput();
+          assertTrue(screen.windows().isOpen("output"));
+          screen.toggleOutput();
+          assertFalse(screen.windows().isOpen("output"));
+
+          java.util.BitSet lines = new java.util.BitSet();
+          lines.set(1);
+          loop.setBreakpoints(0, lines);
+          loop.deploy();
+          for (int frame = 0; frame < 600 && !loop.debugPaused(); frame++) {
+            screen.render(1f / 60);
+          }
+          assertTrue(loop.debugPaused());
+          screen.render(1f / 60);
+          assertTrue(screen.windows().isOpen("debug"), "a stop opens the debugger");
+          int tick = loop.battle().tickCount();
+          screen.render(1f / 60);
+          assertTrue(tick == loop.battle().tickCount(), "the wave waits while paused");
+
+          loop.setBreakpoints(0, new java.util.BitSet());
+          loop.resumeDebug();
+          for (int frame = 0; frame < 200_000 && loop.wavesFinished() == 0; frame++) {
+            if (loop.battle().turret(0).ammo() == 0) {
+              loop.manualReload(0);
+            }
+            screen.render(1f / 20);
+          }
+          screen.render(1f / 60);
+          assertTrue(
+              controls.achievements.contains("FIRST_WAVE"), controls.achievements.toString());
+          assertTrue(screen.notice().contains("Primer día"), screen.notice());
           screen.dispose();
           world.dispose();
           skin.dispose();

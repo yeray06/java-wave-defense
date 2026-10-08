@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.yeray06.wavedefense.script.api.Feature;
 import io.github.yeray06.wavedefense.script.api.Unlocks;
+import io.github.yeray06.wavedefense.script.check.Library;
 import io.github.yeray06.wavedefense.script.diag.CompileError;
 import io.github.yeray06.wavedefense.script.diag.ErrorCode;
 import java.util.EnumSet;
@@ -21,9 +22,33 @@ import org.junit.jupiter.params.provider.MethodSource;
 /** At least one script per compile error, with the line where it must be reported. */
 class ErrorCatalogTest {
 
-  record Case(ErrorCode code, String source, int line, Unlocks unlocks) {
+  /**
+   * @param library the library the script is compiled against, or {@code null} for none
+   * @param inLibrary whether {@code source} is itself the library, where the error must be
+   */
+  record Case(
+      ErrorCode code, String source, int line, Unlocks unlocks, String library, boolean inLibrary) {
     Case(ErrorCode code, String source, int line) {
       this(code, source, line, ALL);
+    }
+
+    Case(ErrorCode code, String source, int line, Unlocks unlocks) {
+      this(code, source, line, unlocks, null, false);
+    }
+
+    /** An error in a library. */
+    static Case library(ErrorCode code, String source, int line) {
+      return new Case(code, source, line, Scripts.METHODS, null, true);
+    }
+
+    /** An error in a turret's script that calls {@code library}. */
+    static Case calling(ErrorCode code, String library, String source, int line) {
+      return new Case(code, source, line, Scripts.METHODS, library, false);
+    }
+
+    /** The same case with methods still locked. */
+    Case locked() {
+      return new Case(code, source, line, ALL, library, inLibrary);
     }
 
     @Override
@@ -108,6 +133,8 @@ class ErrorCatalogTest {
         new Case(ErrorCode.WRONG_ARGUMENT_COUNT, "apuntar();", 1),
         new Case(ErrorCode.ARGUMENT_TYPE_MISMATCH, "apuntar(3);", 1),
         new Case(ErrorCode.ARGUMENT_TYPE_MISMATCH, "usarMunicion(3);", 1),
+        new Case(ErrorCode.NOT_PRINTABLE, "imprimir(disparar());", 1),
+        new Case(ErrorCode.NOT_PRINTABLE, "imprimir(NORMAL);", 1),
         new Case(ErrorCode.CANNOT_ASSIGN, "NORMAL = 3;", 1),
         new Case(ErrorCode.CANNOT_ASSIGN, "municion() = 3;", 1),
         new Case(ErrorCode.ASSIGNMENT_NOT_ALLOWED_HERE, "int x = 1;\nint y = x++;", 2),
@@ -115,20 +142,59 @@ class ErrorCatalogTest {
             ErrorCode.ASSIGNMENT_NOT_ALLOWED_HERE,
             "int x;\nif ((x = 3) > 2) {\n  disparar();\n}",
             2),
-        new Case(ErrorCode.MEMORY_EXCEEDED, "disparar();\n".repeat(13), 13));
+        new Case(ErrorCode.MEMORY_EXCEEDED, "disparar();\n".repeat(13), 13),
+        // Methods
+        new Case(ErrorCode.FEATURE_LOCKED, "return;", 1),
+        Case.library(ErrorCode.MODIFIER_NOT_ALLOWED, "static void a() {\n}", 1),
+        new Case(ErrorCode.MODIFIER_NOT_ALLOWED, "final int x = 1;", 1),
+        Case.library(ErrorCode.STATEMENT_OUTSIDE_METHOD, "void a() {\n}\ndisparar();", 3),
+        Case.library(ErrorCode.STATEMENT_OUTSIDE_METHOD, "int x = 1;", 1),
+        new Case(ErrorCode.METHOD_NOT_ALLOWED_HERE, "void a() {\n}", 1, Scripts.METHODS),
+        Case.library(ErrorCode.METHOD_NOT_ALLOWED_HERE, "void a() {\n  void b() {\n  }\n}", 2),
+        Case.library(ErrorCode.DUPLICATE_METHOD, "void a() {\n}\nvoid a(int x) {\n}", 3),
+        Case.library(ErrorCode.METHOD_NAME_TAKEN, "void disparar() {\n}", 1),
+        Case.library(
+            ErrorCode.MISSING_RETURN,
+            "int a() {\n  if (hayEnemigos()) {\n    return 1;\n  }\n}",
+            1),
+        Case.library(ErrorCode.UNEXPECTED_RETURN_VALUE, "void a() {\n  return 1;\n}", 2),
+        new Case(ErrorCode.UNEXPECTED_RETURN_VALUE, "disparar();\nreturn 1;", 2, Scripts.METHODS),
+        Case.library(ErrorCode.MISSING_RETURN_VALUE, "int a() {\n  return;\n}", 2),
+        Case.library(ErrorCode.TYPE_MISMATCH, "int a() {\n  return true;\n}", 2),
+        Case.library(ErrorCode.UNSUPPORTED_TYPE, "void a(void x) {\n}", 1),
+        Case.library(ErrorCode.DUPLICATE_VARIABLE, "void a(int x, int x) {\n}", 1),
+        Case.library(ErrorCode.FEATURE_LOCKED, "void a() {\n}", 1).locked(),
+        Case.calling(
+            ErrorCode.LIBRARY_HAS_ERRORS, "void rafaga() {\n  saltar();\n}", "rafaga();", 1),
+        Case.calling(ErrorCode.WRONG_ARGUMENT_COUNT, "void a(int n) {\n}", "a();", 1),
+        Case.calling(ErrorCode.ARGUMENT_TYPE_MISMATCH, "void a(int n) {\n}", "a(true);", 1),
+        Case.calling(ErrorCode.TYPE_MISMATCH, "void a() {\n}", "int x = a();", 1));
   }
 
   @ParameterizedTest(name = "{0}")
   @MethodSource("cases")
   void reportsErrorAtLine(Case c) {
     int memory = c.code() == ErrorCode.MEMORY_EXCEEDED ? 12 : Scripts.ROOMY_MEMORY;
-    CompileResult result = Scripts.COMPILER.compile(c.source(), c.unlocks(), memory);
-    List<CompileError> errors = result.errors();
+    if (c.inLibrary()) {
+      LibraryResult result = Scripts.COMPILER.compileLibrary(c.source(), c.unlocks());
+      assertReported(c, result.errors());
+      assertTrue(result.library().hasErrors(), "a library with errors must say so");
+      return;
+    }
+    Library library =
+        c.library() == null
+            ? Library.EMPTY
+            : Scripts.COMPILER.compileLibrary(c.library(), c.unlocks()).library();
+    CompileResult result = Scripts.COMPILER.compile(c.source(), library, c.unlocks(), memory);
+    assertReported(c, result.errors());
+    assertTrue(result.script().isEmpty(), "a script with errors must not be runnable");
+  }
+
+  private static void assertReported(Case c, List<CompileError> errors) {
     assertTrue(
         errors.stream().anyMatch(e -> e.code() == c.code() && e.line() == c.line()),
         () ->
             "Expected " + c.code() + " at line " + c.line() + ", got " + Scripts.describe(errors));
-    assertTrue(result.script().isEmpty(), "a script with errors must not be runnable");
   }
 
   @Test

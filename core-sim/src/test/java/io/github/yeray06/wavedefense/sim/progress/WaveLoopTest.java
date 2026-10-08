@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.github.yeray06.wavedefense.script.api.Feature;
 import io.github.yeray06.wavedefense.sim.TestData;
 import io.github.yeray06.wavedefense.sim.data.GameData;
 import io.github.yeray06.wavedefense.sim.world.Battle;
@@ -191,5 +192,92 @@ class WaveLoopTest {
     assertEquals(start + 4, loop.revision(), "a finished wave");
     loop.selectWave(1);
     assertEquals(start + 5, loop.revision());
+  }
+
+  @Test
+  void theLibraryRunsInEveryTurretAndABrokenOneKeepsTheLastThatCompiled() {
+    GameData data = data();
+    Progress progress = Progress.newGame(data).copyWithStars(1000);
+    Shop shop = new Shop(data);
+    for (Feature f : Feature.values()) {
+      if (data.shop().syntax(f).inMvp()) {
+        shop.buy(progress, f);
+      }
+    }
+    WaveLoop loop = new WaveLoop(data, progress);
+    long start = loop.revision();
+    assertTrue(loop.setLibrary("void rafaga() {\n  disparar();\n}").succeeded());
+    assertEquals(start + 2, loop.revision(), "the draft and the code that runs both changed");
+    assertTrue(loop.setScript(0, "rafaga();").succeeded());
+
+    assertFalse(loop.setLibrary("void rafaga() {").succeeded());
+    assertEquals("void rafaga() {\n  disparar();\n}", loop.library(), "the last one that compiled");
+    assertEquals("void rafaga() {", loop.libraryDraft());
+    assertTrue(loop.compile("rafaga();").succeeded(), "turrets still call it");
+
+    assertTrue(loop.setLibrary("").succeeded());
+    assertFalse(loop.compile("rafaga();").succeeded(), "the method is gone");
+    assertEquals("rafaga();", loop.script(0));
+    assertFalse(loop.battle().turret(0).hasScript(), "the turret stays idle until fixed");
+  }
+
+  @Test
+  void aBreakpointPausesTheWaveWithTheTurretsCycleRecorded() {
+    WaveLoop loop = new WaveLoop(data(), Progress.newGame(data()));
+    java.util.BitSet lines = new java.util.BitSet();
+    lines.set(1);
+    loop.setBreakpoints(0, lines);
+    loop.deploy();
+    for (int i = 0; i < 1000 && !loop.debugPaused(); i++) {
+      loop.tick();
+    }
+    assertTrue(loop.debugPaused(), "the turret ran line 1");
+    assertEquals(0, loop.debugTurret());
+    var trace = loop.battle().trace(0);
+    assertTrue(trace.firstBreak() >= 0);
+    assertEquals(1, trace.line(trace.firstBreak()));
+
+    int tick = loop.battle().tickCount();
+    loop.tick();
+    assertEquals(tick, loop.battle().tickCount(), "the wave waits for the player");
+    loop.resumeDebug();
+    loop.tick();
+    assertEquals(tick + 1, loop.battle().tickCount());
+  }
+
+  @Test
+  void stepCyclePausesAfterOneCycleWithoutBreakpoints() {
+    WaveLoop loop = new WaveLoop(data(), Progress.newGame(data()));
+    loop.deploy();
+    loop.stepCycle(0);
+    for (int i = 0; i < 1000 && !loop.debugPaused(); i++) {
+      loop.tick();
+    }
+    assertTrue(loop.debugPaused());
+    assertEquals(0, loop.battle().trace(0).firstBreak());
+  }
+
+  @Test
+  void debuggingDoesNotChangeTheBattle() {
+    WaveLoop plain = new WaveLoop(data(), Progress.newGame(data()));
+    WaveLoop debugged = new WaveLoop(data(), Progress.newGame(data()));
+    java.util.BitSet lines = new java.util.BitSet();
+    lines.set(1);
+    debugged.setBreakpoints(0, lines);
+    plain.deploy();
+    debugged.deploy();
+    finishWave(plain);
+    int finished = debugged.wavesFinished();
+    for (int i = 0; i < LIMIT && debugged.wavesFinished() == finished; i++) {
+      Battle battle = debugged.battle();
+      for (int t = 0; t < battle.turretCount(); t++) {
+        if (battle.turret(t).ammo() == 0) {
+          debugged.manualReload(t);
+        }
+      }
+      debugged.tick();
+      debugged.resumeDebug();
+    }
+    assertEquals(plain.lastReport(), debugged.lastReport());
   }
 }

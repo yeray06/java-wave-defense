@@ -49,6 +49,20 @@ public final class Progress {
   }
 
   /**
+   * An expert game (D-64): every syntax piece on sale is owned from the start, for players who
+   * already program. Stars, hardware and waves are as in a normal game.
+   */
+  public static Progress newExpertGame(GameData data) {
+    Progress progress = newGame(data);
+    for (var item : data.shop().syntax()) {
+      if (item.inMvp()) {
+        progress.features.add(item.feature());
+      }
+    }
+    return progress;
+  }
+
+  /**
    * Everything a saved game keeps of the progress, as plain values.
    *
    * @param stars stars not spent yet

@@ -1,11 +1,13 @@
 package io.github.yeray06.wavedefense.sim.data;
 
 import io.github.yeray06.wavedefense.script.CompileResult;
+import io.github.yeray06.wavedefense.script.LibraryResult;
 import io.github.yeray06.wavedefense.script.ScriptCompiler;
 import io.github.yeray06.wavedefense.script.api.ApiFunction;
 import io.github.yeray06.wavedefense.script.api.Feature;
 import io.github.yeray06.wavedefense.script.api.Requirement;
 import io.github.yeray06.wavedefense.script.api.Unlocks;
+import io.github.yeray06.wavedefense.script.diag.CompileError;
 import io.github.yeray06.wavedefense.script.diag.FaultType;
 import io.github.yeray06.wavedefense.sim.data.ScriptApiLoader.ScriptApiData;
 import io.github.yeray06.wavedefense.sim.economy.Formulas;
@@ -23,7 +25,8 @@ public record GameData(
     ShopConfig shop,
     MapConfig map,
     ScriptApiData scriptApi,
-    ManualConfig manual) {
+    ManualConfig manual,
+    CareerConfig career) {
 
   public static final String BALANCE = "data/balance.json";
   public static final String TURRET = "data/turret.json";
@@ -32,6 +35,7 @@ public record GameData(
   public static final String SHOP = "data/shop.json";
   public static final String MAP = "data/map.json";
   public static final String MANUAL = "data/manual.json";
+  public static final String CAREER = "data/career.json";
 
   /**
    * @throws DataException naming the file and the problem
@@ -46,7 +50,8 @@ public record GameData(
             Json.readStrict(read(source, SHOP), ShopConfig.class, SHOP),
             Json.readStrict(read(source, MAP), MapConfig.class, MAP),
             ScriptApiLoader.load(read(source, ScriptApiLoader.FILE)),
-            Json.read(read(source, MANUAL), ManualConfig.class, MANUAL));
+            Json.read(read(source, MANUAL), ManualConfig.class, MANUAL),
+            Json.readStrict(read(source, CAREER), CareerConfig.class, CAREER));
     data.crossCheck();
     return data;
   }
@@ -54,7 +59,7 @@ public record GameData(
   /** The same data with the shop's hardware caps removed, for "sin tope" comparisons. */
   public GameData withoutHardwareCaps() {
     return new GameData(
-        balance, turret, enemies, waves, shop.withoutCaps(), map, scriptApi, manual);
+        balance, turret, enemies, waves, shop.withoutCaps(), map, scriptApi, manual, career);
   }
 
   public ScriptCompiler compiler() {
@@ -182,19 +187,40 @@ public record GameData(
             SHOP,
             item.feature() + " needs an example of at most " + shop.exampleLines() + " lines");
       }
-      CompileResult example =
-          compiler().compile(item.example(), new Unlocks(owned, 1), turret.memoryLines());
-      if (!example.succeeded()) {
-        throw new DataException(
-            SHOP, item.feature() + " example does not compile: " + example.errors());
+      Unlocks unlocks = new Unlocks(owned, 1);
+      List<CompileError> errors =
+          item.exampleInLibrary()
+              ? compiler().compileLibrary(item.example(), unlocks).errors()
+              : compiler().compile(item.example(), unlocks, turret.memoryLines()).errors();
+      if (!errors.isEmpty()) {
+        throw new DataException(SHOP, item.feature() + " example does not compile: " + errors);
       }
     }
     checkManual();
+    checkCareer();
     CompileResult initial =
         compiler().compile(turret.initialScript(), Unlocks.of(1), turret.memoryLines());
     if (!initial.succeeded()) {
       throw new DataException(
           TURRET, "initialScript does not compile with nothing unlocked: " + initial.errors());
+    }
+  }
+
+  /** Every achievement can be reached: no count above what the game has. */
+  private void checkCareer() {
+    long syntax = shop.syntax().stream().filter(ShopConfig.SyntaxItem::inMvp).count();
+    for (CareerConfig.Achievement a : career.achievements()) {
+      long most =
+          switch (a.kind()) {
+            case WAVES_BEATEN, PERFECT_WAVES, CHALLENGES, BEST_STREAK, RECORDS ->
+                balance.lastWave();
+            case BOSSES -> balance.lastWave() / balance.boss().everyWaves();
+            case SYNTAX_OWNED -> syntax;
+            case GREETINGS, FAULT, ALL -> Long.MAX_VALUE;
+          };
+      if (a.target() > most) {
+        throw new DataException(CAREER, a.id() + " asks for " + a.target() + ", at most " + most);
+      }
     }
   }
 
@@ -232,15 +258,31 @@ public record GameData(
           throw new DataException(MANUAL, page.id() + ": " + topic.enemy() + " is in no wave");
         }
       }
+      List<ManualConfig.Topic> pageTopics = new ArrayList<>(page.topics());
+      StringBuilder libraryCode = new StringBuilder();
+      for (ManualConfig.Example example : page.examples()) {
+        pageTopics.addAll(example.needs());
+        if (example.inLibrary()) {
+          libraryCode.append(example.code()).append('\n');
+        }
+      }
+      // The page's library examples together are the library its scripts call.
+      LibraryResult library =
+          compiler().compileLibrary(libraryCode.toString(), unlocksFor(pageTopics));
       for (int i = 0; i < page.examples().size(); i++) {
         ManualConfig.Example example = page.examples().get(i);
         List<ManualConfig.Topic> topics = new ArrayList<>(page.topics());
         topics.addAll(example.needs());
-        CompileResult result =
-            compiler().compile(example.code(), unlocksFor(topics), turret.memoryLines());
-        if (!result.succeeded()) {
+        List<CompileError> errors =
+            example.inLibrary()
+                ? library.errors()
+                : compiler()
+                    .compile(
+                        example.code(), library.library(), unlocksFor(topics), turret.memoryLines())
+                    .errors();
+        if (!errors.isEmpty()) {
           throw new DataException(
-              MANUAL, page.id() + " example " + (i + 1) + " does not compile: " + result.errors());
+              MANUAL, page.id() + " example " + (i + 1) + " does not compile: " + errors);
         }
       }
     }

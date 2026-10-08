@@ -14,12 +14,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Recursive-descent parser for the player's script: a method body, with Java's precedences.
+ * Recursive-descent parser for the player's code, with Java's precedences: a turret's script (a
+ * method body) or the library (method declarations, like a class body).
  *
- * <p>Syntax the game knows but cannot run yet ({@code try}, methods, classes) is reported as locked
- * and skipped whole, never half-interpreted. Syntax it runs ({@code if}, {@code while}, {@code
- * for}…) is always parsed; whether the player owns it is the checker's business. After an error the
- * parser resynchronizes at the end of the statement so several errors can be shown at once.
+ * <p>Syntax the game knows but cannot run yet ({@code try}, classes) is reported as locked and
+ * skipped whole, never half-interpreted. Syntax it runs ({@code if}, {@code while}, {@code for},
+ * methods…) is always parsed; whether the player owns it, and whether it is in the right place, is
+ * the checker's business. After an error the parser resynchronizes at the end of the statement so
+ * several errors can be shown at once.
  */
 public final class Parser {
 
@@ -58,6 +60,33 @@ public final class Parser {
       // Already reported; what was parsed so far is kept for the memory counter.
     }
     return List.copyOf(statements);
+  }
+
+  /**
+   * Parses the library: what the player writes there is a list of methods. Anything else is
+   * reported where it is, and only the methods are returned.
+   */
+  public static List<Stmt.MethodDecl> parseLibrary(
+      List<Token> tokens, Diagnostics diagnostics, int maxDepth) {
+    Parser parser = new Parser(tokens, diagnostics, maxDepth);
+    List<Stmt.MethodDecl> methods = new ArrayList<>();
+    try {
+      while (!parser.at(TokenKind.EOF)) {
+        int before = parser.index;
+        Stmt statement = parser.statement(false);
+        if (statement instanceof Stmt.MethodDecl method) {
+          methods.add(method);
+        } else if (statement != null && !(statement instanceof Stmt.Empty)) {
+          parser.report(ErrorCode.STATEMENT_OUTSIDE_METHOD, statement.pos());
+        }
+        if (parser.index == before) {
+          parser.advance();
+        }
+      }
+    } catch (TooDeep e) {
+      // Already reported.
+    }
+    return List.copyOf(methods);
   }
 
   // ---------------------------------------------------------------- statements
@@ -101,28 +130,32 @@ public final class Parser {
           lockedTry(t);
           yield null;
         }
-        case CLASS, MODIFIER -> {
+        case CLASS -> {
           lockedDeclaration(t);
           yield null;
         }
+        case MODIFIER -> modifiers(nested);
         case VOID -> {
-          report(ErrorCode.FEATURE_LOCKED, t, Feature.METHODS);
-          skipDeclarationBody();
+          if (methodAhead()) {
+            yield methodDeclaration();
+          }
+          report(ErrorCode.UNSUPPORTED_TYPE, t, t.text());
+          syncToStatementEnd();
           yield null;
         }
-        case RETURN -> {
-          report(ErrorCode.FEATURE_LOCKED, t, Feature.METHODS);
-          skipConstruct();
-          yield null;
-        }
+        case RETURN -> returnStatement();
         case DO, OTHER_KEYWORD -> {
           report(ErrorCode.UNSUPPORTED_KEYWORD, t, t.text());
           advance();
           skipConstruct();
           yield null;
         }
-        case INT, BOOLEAN, OTHER_PRIMITIVE -> declaration(nested);
+        case INT, BOOLEAN, OTHER_PRIMITIVE ->
+            methodAhead() ? methodDeclaration() : declaration(nested);
         case IDENTIFIER -> {
+          if (methodAhead()) {
+            yield methodDeclaration();
+          }
           yield startsDeclaration() ? declaration(nested) : expressionStatement();
         }
         default -> expressionStatement();
@@ -130,6 +163,98 @@ public final class Parser {
     } finally {
       depth--;
     }
+  }
+
+  /**
+   * {@code public}, {@code static}, {@code final}…: classes are not sold yet, and methods and
+   * variables are written without them. Reported once; what follows is parsed as usual.
+   */
+  private Stmt modifiers(boolean nested) {
+    Token first = peek();
+    int i = index;
+    while (tokens.get(i).kind() == TokenKind.MODIFIER) {
+      i++;
+    }
+    if (tokens.get(i).kind() == TokenKind.CLASS) {
+      lockedDeclaration(first);
+      return null;
+    }
+    report(ErrorCode.MODIFIER_NOT_ALLOWED, first, first.text());
+    while (at(TokenKind.MODIFIER)) {
+      advance();
+    }
+    return statement(nested);
+  }
+
+  /** Whether a method header starts here: {@code void name(}, {@code int name(}… */
+  private boolean methodAhead() {
+    int offset;
+    if (at(TokenKind.VOID)
+        || at(TokenKind.INT)
+        || at(TokenKind.BOOLEAN)
+        || at(TokenKind.OTHER_PRIMITIVE)) {
+      offset = 1;
+    } else if (at(TokenKind.IDENTIFIER)) {
+      offset = genericArgumentAhead(1) ? 4 : 1;
+    } else {
+      return false;
+    }
+    return peekKind(offset) == TokenKind.IDENTIFIER && peekKind(offset + 1) == TokenKind.LPAREN;
+  }
+
+  /** {@code Type name(Type a, Type b) { … }}; {@link #methodAhead()} has checked the header. */
+  private Stmt methodDeclaration() {
+    Token start = peek();
+    TypeRef returnType;
+    if (at(TokenKind.VOID)) {
+      returnType = new TypeRef.VoidType(pos(advance()));
+    } else {
+      returnType = type();
+    }
+    Token name = advance();
+    advance(); // (
+    List<Stmt.Param> params = new ArrayList<>();
+    if (!at(TokenKind.RPAREN)) {
+      while (true) {
+        Token paramStart = peek();
+        TypeRef type = type();
+        if (at(TokenKind.LBRACKET)) {
+          report(ErrorCode.ARRAYS_NOT_SUPPORTED, peek());
+          while (at(TokenKind.LBRACKET)) {
+            skipBalanced(TokenKind.LBRACKET, TokenKind.RBRACKET);
+          }
+          type = new TypeRef.Invalid(pos(paramStart));
+        }
+        if (!at(TokenKind.IDENTIFIER)) {
+          report(ErrorCode.EXPECTED_NAME, peek(), peek().display());
+          break;
+        }
+        Token paramName = advance();
+        params.add(new Stmt.Param(type, pos(paramName), paramName.text()));
+        if (!at(TokenKind.COMMA)) {
+          break;
+        }
+        advance();
+      }
+    }
+    if (!expect(TokenKind.RPAREN, ")")) {
+      skipDeclarationBody();
+      return null;
+    }
+    if (!at(TokenKind.LBRACE)) {
+      report(ErrorCode.EXPECTED_TOKEN, peek(), "{", peek().display());
+      skipDeclarationBody();
+      return null;
+    }
+    Stmt.Block body = (Stmt.Block) block();
+    return new Stmt.MethodDecl(pos(start), returnType, pos(name), name.text(), params, body);
+  }
+
+  private Stmt returnStatement() {
+    Token keyword = advance();
+    Expr value = at(TokenKind.SEMICOLON) ? null : expression();
+    endStatement();
+    return new Stmt.Return(pos(keyword), value);
   }
 
   private Stmt block() {
@@ -265,7 +390,7 @@ public final class Parser {
       return null;
     }
     if (peekKind(1) == TokenKind.LPAREN) {
-      report(ErrorCode.FEATURE_LOCKED, start, Feature.METHODS);
+      // A method returning an array: the array is already reported.
       skipDeclarationBody();
       return null;
     }
@@ -402,14 +527,9 @@ public final class Parser {
     }
   }
 
-  /** A class, or a method written with modifiers ({@code public static void x()}). */
+  /** A class, with or without modifiers in front. */
   private void lockedDeclaration(Token start) {
-    int i = index;
-    while (tokens.get(i).kind() == TokenKind.MODIFIER) {
-      i++;
-    }
-    Feature feature = tokens.get(i).kind() == TokenKind.CLASS ? Feature.CLASSES : Feature.METHODS;
-    report(ErrorCode.FEATURE_LOCKED, start, feature);
+    report(ErrorCode.FEATURE_LOCKED, start, Feature.CLASSES);
     skipDeclarationBody();
   }
 

@@ -4,20 +4,24 @@ import io.github.yeray06.wavedefense.script.diag.FaultType;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Counts a turret's exceptions by type and line, in fixed arrays (no allocation per fault). */
+/**
+ * Counts a turret's exceptions by type and line (of its script or of the library), in fixed arrays
+ * (no allocation per fault).
+ */
 final class FaultLog {
   /** Distinct (type, line) pairs kept; a script has at most a few dozen lines that can throw. */
   private static final int CAPACITY = 64;
 
   private final FaultType[] types = new FaultType[CAPACITY];
   private final int[] lines = new int[CAPACITY];
+  private final boolean[] inLibrary = new boolean[CAPACITY];
   private final int[] counts = new int[CAPACITY];
   private int size;
   private int dropped;
 
-  void record(FaultType type, int line) {
+  void record(FaultType type, int line, boolean library) {
     for (int i = 0; i < size; i++) {
-      if (types[i] == type && lines[i] == line) {
+      if (types[i] == type && lines[i] == line && inLibrary[i] == library) {
         counts[i]++;
         return;
       }
@@ -25,6 +29,7 @@ final class FaultLog {
     if (size < CAPACITY) {
       types[size] = type;
       lines[size] = line;
+      inLibrary[size] = library;
       counts[size] = 1;
       size++;
     } else {
@@ -43,7 +48,7 @@ final class FaultLog {
   List<WaveReport.FaultCount> snapshot() {
     List<WaveReport.FaultCount> list = new ArrayList<>(size);
     for (int i = 0; i < size; i++) {
-      list.add(new WaveReport.FaultCount(types[i], lines[i], counts[i]));
+      list.add(new WaveReport.FaultCount(types[i], lines[i], inLibrary[i], counts[i]));
     }
     return List.copyOf(list);
   }

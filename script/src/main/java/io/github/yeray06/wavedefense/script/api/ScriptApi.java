@@ -98,6 +98,21 @@ public final class ScriptApi {
     return Optional.ofNullable(ammoConstants.get(name));
   }
 
+  /** Names of the calls written without a receiver, for suggestions and autocompletion. */
+  public Set<String> turretCallNames() {
+    return Set.copyOf(turretCalls.keySet());
+  }
+
+  /** Names of the calls written on an enemy. */
+  public Set<String> enemyCallNames() {
+    return Set.copyOf(enemyCalls.keySet());
+  }
+
+  /** Names of the ammo constants. */
+  public Set<String> ammoConstantNames() {
+    return Set.copyOf(ammoConstants.keySet());
+  }
+
   private static String requireIdentifier(String name, String what) {
     if (name == null || name.isEmpty()) {
       throw new IllegalArgumentException("Missing name for " + what);

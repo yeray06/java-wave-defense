@@ -25,6 +25,15 @@ public record WaveReport(
     turrets = List.copyOf(turrets);
   }
 
+  /** Shots fired by every turret together, hits or not. */
+  public int totalShots() {
+    int shots = 0;
+    for (TurretReport turret : turrets) {
+      shots += turret.shots();
+    }
+    return shots;
+  }
+
   /** No enemy got through ("oleada perfecta"). */
   public boolean perfect() {
     return won && leaks.isEmpty();
@@ -38,7 +47,10 @@ public record WaveReport(
    */
   public record Leak(EnemyKind kind, double healthFraction, double lastDefendedDistance) {}
 
-  public record FaultCount(FaultType type, int line, int count) {}
+  /**
+   * @param inLibrary whether {@code line} is a line of the library rather than of the turret's code
+   */
+  public record FaultCount(FaultType type, int line, boolean inLibrary, int count) {}
 
   /**
    * @param airShots shots fired with no enemy in range
@@ -46,6 +58,7 @@ public record WaveReport(
    * @param reloads every reload, by code or by hand
    * @param manualReloads reloads the player clicked
    * @param hungTicks ticks spent hung after exceptions
+   * @param greetings times its code ran {@code saludar()}
    */
   public record TurretReport(
       int shots,
@@ -54,9 +67,22 @@ public record WaveReport(
       int reloads,
       int manualReloads,
       int hungTicks,
-      List<FaultCount> faults) {
+      List<FaultCount> faults,
+      int greetings) {
     public TurretReport {
       faults = List.copyOf(faults);
+    }
+
+    /** A turret that never greeted. */
+    public TurretReport(
+        int shots,
+        int airShots,
+        int wastedOnDead,
+        int reloads,
+        int manualReloads,
+        int hungTicks,
+        List<FaultCount> faults) {
+      this(shots, airShots, wastedOnDead, reloads, manualReloads, hungTicks, faults, 0);
     }
 
     public int faultCount() {

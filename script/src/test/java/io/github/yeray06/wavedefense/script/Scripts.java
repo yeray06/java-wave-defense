@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import io.github.yeray06.wavedefense.script.api.Feature;
 import io.github.yeray06.wavedefense.script.api.Unlocks;
+import io.github.yeray06.wavedefense.script.check.Library;
 import io.github.yeray06.wavedefense.script.diag.CompileError;
 import io.github.yeray06.wavedefense.script.diag.ErrorCode;
 import io.github.yeray06.wavedefense.script.runtime.CompiledScript;
@@ -18,6 +19,17 @@ final class Scripts {
   static final Unlocks ALL =
       Unlocks.of(
           10, Feature.IF_ELSE, Feature.VARIABLES, Feature.LOGIC_OPS, Feature.WHILE, Feature.FOR);
+
+  /** Every piece up to methods. */
+  static final Unlocks METHODS =
+      Unlocks.of(
+          10,
+          Feature.IF_ELSE,
+          Feature.VARIABLES,
+          Feature.LOGIC_OPS,
+          Feature.WHILE,
+          Feature.FOR,
+          Feature.METHODS);
 
   /** The MVP's four pieces: {@code for} still locked. */
   static final Unlocks MVP =
@@ -38,6 +50,38 @@ final class Scripts {
 
   static CompileResult compile(String source, Unlocks unlocks) {
     return COMPILER.compile(source, unlocks, ROOMY_MEMORY);
+  }
+
+  /** Compiles a library with methods unlocked. */
+  static LibraryResult library(String source) {
+    return COMPILER.compileLibrary(source, METHODS);
+  }
+
+  /** Compiles a library that must have no errors. */
+  static Library okLibrary(String source) {
+    LibraryResult result = library(source);
+    if (!result.succeeded()) {
+      fail(
+          "Expected the library to compile:\n"
+              + source
+              + "\nbut got: "
+              + describe(result.errors()));
+    }
+    return result.library();
+  }
+
+  /** A turret's script calling {@code library}, with methods unlocked. */
+  static CompileResult compile(String source, Library library) {
+    return COMPILER.compile(source, library, METHODS, ROOMY_MEMORY);
+  }
+
+  /** Compiles a script against a library, both of which must have no errors. */
+  static CompiledScript ok(String source, String library) {
+    CompileResult result = compile(source, okLibrary(library));
+    if (!result.succeeded()) {
+      fail("Expected to compile:\n" + source + "\nbut got: " + describe(result.errors()));
+    }
+    return result.script().orElseThrow();
   }
 
   /** Compiles with everything unlocked and fails the test on any error. */
@@ -78,6 +122,14 @@ final class Scripts {
     assertEquals(code, errors.get(0).code());
     assertEquals(line, errors.get(0).line());
     assertTrue(compile(source, unlocks).script().isEmpty());
+  }
+
+  /** Asserts that a script calling {@code library} reports only {@code code} at {@code line}. */
+  static void expectOnlyWith(String source, Library library, ErrorCode code, int line) {
+    List<CompileError> errors = compile(source, library).errors();
+    assertEquals(1, errors.size(), () -> "Expected only " + code + " but got " + describe(errors));
+    assertEquals(code, errors.get(0).code());
+    assertEquals(line, errors.get(0).line());
   }
 
   static String describe(List<CompileError> errors) {

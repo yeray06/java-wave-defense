@@ -27,6 +27,16 @@ public final class Texts {
     return bundle.get(key);
   }
 
+  /** Whether a text exists: for optional parts, like a manual page's hint. */
+  public boolean has(String key) {
+    try {
+      bundle.get(key);
+      return true;
+    } catch (java.util.MissingResourceException e) {
+      return false;
+    }
+  }
+
   /**
    * Fills a text's {@code {0}}, {@code {1}}… Numbers are written the Spanish way here: the bundle
    * would format them for the base file's root locale ("1,234").

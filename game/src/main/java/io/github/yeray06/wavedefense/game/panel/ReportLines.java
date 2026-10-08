@@ -4,9 +4,12 @@ import io.github.yeray06.wavedefense.game.i18n.ScriptTexts;
 import io.github.yeray06.wavedefense.game.i18n.Texts;
 import io.github.yeray06.wavedefense.sim.data.Challenge;
 import io.github.yeray06.wavedefense.sim.data.EnemyKind;
+import io.github.yeray06.wavedefense.sim.progress.Career;
+import io.github.yeray06.wavedefense.sim.progress.CareerOutcome;
 import io.github.yeray06.wavedefense.sim.progress.Goal;
 import io.github.yeray06.wavedefense.sim.progress.Progress;
 import io.github.yeray06.wavedefense.sim.progress.WaveOutcome;
+import io.github.yeray06.wavedefense.sim.progress.WaveRecord;
 import io.github.yeray06.wavedefense.sim.world.WaveReport;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -82,6 +85,73 @@ public final class ReportLines {
       lines.add(new Line(texts.format("report.next.lost", outcome.nextWave()), Kind.WARNING));
     }
 
+    addDetails(lines, report, names, ticksPerSecond, pathLength);
+    return lines;
+  }
+
+  /**
+   * «Probar» (D-65): the report of a trial run, which earns and records nothing: whether it would
+   * win, the leaks and each turret.
+   */
+  public static List<Line> trial(
+      WaveReport report, ScriptTexts names, int ticksPerSecond, double pathLength) {
+    Texts texts = names.texts();
+    List<Line> lines = new ArrayList<>();
+    String title = !report.won() ? "trial.lost" : report.perfect() ? "trial.perfect" : "trial.won";
+    lines.add(new Line(texts.format(title, report.wave()), Kind.TITLE));
+    lines.add(new Line(texts.get("trial.note"), Kind.TEXT, true));
+    addDetails(lines, report, names, ticksPerSecond, pathLength);
+    return lines;
+  }
+
+  /** What a wave added to the career (D-63): new records, the streak and achievements. */
+  public static List<Line> career(
+      CareerOutcome outcome, Career career, int wave, ScriptTexts names, int ticksPerSecond) {
+    Texts texts = names.texts();
+    List<Line> lines = new ArrayList<>();
+    WaveRecord record = career.record(wave);
+    if (!outcome.newMarks().isEmpty() && record != null) {
+      lines.add(new Line(texts.get("report.records"), Kind.GOOD));
+      for (WaveRecord.Mark mark : WaveRecord.Mark.values()) {
+        if (outcome.newMarks().contains(mark)) {
+          lines.add(new Line(recordText(mark, record, names, ticksPerSecond), Kind.GOOD, true));
+        }
+      }
+    }
+    if (outcome.streak() > 0) {
+      lines.add(
+          new Line(
+              texts.format(
+                  "report.streak", outcome.streak(), outcome.streakPoints(), career.streakScore()),
+              Kind.TEXT));
+    }
+    for (String id : outcome.newAchievements()) {
+      lines.add(
+          new Line(
+              texts.format("career.toast", texts.get("achievement." + id + ".name")), Kind.GOOD));
+    }
+    return lines;
+  }
+
+  /** One of the player's marks on a wave, as text. */
+  public static String recordText(
+      WaveRecord.Mark mark, WaveRecord record, ScriptTexts names, int ticksPerSecond) {
+    Texts texts = names.texts();
+    return switch (mark) {
+      case TICKS ->
+          texts.format("record.ticks", oneDecimal(record.ticks() / (double) ticksPerSecond));
+      case SHOTS -> texts.format("record.shots", record.shots());
+      case MEMORY -> texts.format("record.memory", record.memory());
+    };
+  }
+
+  private static void addDetails(
+      List<Line> lines,
+      WaveReport report,
+      ScriptTexts names,
+      int ticksPerSecond,
+      double pathLength) {
+    Texts texts = names.texts();
     addLeaks(lines, report, names, pathLength);
 
     for (int i = 0; i < report.turrets().size(); i++) {
@@ -110,12 +180,14 @@ public final class ReportLines {
         lines.add(
             new Line(
                 texts.format(
-                    "report.turret.fault", names.fault(fault.type()), fault.line(), fault.count()),
+                    fault.inLibrary() ? "report.turret.faultLibrary" : "report.turret.fault",
+                    names.fault(fault.type()),
+                    fault.line(),
+                    fault.count()),
                 Kind.WARNING,
                 true));
       }
     }
-    return lines;
   }
 
   private static void addLeaks(
@@ -159,7 +231,7 @@ public final class ReportLines {
   }
 
   /** "6" for 6.0, "2,5" for 2.5. */
-  private static String oneDecimal(double value) {
+  static String oneDecimal(double value) {
     long tenths = Math.round(value * 10);
     return tenths % 10 == 0 ? String.valueOf(tenths / 10) : (tenths / 10) + "," + (tenths % 10);
   }

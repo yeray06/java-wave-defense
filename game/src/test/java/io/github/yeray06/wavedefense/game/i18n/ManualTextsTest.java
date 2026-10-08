@@ -50,6 +50,15 @@ class ManualTextsTest {
           Set<String> missing = new HashSet<>(expected);
           missing.removeAll(present);
           assertTrue(missing.isEmpty(), "missing: " + missing);
+          // Optional parts (phase 9b): a page's story and hint, checked like the rest.
+          for (ManualConfig.Page page : data.manual().pages()) {
+            for (String part : new String[] {"story", "hint"}) {
+              String key = "manual.page." + page.id() + "." + part;
+              if (present.contains(key)) {
+                expected.add(key);
+              }
+            }
+          }
           Set<String> leftOver = new HashSet<>(present);
           leftOver.removeAll(expected);
           assertTrue(leftOver.isEmpty(), "not used by any page: " + leftOver);

@@ -14,6 +14,9 @@ final class Signal extends RuntimeException {
 
   int line;
 
+  /** Whether {@link #line} is a line of the library rather than of the turret's script. */
+  boolean inLibrary;
+
   Signal() {
     super(null, null, false, false);
   }

@@ -25,6 +25,7 @@ public final class Turret {
 
   FaultType lastFault;
   int lastFaultLine;
+  boolean lastFaultInLibrary;
 
   int shots;
   int airShots;
@@ -32,6 +33,7 @@ public final class Turret {
   int reloads;
   int manualReloads;
   int hungTicks;
+  int greetings;
 
   Turret(int index, double x, double y, CompiledScript script, int magazine) {
     this.index = index;
@@ -82,6 +84,11 @@ public final class Turret {
     return lastFaultLine;
   }
 
+  /** Whether {@link #lastFaultLine()} is a line of the library rather than of the turret's code. */
+  public boolean lastFaultInLibrary() {
+    return lastFaultInLibrary;
+  }
+
   /** Whether a script is loaded; a turret whose code does not compile stands idle. */
   public boolean hasScript() {
     return script != null;
@@ -89,6 +96,13 @@ public final class Turret {
 
   WaveReport.TurretReport report() {
     return new WaveReport.TurretReport(
-        shots, airShots, wastedOnDead, reloads, manualReloads, hungTicks, faults.snapshot());
+        shots,
+        airShots,
+        wastedOnDead,
+        reloads,
+        manualReloads,
+        hungTicks,
+        faults.snapshot(),
+        greetings);
   }
 }

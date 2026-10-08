@@ -22,8 +22,15 @@ public final class FakeControls implements GameControls {
     applied.add(next);
   }
 
+  public final java.util.List<String> achievements = new java.util.ArrayList<>();
+
   @Override
-  public void newGame() {
+  public void achievementUnlocked(String id) {
+    achievements.add(id);
+  }
+
+  @Override
+  public void newGame(boolean expert) {
     newGames++;
   }
 

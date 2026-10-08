@@ -78,7 +78,7 @@ class WaveDefenseGameTest {
               game.apply(game.settings().withUiScale(150).withCodeFontSize(20));
             }
             if (frame[0] == 6) {
-              game.newGame();
+              game.newGame(false);
             }
             game.render();
           }

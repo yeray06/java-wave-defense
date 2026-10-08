@@ -1,26 +1,39 @@
 package io.github.yeray06.wavedefense.sim.save;
 
 import io.github.yeray06.wavedefense.sim.data.GameData;
+import io.github.yeray06.wavedefense.sim.progress.Career;
 import io.github.yeray06.wavedefense.sim.progress.Progress;
 import io.github.yeray06.wavedefense.sim.progress.WaveLoop;
 import java.util.List;
 
 /**
- * A saved game (ARCHITECTURE §7): the progress, the code each turret runs and the editor's drafts
- * (D-55). A wave in progress is not saved: loading waits on the current wave's «Desplegar».
+ * A saved game (ARCHITECTURE §7): the progress, the code each turret runs, the library and the
+ * editor's drafts (D-55). A wave in progress is not saved: loading waits on the current wave's
+ * «Desplegar».
  *
  * @param version the format, for {@link SaveCodec}'s migrations
+ * @param library the library's code that runs: the last that compiled
+ * @param libraryDraft what the library's tab holds, even broken
  * @param battlesBuilt the seed counter, so a loaded game replays as it would have
+ * @param career records, streak, achievements, hats and names (D-63)
  */
 public record SaveGame(
     int version,
     Progress.Snapshot progress,
     List<String> scripts,
     List<String> drafts,
-    long battlesBuilt) {
+    String library,
+    String libraryDraft,
+    long battlesBuilt,
+    Career.Snapshot career) {
 
   public SaveGame {
-    if (progress == null || scripts == null || drafts == null) {
+    if (progress == null
+        || career == null
+        || scripts == null
+        || drafts == null
+        || library == null
+        || libraryDraft == null) {
       throw new IllegalArgumentException("incomplete save");
     }
     if (battlesBuilt < 0) {
@@ -37,7 +50,10 @@ public record SaveGame(
         loop.progress().snapshot(),
         loop.scripts(),
         loop.drafts(),
-        loop.battlesBuilt());
+        loop.library(),
+        loop.libraryDraft(),
+        loop.battlesBuilt(),
+        loop.career().snapshot());
   }
 
   /**
@@ -46,6 +62,11 @@ public record SaveGame(
    * @throws IllegalArgumentException if it does not fit the data
    */
   public WaveLoop restore(GameData data) {
-    return WaveLoop.restore(data, Progress.restore(data, progress), scripts, drafts, battlesBuilt);
+    return WaveLoop.restore(
+        data,
+        Progress.restore(data, progress),
+        Career.restore(data, career),
+        new WaveLoop.Code(scripts, drafts, library, libraryDraft),
+        battlesBuilt);
   }
 }
