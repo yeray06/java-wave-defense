@@ -210,7 +210,10 @@ texto ─► Lexer ─► tokens ─► Parser ─► AST ─► Checker ─► 
 ### 4.3 Desbloqueos (`Feature`)
 
 `enum Feature { IF_ELSE, VARIABLES, LOGIC_OPS, WHILE, FOR, METHODS, TRY_CATCH, CLASSES }`.
-El checker recibe el conjunto comprado; el MVP solo vende los cuatro primeros.
+El checker recibe el conjunto comprado; desde la fase 8 se venden los cinco
+primeros. El parser lee siempre lo que el juego sabe ejecutar (`if`, `while`,
+`for`…) y es el checker quien dice si está comprado; lo que aún no se ejecuta
+(`try`, métodos, clases) se marca como bloqueado y se salta entero.
 
 | Pieza | Qué habilita (D-07) |
 |---|---|
@@ -219,6 +222,7 @@ El checker recibe el conjunto comprado; el MVP solo vende los cuatro primeros.
 | Variables | Tipos `int`, `boolean` y `Enemigo`; declaración (también `int a = 1, b;`), asignación, `null`; aritmética `+ - * / %` y `-` unario, `++`, `+=` (y por simetría `--`, `-=`, `*=`, `/=`, `%=`, PROVISIONAL D-21); llamadas `enemigoMasCercano()`, `objetivo()`, `apuntar(e)`, `e.vida()`, `e.velocidad()`, `e.blindado()`, `e.distanciaAlNucleo()`. |
 | `&&`, `||`, `!` | Solo esos tres operadores. |
 | while | Solo el bucle `while`. |
+| for («Recorrer (for)», fase 8) | Las dos formas: contar, `for (int i = 0; i < n; i++)` (varias inicializaciones y actualizaciones separadas por comas, condición opcional), y recorrer, `for (Enemigo e : lista)`. El tipo `List<Enemigo>` con `size()`, `get(i)` e `isEmpty()` (nombres de Java, no del tema). La llamada `enemigos()`. |
 | Oleada 6 (no se compra) | `usarMunicion(NORMAL)` / `usarMunicion(PERFORANTE)`. |
 
 Usar algo no desbloqueado da error de compilación con el texto del plan:
@@ -232,7 +236,8 @@ Usar algo no desbloqueado da error de compilación con el texto del plan:
 comentarios y las líneas en blanco no ocupan».
 
 - Cuentan 1: cada declaración, asignación, llamada, cabecera de `if`
-  (un `else if` es otro `if`) y cabecera de `while`.
+  (un `else if` es otro `if`), cabecera de `while` y cabecera de `for` (con lo
+  que lleve dentro de los paréntesis).
 - Cuentan 0: `else`, llaves, líneas en blanco y comentarios.
 
 Motivo: si contaran líneas físicas, el jugador metería todo en una línea y el
@@ -262,9 +267,11 @@ plan con `if/else` ocupa 3 líneas de memoria; el de `for` de la oleada 12,
   envuelve la ejecución en un `catch (RuntimeException | StackOverflowError)`
   que lo convierte en un fallo interno con línea, lo registra en el log y
   cuelga la torreta como cualquier otra excepción.
-- Excepciones del MVP: `SinMunicionException`, `SobrecalentamientoException`,
-  `NullPointerException`, `BucleInfinitoException` y `ArithmeticException`
-  (división o resto entre cero, como en Java real; D-08). Todas cuelgan la
+- Excepciones: `SinMunicionException`, `SobrecalentamientoException`,
+  `NullPointerException`, `BucleInfinitoException`, `ArithmeticException`
+  (división o resto entre cero, como en Java real; D-08) e
+  `IndexOutOfBoundsException` (`get(i)` fuera de `0..size()-1`, fase 8).
+  `for` tiene el mismo límite de vueltas que `while`. Todas cuelgan la
   torreta 3 s y muestran su línea. Los `int` desbordan como en Java.
 - Implementación: una única señal precreada y sin traza de pila desenrolla el
   script (excepción del juego o `recargar()`), así que lanzarla no reserva
@@ -287,8 +294,16 @@ public interface TurretApi {           // lo único que ve un script
   boolean exists(long enemy);          // el intérprete lo consulta antes de cada uso
   int health(long enemy);  int speed(long enemy);
   boolean armored(long enemy);  int distanceToCore(long enemy);
+  int enemyCount();  long enemyAt(int index);   // enemigos() (fase 8)
 }
 ```
+
+- **Listas sin objetos** (fase 8): una lista es una referencia más (0 =
+  `null`). `size()`, `get(i)` e `isEmpty()` llaman a `enemyCount()` y
+  `enemyAt(i)` en el momento: como el mundo no se mueve mientras corre un
+  script, es la misma lista. `Battle` la construye una vez por tick y torreta
+  en un array preparado de antemano (los enemigos a tiro, en el orden en que
+  salieron; ordenación por inserción, sin reservar memoria).
 
 - Los enemigos viajan como asas `long` (`EnemyHandle.NONE` = `null`) en vez
   de objetos `EnemyRef`: así leerlos no reserva memoria. La simulación decide
@@ -435,7 +450,9 @@ Así se ve en el propio dato qué es provisional.
   cargar: compila con esa pieza y cabe en `exampleLines` (5, plan). El
   hardware muestra nivel, efecto y precio; la torreta extra aparece en el
   siguiente hueco.
-- **Mapa de oleadas** (D-49): Acto 1 con las 10 oleadas en un camino de
+- **Mapa de oleadas** (D-49): un acto cada vez (tantas oleadas como el ritmo de
+  los jefes, 10), con botones «Acto 1», «Acto 2» y el de la oleada actual
+  abierto; las oleadas se nombran acto-oleada (la 11 es «2-1»). Cada acto, en un camino de
   puntos; candado en las no alcanzadas, bandera roja en la actual, el jefe
   más grande; bajo cada oleada alcanzada, sus estrellas (●●○). Clic en una alcanzada: se abandona la oleada en curso sin cobrar
   ni contar como derrota y la elegida espera a «Desplegar» (D-50).
@@ -609,6 +626,7 @@ los JSON y en `docs/BALANCE.md`.
 | Jefe 1 | Vida = 20 × vida de la oleada 10; alterna blindaje cada 5 s; si llega al núcleo se pierde la oleada; 50 u/s | Plan; velocidad No viene del plan |
 | Recompensa del jefe | 1.er derribo = 1 trofeo; los siguientes, nada (D-57) | Yeray (D-57; sustituye a D-10) |
 | Básico | 100 u/s | No viene del plan (D-12, D-22) |
+| Corredor (acto 2) | 300 u/s (el triple); vida ×0,5 | Triple Plan; vida PROVISIONAL (D-60) |
 | Duración | ~45 s: camino de 2.500 u, velocidad base 100 u/s (25 s), salidas repartidas en 20 s | ~45 s Plan; números No viene del plan |
 
 Composición (No viene del plan, D-12). B = Básico, R = Regenerador,
@@ -626,6 +644,9 @@ Bl = Blindado, E = Enjambre:
 | 8 | 22 | 6 B + 3 R + 3 Bl + 10 E |
 | 9 | 24 | 4 B + 4 R + 6 Bl + 10 E |
 | 10 | 26 | 6 B + 5 R + 5 Bl + 10 E + Jefe |
+| 11 | 28 | 6 B + 8 C + 4 R + 10 E (C = Corredor) |
+| 12 | 30 | 4 B + 4 Bl + 10 C + 10 E + 2 R |
+| 13 | 32 | 12 C + 4 Bl + 10 E + 4 R + 2 B |
 
 ### 10.3 Economía, tienda y progreso
 
@@ -636,16 +657,16 @@ retos son PROVISIONAL: salen de calibrar con `sim-cli` (ver
 | Regla | Valor | Origen |
 |---|---|---|
 | Estrellas por oleada | 3, cada una **una sola vez**: superarla, superarla sin fugas y cumplir su reto. Repetir no paga | Yeray (D-57) |
-| Retos | Uno fijo por oleada en `waves.json`: 1 ningún disparo al aire · 2 no recargar a mano · 3 memoria ≤ 4 · 4 ninguna bala a enemigos ya derribados · 5 ≤ 52 disparos · 6 memoria ≤ 10 · 7 ≤ 100 disparos · 8 ≤ 90 disparos · 9 memoria ≤ 9 · 10 ninguna excepción. Cuentan todas las torretas juntas; memoria = la torreta que más ocupa | Yeray (uno fijo por oleada); retos PROVISIONAL |
+| Retos | Uno fijo por oleada en `waves.json`: 1 ningún disparo al aire · 2 no recargar a mano · 3 memoria ≤ 4 · 4 ninguna bala a enemigos ya derribados · 5 ≤ 52 disparos · 6 memoria ≤ 10 · 7 ≤ 100 disparos · 8 ≤ 90 disparos · 9 memoria ≤ 9 · 10 ninguna excepción · 11 ninguna bala a enemigos ya derribados · 12 memoria ≤ 10 · 13 ninguna excepción. Cuentan todas las torretas juntas; memoria = la torreta que más ocupa | Yeray (uno fijo por oleada); retos PROVISIONAL |
 | Trofeos | 1 por jefe, la primera vez que cae. Se gastarán en mejoras especiales en los actos siguientes | Yeray (D-57) |
 | Estrellas al empezar | 0 | PROVISIONAL |
-| Sintaxis MVP | if 1 · Variables 2 (req. if) · `&& || !` 3 (req. Variables) · while 4 (req. `&&`); fuera del MVP 5, 6, 7, 8 | Orden y requisitos Plan; precios PROVISIONAL (D-57) |
+| Sintaxis | if 1 · Variables 2 (req. if) · `&& || !` 3 (req. Variables) · while 4 (req. `&&`) · for 4 (req. while, fase 8); aún sin vender: métodos 6, try/catch 7, clases 8 | Orden y requisitos Plan; precios PROVISIONAL (D-57, D-60) |
 | Árbol visible | Las 8 piezas con precio desde el inicio; las 4 de fuera del MVP, bloqueadas | Plan |
-| Hardware MVP | Daño, cargador y disipador: 4 niveles a 1 estrella cada uno; torreta extra 2 | PROVISIONAL (D-57) |
-| Todo el MVP | 10 en sintaxis + 14 en hardware = 24 de las 30 estrellas | PROVISIONAL (D-57) |
+| Hardware | Daño, cargador y disipador: 4 niveles a 1 estrella cada uno. Con for: memoria (+4 líneas por nivel) 2 y 3; procesador (+0,5 ciclos/s, máximo 5) 2, 2, 3, 3, 4, 4. Torretas extra 2, 3 y 4 | PROVISIONAL (D-57, D-60) |
+| Todo lo que se vende | 14 en sintaxis + 44 en hardware; las oleadas 1–13 dan 39 estrellas | PROVISIONAL (D-60) |
 | Efecto por nivel | Aditivo sobre la base: daño 5 → 6,25 → 7,5 | Plan («cada nivel… da lo mismo») + PROVISIONAL (D-13) |
 | Ámbito del hardware | Global, para todas las torretas | PROVISIONAL (D-13) |
-| Segunda torreta | «Torreta extra»; tope 2 en el MVP | Plan |
+| Torretas | «Torreta extra»: la 2.ª con `&&`, la 3.ª y la 4.ª con for; 4 huecos (los dos nuevos junto a los tramos del medio) | Plan (3 o 4 en el acto 2) + PROVISIONAL (D-60) |
 | Topes de hardware | Un nivel de hardware no se compra hasta tener cierta sintaxis (`shop.json`, `caps`): daño y cargador, nivel 1 con if, 2 con Variables, 4 con while; disipador y torreta extra, con `&&`. La tienda dice «Necesitas variables para seguir mejorando el daño» | Yeray (red de seguridad, D-34); topes concretos PROVISIONAL |
 | Devolver | Daño, cargador y disipador se devuelven nivel a nivel por lo que costaron; la sintaxis y la torreta extra, no | Yeray (D-59) |
 | Avance automático | Interruptor; apagado repite la oleada. Encendido en partida nueva | Plan + PROVISIONAL (D-02) |
@@ -688,6 +709,13 @@ obliga a regenerarlo y a ver el efecto en el mismo PR.
   fuerte. Si tampoco, la partida está **bloqueada** y sale en
   «Contradicciones». Usa ×3 donde se puede. El
   tiempo de escribir código no cuenta.
+- **Hasta la última oleada** (fase 8): la partida acaba al superar la última
+  (`lastWave`, hoy 13); el informe da también cuándo cae el Jefe 1. El
+  jugador ahorra para una pieza solo desde la oleada anterior a la que «llega»
+  (`shop.json`); antes, sus estrellas van al hardware que más le ayuda.
+  Juega con la memoria que tiene: los scripts de nivel 5 (`L5…`, con for)
+  eligen al enemigo más cerca del núcleo, y el mejor ocupa 13 líneas, así que
+  necesita la mejora de memoria.
 - **Sin retos**: la misma partida con un jugador que nunca intenta los
   retos (solo los cumple si le salen solos). Mide si hacen falta para llegar
   al jefe; hoy sí (se bloquea en la oleada 7).
@@ -717,7 +745,8 @@ obliga a regenerarlo y a ver el efecto en el mismo PR.
 ### 11.1 Simulación (`core-sim`) tal como ha quedado
 
 - `Battle` juega una oleada: aparición → ciclos de torreta → balas →
-  enemigos → fin. 60 ticks/s; ciclo de torreta cada 30 ticks.
+  enemigos → fin. 60 ticks/s; ciclo de torreta cada 30 ticks (con el
+  procesador, 60 / ciclos por segundo, redondeado).
 - Aparición: los «huecos» de salida se reparten en la ventana de 20 s; tras
   cada hueco va un trozo de ventana proporcional al `spawnGapFactor` de su
   tipo (`enemies.json`; hoy 1 en todos = reparto por igual, D-38); un grupo de enjambre ocupa un hueco y sus miembros salen seguidos a la
@@ -811,6 +840,7 @@ provisional contradice el plan.
 | D-57 | Economía sin farmeo | CERRADA la idea (Yeray); números PROVISIONAL | **Cambia el plan** («Farmeo»: repetir paga, oleada perfecta +25 %, regla de las 5 pasadas). Repitiendo una oleada a ×3 se compraba toda la sintaxis en minutos sin programar mejor (oleada 3 perfecta a ×3: 159 por minuto; la sintaxis cuesta 385). Nuevo modelo: cada oleada da 3 estrellas que se cobran **una sola vez**: superarla, superarla sin fugas y un reto de código fijo de esa oleada (menos memoria, sin disparos al aire, sin excepciones…; son los «contratos» del plan, que entran ya). Las estrellas compran sintaxis y hardware. Además, una segunda moneda que solo dan los jefes, la primera vez, para lo más grande; en el MVP solo hay un jefe, así que queda preparada para los actos siguientes. Repetir una oleada solo sirve para sacar las estrellas que falten mejorando el código. Implementada en la fase 6c: precios, retos y calibración en §10.3 y `docs/BALANCE.md`; el simulador comprueba que no haya partidas bloqueadas y mide una partida sin retos. |
 | D-58 | Nombres y manual para principiantes | CERRADA (Yeray) | Las piezas se llaman «Decidir (if/else)», «Recordar (variables)», «Combinar condiciones (&&, ||, !)» y «Repetir (while)» (y «Contar (for)», «Reutilizar código (métodos)», «Atrapar errores (try/catch)», «Tipos de torreta (clases)»). Cambia el texto del plan: «Aún no has desbloqueado «Repetir (while)»». El manual se escribe para quien nunca ha programado: capítulo «Empieza aquí», «Símbolos y palabras» (cada símbolo, glosario y cómo leer el código en voz alta), títulos que dicen qué hace cada orden y ejemplos comentados. |
 | D-59 | Devolver mejoras | CERRADA (Yeray) | Con estrellas que no se repiten, una mejora inútil podía dejar la partida sin salida. Daño, cargador y disipador se devuelven nivel a nivel (el último primero) por lo que costaron, en cualquier momento; la oleada en curso sigue con lo que empezó. La sintaxis no (el código que la usa dejaría de compilar) ni la torreta extra (se perdería su código y su pestaña). No cambia el guardado: los niveles ya se guardan. |
+| D-60 | Fase 8: for y el inicio del acto 2 | PROVISIONAL (las piezas las pidió Yeray; los números son míos) | La pieza se llama «Recorrer (for)» y trae las dos formas. `enemigos()` da los enemigos a tiro en el orden en que salieron. De `List` solo `size()`, `get(i)` e `isEmpty()`; sin arrays. Corredor a 300 u/s (plan) con vida ×0,5 y 8/10/12 en las oleadas 11–13, para que elegir a quién disparar importe. for a 4 estrellas; memoria y procesador esperan a for. Huecos 3 y 4 en (380, 430) y (850, 190). El juego acaba por ahora en la oleada 13. El mapa enseña un acto cada vez. |
 | D-54 | Manual del jugador (fase 5b) | CERRADA la idea (Yeray, no viene del plan); contenido PROVISIONAL | Un libro dentro del juego con cada llamada, pieza de sintaxis, excepción y enemigo, ejemplos que se copian con un botón y recetas. Todo visible desde el principio; lo no desbloqueado, con candado y qué lo trae, como el árbol de la tienda. Textos y ejemplos escritos por mí; los ejemplos se compilan al cargar y los números salen de los datos. |
 | D-44 | Semilla de cada batalla | PROVISIONAL | Un contador de batallas de la partida: las mismas acciones repiten la misma partida. Hoy solo la usa el objetivo «al azar», que no está activo. |
 | D-45 | Medida de la decisión C | PROVISIONAL | En la oleada 1, segundos reales desde que una torreta se queda sin balas hasta el clic que la recarga, más un resumen al acabar la oleada. Se escribe en la consola (`Gdx.app.log`, etiqueta `wave-defense`); el log a fichero llega en la fase 6. |

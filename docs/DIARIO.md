@@ -282,3 +282,33 @@ instalar Java ni Gradle, y dejar escrito cómo llevarlo a Steam.
 | ¿Funciona de verdad el Java recortado (solo 4 módulos)? | Probado aquí: el zip de Linux, en una carpeta limpia, arranca, guarda la partida, escribe el log y juega una oleada. |
 | `jugar.bat` hace `git pull`, que puede cambiar el propio `jugar.bat` mientras se ejecuta; Windows lee los `.bat` a trozos y ejecutaría comandos a medias. | El lanzador se copia a la carpeta temporal y sigue desde la copia. |
 | No puedo abrir los de Windows ni macOS. | Se generan y su contenido es el esperado (`.exe`, `.app` con `Info.plist`); probarlos queda en «Pendiente de probar en local». |
+
+## Fase 8 · 8 de octubre · for, el Corredor y el comienzo del acto 2
+
+**Lo que pidió Yeray**: todo lo que en la tienda ponía «Llegará en una versión
+posterior», por fases. Esta es la primera: for.
+
+- Las dos formas de for: contar (`for (int i = 0; i < 3; i++)`) y recorrer
+  la lista de enemigos (`for (Enemigo e : enemigos())`).
+- Listas: `List<Enemigo>` con `size()`, `get(i)` e `isEmpty()`, y su
+  excepción, `IndexOutOfBoundsException`.
+- El acto 2 empieza: el Corredor, las oleadas 11–13, dos huecos más para
+  torretas y las mejoras de memoria y procesador.
+- El mapa se divide en actos y el manual tiene seis páginas nuevas.
+
+![Parte de la oleada 11 con los Corredores](capturas/fase8-01-parte-oleada-11-corredores.png)
+![Cuatro torretas y un Corredor entrando](capturas/fase8-02-cuatro-torretas-y-corredor.png)
+![El editor con for y la memoria a 16](capturas/fase8-03-editor-for-memoria-16.png)
+![El mapa del acto 2](capturas/fase8-04-mapa-acto-2.png)
+![El manual: Recorrer (for)](capturas/fase8-05-manual-recorrer-for.png)
+
+| Problema | Solución |
+|---|---|
+| Recorrer la lista de enemigos no puede crear objetos en cada ciclo (el juego vigila que el bucle principal no reserve memoria). | La lista es una referencia más; `size()` y `get(i)` preguntan a la batalla en el momento. La batalla prepara la lista una vez por tick en un array creado al empezar la oleada. Como el mundo no se mueve mientras corre un script, es siempre la misma lista. |
+| El orden interno de los enemigos no es el de salida: los huecos de los que mueren se reutilizan. | Se ordenan por el momento en que salieron (ordenación por inserción, sin reservar memoria). |
+| La lista de cada torreta se creaba antes que la de enemigos y fallaba al arrancar la batalla. | Se crea después. |
+| javac acepta comparar una lista con un enemigo (una interfaz con una clase no final), aunque nunca pueda ser cierto. | El juego lo rechaza a propósito; queda como desviación documentada en `JavacAgreementTest`. |
+| Con for a la venta, el jugador de referencia ahorraba para él desde la oleada 4 y dejaba de mejorar: muros en las oleadas 7–10 que antes no había. | Ahora solo ahorra para una pieza desde la oleada anterior a la que llega. |
+| Las oleadas 11–13 se pasaban sin comprar for. | El Corredor pasa a tener la mitad de vida y viene en más cantidad. Aun así, for rinde 0,86 frente al plan, que pide 2: lo dejo apuntado para Yeray en vez de forzar los números. |
+| El mejor script con for ocupa 13 líneas. | Necesita la mejora de memoria; el simulador la compra cambiando un nivel de daño (la devolución de D-59 en acción). |
+| El índice del manual se desplazaba en horizontal por un título largo. | Título más corto: «IndexOutOfBoundsException · fuera de la lista». |

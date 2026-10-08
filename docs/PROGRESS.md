@@ -20,7 +20,11 @@ capturas está en [`DIARIO.md`](DIARIO.md).
 | 6. Guardado, ajustes, robustez | ✅ Fusionada | `phase-6-guardado` |
 | 6b. Manual para principiantes y nombres | ✅ Fusionada | `phase-6b-manual-sencillo` |
 | 6c. Economía de estrellas y retos (D-57) | ✅ Fusionada | `phase-6c-estrellas` |
-| 7. Empaquetado y documentación | ✅ Hecha, en PR | `phase-7-empaquetado` |
+| 7. Empaquetado y documentación | ✅ Fusionada | `phase-7-empaquetado` |
+| 8. for, Corredor y oleadas 11–13 (acto 2) | ✅ Hecha, en PR | `phase-8-for` |
+| 9. Métodos | Siguiente | — |
+| 10. try/catch y Jefe 2 | Pendiente | — |
+| 11. Clases y acto 3 | Pendiente | — |
 
 ## Fase 0 (hecha)
 
@@ -418,10 +422,38 @@ Comprobado aquí: el zip de Linux, descomprimido en una carpeta limpia, arranca
 con su propio Java, guarda la partida y juega una oleada. Los de Windows y
 macOS se generan bien, pero no se pueden abrir en este contenedor.
 
+## Fase 8: for, el Corredor y las oleadas 11–13 (hecha)
+
+Yeray pidió el resto de la sintaxis, por fases. Esta trae «Recorrer (for)» y
+abre el acto 2.
+
+- Intérprete: las dos formas de `for` (contar y recorrer), `enemigos()`,
+  `List<Enemigo>` con `size()`, `get(i)` e `isEmpty()` y la excepción
+  `IndexOutOfBoundsException`. Sin crear objetos al ejecutar. Los arrays dan
+  un mensaje propio. javac sigue de árbitro (casos nuevos en
+  `JavacAgreementTest`).
+- Simulación: la lista de enemigos a tiro, en el orden en que salieron; el
+  Corredor (el triple de rápido); las oleadas 11–13 con sus retos; los huecos
+  3 y 4; las mejoras de memoria (+4 líneas) y procesador (+0,5 ciclos/s).
+- Juego: mapa por actos («2-1» es la oleada 11), manual con seis páginas
+  nuevas (for, listas, `enemigos()`, la excepción, el Corredor y una receta),
+  la tienda con las mejoras nuevas y el editor con la memoria de la partida.
+- `sim-cli` juega hasta la oleada 13 con scripts que usan for.
+
+Resultado del simulador (`docs/BALANCE.md`):
+
+- Llega al final: Jefe 1 tras 17 oleadas jugadas (9,9 min) y la oleada 13 tras
+  34 (18,4 min). Muros en la 10, la 12 y la 13; el de la 13 pide 5 pasadas,
+  justo el máximo del plan.
+- **for no cumple la regla del doble** (0,86 frente a no comprar nada en la
+  oleada 11). Con las reglas actuales, apuntar al enemigo más adelantado no
+  rinde más que fijar un objetivo y no soltarlo. Es un dato para Yeray, no lo
+  he forzado: ver «A observar en el playtest».
+
 ## Siguiente
 
-El MVP está completo. Lo siguiente lo decide Yeray tras jugar el zip de
-Windows: ajustes de balance con lo que salga del playtest, o el acto 2.
+Fase 9: métodos (una biblioteca de código compartida por todas las torretas
+que no gasta memoria, según el plan) y el Mutante. Cuando Yeray lo diga.
 
 ## Decisiones por revisar
 
@@ -486,6 +518,9 @@ Propuestas mías aplicadas como PROVISIONAL (detalle en
   escrito yo; se revisa leyéndolo en el juego.
 - **D-55**: guardado automático (como mucho una vez por segundo mientras se
   escribe); la oleada en curso no se guarda.
+- **D-60**: fase 8 — nombre «Recorrer (for)», orden de `enemigos()`, solo
+  `size`/`get`/`isEmpty`, Corredor con vida ×0,5 y 8/10/12 por oleada, precio
+  de for (4), de memoria y procesador, posición de los huecos 3 y 4.
 - **D-57**: los números de la economía de estrellas: precios (sintaxis 1–4,
   hardware 1 por nivel, torreta extra 2), los 10 retos y 0 estrellas al
   empezar. Calibrados con `sim-cli`.
@@ -500,6 +535,11 @@ Números de balance que no vienen del plan (D-12): están en la lista
 Preguntas de diseño que solo responde alguien jugando. Se apuntan aquí y se
 deciden con ese dato, no antes.
 
+- [ ] **for contra el Corredor** (D-60): ¿nota el jugador que for le ayuda
+  en las oleadas 11–13? El simulador dice que no lo bastante (0,86, el plan
+  pide 2). Si se nota poco, opciones: Corredores con menos vida o que solo
+  se vean en `enemigos()`, o que `disparar()` sin apuntar tire al más lejano
+  del núcleo.
 - [ ] **Variables contra el Regenerador** (D-39): ¿nota el jugador la
   diferencia al comprar Variables en las oleadas 4–5? Si no la nota, se
   rediseña el Regenerador con ese dato. El simulador da 1,07 frente al
@@ -511,6 +551,18 @@ deciden con ese dato, no antes.
   así: empujan a programar «dispara solo si hay enemigos». D-05 cerrada.
 
 ## Pendiente de probar en local
+
+Fase 8 (`jugar.bat`):
+
+- [ ] Comprar «Recorrer (for)» (hace falta llegar con estrellas) y pegar el
+  ejemplo de la tarjeta: compila y la torreta apunta al Corredor.
+- [ ] Escribir un `for (int i = 0; i < 3; i++)` y un `get` fuera de la lista:
+  sale `IndexOutOfBoundsException` encima de la torreta.
+- [ ] Comprar memoria: el editor pasa a «Memoria: N/16».
+- [ ] Comprar la tercera y la cuarta torreta: aparecen en los huecos nuevos y
+  sus pestañas en el editor.
+- [ ] El mapa: botones «Acto 1» y «Acto 2»; la oleada 11 se llama 2-1.
+- [ ] ¿Se distingue bien el Corredor (amarillo y pequeño) mientras pasa?
 
 Fase 7 (Windows, sin usar Gradle):
 
