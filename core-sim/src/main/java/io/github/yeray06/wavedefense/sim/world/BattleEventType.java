@@ -17,5 +17,7 @@ public enum BattleEventType {
   /** A turret started reloading. {@code a} = turret, {@code b} = 1 if it was the player's click. */
   RELOAD,
   /** A turret's magazine reached zero. {@code a} = turret. */
-  EMPTY
+  EMPTY,
+  /** A turret ran {@code saludar()}: it spins round. {@code a} = turret. */
+  GREET
 }

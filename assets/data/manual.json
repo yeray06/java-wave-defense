@@ -228,6 +228,57 @@
               ]
             }
           ]
+        },
+        {
+          "id": "CALL_PRINT",
+          "about": {
+            "call": "PRINT"
+          },
+          "examples": [
+            {
+              "code": "// mira cuantas balas quedan en cada ciclo\nimprimir(municion());\ndisparar();",
+              "needs": [
+                {
+                  "feature": "IF_ELSE"
+                }
+              ]
+            },
+            {
+              "code": "Enemigo e = enemigoMasCercano();\n// null si no hay nadie a tiro\nimprimir(e);\nif (e != null) {\n  imprimir(e.vida());\n}",
+              "needs": [
+                {
+                  "feature": "VARIABLES"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "CALL_WAVE",
+          "about": {
+            "call": "WAVE"
+          },
+          "examples": [
+            {
+              "code": "// en la oleada 15 el Mutante es debil a NORMAL\nif (oleada() == 15) {\n  usarMunicion(NORMAL);\n}\ndisparar();",
+              "needs": [
+                {
+                  "call": "USE_AMMO"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "CALL_GREET",
+          "about": {
+            "call": "GREET"
+          },
+          "examples": [
+            {
+              "code": "// una vuelta para celebrar\nsaludar();\ndisparar();"
+            }
+          ]
         }
       ]
     },

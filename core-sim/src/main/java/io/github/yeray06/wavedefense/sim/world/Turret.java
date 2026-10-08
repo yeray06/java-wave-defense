@@ -33,6 +33,7 @@ public final class Turret {
   int reloads;
   int manualReloads;
   int hungTicks;
+  int greetings;
 
   Turret(int index, double x, double y, CompiledScript script, int magazine) {
     this.index = index;
@@ -95,6 +96,13 @@ public final class Turret {
 
   WaveReport.TurretReport report() {
     return new WaveReport.TurretReport(
-        shots, airShots, wastedOnDead, reloads, manualReloads, hungTicks, faults.snapshot());
+        shots,
+        airShots,
+        wastedOnDead,
+        reloads,
+        manualReloads,
+        hungTicks,
+        faults.snapshot(),
+        greetings);
   }
 }

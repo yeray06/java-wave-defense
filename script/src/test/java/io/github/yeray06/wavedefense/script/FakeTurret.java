@@ -3,6 +3,7 @@ package io.github.yeray06.wavedefense.script;
 import io.github.yeray06.wavedefense.script.api.AmmoType;
 import io.github.yeray06.wavedefense.script.api.EnemyHandle;
 import io.github.yeray06.wavedefense.script.api.FireResult;
+import io.github.yeray06.wavedefense.script.api.PrintKind;
 import io.github.yeray06.wavedefense.script.api.TurretApi;
 
 /**
@@ -27,6 +28,13 @@ final class FakeTurret implements TurretApi {
   int reloadCalls;
   int hasEnemiesCalls;
   long lastAimed = EnemyHandle.NONE;
+  int wave = 1;
+  int greetings;
+  int prints;
+  PrintKind lastPrintKind;
+  long lastPrintValue;
+  int lastPrintLine;
+  boolean lastPrintInLibrary;
 
   final boolean[] alive = new boolean[MAX_ENEMIES + 1];
   final int[] health = new int[MAX_ENEMIES + 1];
@@ -135,6 +143,25 @@ final class FakeTurret implements TurretApi {
   @Override
   public void useAmmo(AmmoType type) {
     ammoType = type;
+  }
+
+  @Override
+  public void print(PrintKind kind, long value, int line, boolean inLibrary) {
+    prints++;
+    lastPrintKind = kind;
+    lastPrintValue = value;
+    lastPrintLine = line;
+    lastPrintInLibrary = inLibrary;
+  }
+
+  @Override
+  public void greet() {
+    greetings++;
+  }
+
+  @Override
+  public int wave() {
+    return wave;
   }
 
   @Override

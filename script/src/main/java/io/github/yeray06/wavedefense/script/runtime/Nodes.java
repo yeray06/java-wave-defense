@@ -3,6 +3,7 @@ package io.github.yeray06.wavedefense.script.runtime;
 import io.github.yeray06.wavedefense.script.api.AmmoType;
 import io.github.yeray06.wavedefense.script.api.EnemyHandle;
 import io.github.yeray06.wavedefense.script.api.FireResult;
+import io.github.yeray06.wavedefense.script.api.PrintKind;
 import io.github.yeray06.wavedefense.script.ast.Expr.BinaryOp;
 import io.github.yeray06.wavedefense.script.diag.FaultType;
 
@@ -327,6 +328,47 @@ public final class Nodes {
 
   public static Exec aim(RefEval enemy, int line) {
     return frame -> frame.api.aim(frame.enemy(enemy.eval(frame), line));
+  }
+
+  public static Exec printInt(IntEval value, int line) {
+    return frame -> frame.api.print(PrintKind.INT, value.eval(frame), line, frame.depth > 0);
+  }
+
+  public static Exec printBool(BoolEval value, int line) {
+    return frame ->
+        frame.api.print(PrintKind.BOOLEAN, value.eval(frame) ? 1 : 0, line, frame.depth > 0);
+  }
+
+  /**
+   * An enemy, or {@code null}. Printing never dereferences, so it never throws: the game says
+   * whether the enemy is still alive.
+   */
+  public static Exec printEnemy(RefEval value, int line) {
+    return frame -> {
+      long enemy = value.eval(frame);
+      PrintKind kind = enemy == EnemyHandle.NONE ? PrintKind.NULL : PrintKind.ENEMY;
+      frame.api.print(kind, enemy, line, frame.depth > 0);
+    };
+  }
+
+  /** A list prints how many enemies it holds; a null list prints null. */
+  public static Exec printList(RefEval value, int line) {
+    return frame -> {
+      boolean isNull = value.eval(frame) == EnemyHandle.NONE;
+      frame.api.print(
+          isNull ? PrintKind.NULL : PrintKind.LIST,
+          isNull ? 0 : frame.api.enemyCount(),
+          line,
+          frame.depth > 0);
+    };
+  }
+
+  public static Exec greet() {
+    return frame -> frame.api.greet();
+  }
+
+  public static IntEval wave() {
+    return frame -> frame.api.wave();
   }
 
   public static Exec useAmmo(AmmoType type) {

@@ -146,7 +146,7 @@ class RobustnessTest {
     List<CompileError> errors = Scripts.compile("System.exit(0);").errors();
     assertEquals(1, errors.size());
     assertEquals(ErrorCode.UNKNOWN_SYMBOL, errors.get(0).code());
-    assertEquals(List.of("System"), errors.get(0).args());
+    assertEquals(List.of("System", ""), errors.get(0).args(), "and nothing close to suggest");
   }
 
   @Test

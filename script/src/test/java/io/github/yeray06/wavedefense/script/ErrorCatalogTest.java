@@ -133,6 +133,8 @@ class ErrorCatalogTest {
         new Case(ErrorCode.WRONG_ARGUMENT_COUNT, "apuntar();", 1),
         new Case(ErrorCode.ARGUMENT_TYPE_MISMATCH, "apuntar(3);", 1),
         new Case(ErrorCode.ARGUMENT_TYPE_MISMATCH, "usarMunicion(3);", 1),
+        new Case(ErrorCode.NOT_PRINTABLE, "imprimir(disparar());", 1),
+        new Case(ErrorCode.NOT_PRINTABLE, "imprimir(NORMAL);", 1),
         new Case(ErrorCode.CANNOT_ASSIGN, "NORMAL = 3;", 1),
         new Case(ErrorCode.CANNOT_ASSIGN, "municion() = 3;", 1),
         new Case(ErrorCode.ASSIGNMENT_NOT_ALLOWED_HERE, "int x = 1;\nint y = x++;", 2),

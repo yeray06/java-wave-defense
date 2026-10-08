@@ -539,7 +539,12 @@ public final class Checker {
         if (t.name().equals(api.ammoTypeName())) {
           report(ErrorCode.UNSUPPORTED_TYPE, t.pos(), t.name());
         } else {
-          report(ErrorCode.UNKNOWN_TYPE, t.pos(), t.name());
+          report(
+              ErrorCode.UNKNOWN_TYPE,
+              t.pos(),
+              t.name(),
+              Suggestions.closest(
+                  t.name(), List.of(api.enemyTypeName(), LIST_TYPE, "int", "boolean")));
         }
         yield Type.ERROR;
       }
@@ -547,7 +552,10 @@ public final class Checker {
   }
 
   private Exec expressionStatement(Stmt.ExprStmt s, BitSet assigned) {
-    memory.count(s.pos());
+    if (!isPrint(s.expr())) {
+      // imprimir() is for looking at the code, not part of it: it takes no memory.
+      memory.count(s.pos());
+    }
     int line = s.pos().line();
     return switch (s.expr()) {
       case Expr.Assign a -> Nodes.statement(line, assignment(a, assigned));
@@ -559,6 +567,11 @@ public final class Checker {
         yield Nodes.statement(line, discard(value));
       }
     };
+  }
+
+  private boolean isPrint(Expr expr) {
+    return expr instanceof Expr.Call call
+        && api.turretCall(call.name()).filter(f -> f == ApiFunction.PRINT).isPresent();
   }
 
   private Exec discard(Typed value) {
@@ -624,7 +637,7 @@ public final class Checker {
       if (api.ammoConstant(n.name()).isPresent()) {
         report(ErrorCode.CANNOT_ASSIGN, n.pos(), n.name());
       } else {
-        report(ErrorCode.UNKNOWN_SYMBOL, n.pos(), n.name());
+        report(ErrorCode.UNKNOWN_SYMBOL, n.pos(), n.name(), suggestSymbol(n.name()));
       }
       return null;
     }
@@ -706,7 +719,7 @@ public final class Checker {
     if (ammo.isPresent()) {
       return new Typed(Type.AMMO, ammo.get());
     }
-    report(ErrorCode.UNKNOWN_SYMBOL, e.pos(), e.name());
+    report(ErrorCode.UNKNOWN_SYMBOL, e.pos(), e.name(), suggestSymbol(e.name()));
     return Typed.ERROR;
   }
 
@@ -717,7 +730,9 @@ public final class Checker {
       return libraryCall(e, methods.get(e.name()), args);
     }
     if (found.isEmpty()) {
-      report(ErrorCode.UNKNOWN_METHOD, e.pos(), e.name());
+      Set<String> calls = new HashSet<>(api.turretCallNames());
+      calls.addAll(methods.keySet());
+      report(ErrorCode.UNKNOWN_METHOD, e.pos(), e.name(), Suggestions.closest(e.name(), calls));
       return Typed.ERROR;
     }
     ApiFunction function = found.get();
@@ -737,8 +752,21 @@ public final class Checker {
       case ENEMIES -> new Typed(Type.ENEMY_LIST, Nodes.enemies());
       case AIM -> new Typed(Type.VOID, Nodes.aim(args.get(0).asRef(), line));
       case USE_AMMO -> new Typed(Type.VOID, Nodes.useAmmo((AmmoType) args.get(0).node()));
+      case PRINT -> new Typed(Type.VOID, print(args.get(0), line));
+      case GREET -> new Typed(Type.VOID, Nodes.greet());
+      case WAVE -> new Typed(Type.INT, Nodes.wave());
       case HEALTH, SPEED, ARMORED, MUTANT, DISTANCE_TO_CORE ->
           throw new IllegalStateException("Enemy call resolved as turret call: " + function);
+    };
+  }
+
+  private static Exec print(Typed value, int line) {
+    return switch (value.type()) {
+      case INT -> Nodes.printInt(value.asInt(), line);
+      case BOOLEAN -> Nodes.printBool(value.asBool(), line);
+      case ENEMY_LIST -> Nodes.printList(value.asRef(), line);
+      case ENEMY, NULL -> Nodes.printEnemy(value.asRef(), line);
+      default -> Nodes.empty();
     };
   }
 
@@ -767,7 +795,12 @@ public final class Checker {
           default -> -1;
         };
     if (expected < 0) {
-      report(ErrorCode.UNKNOWN_ENEMY_METHOD, e.pos(), e.name(), name(Type.ENEMY_LIST));
+      report(
+          ErrorCode.UNKNOWN_ENEMY_METHOD,
+          e.pos(),
+          e.name(),
+          name(Type.ENEMY_LIST),
+          Suggestions.closest(e.name(), List.of("size", "get", "isEmpty")));
       return Typed.ERROR;
     }
     if (args.size() != expected) {
@@ -804,7 +837,12 @@ public final class Checker {
     }
     Optional<ApiFunction> found = api.enemyCall(e.name());
     if (found.isEmpty()) {
-      report(ErrorCode.UNKNOWN_ENEMY_METHOD, e.pos(), e.name(), api.enemyTypeName());
+      report(
+          ErrorCode.UNKNOWN_ENEMY_METHOD,
+          e.pos(),
+          e.name(),
+          api.enemyTypeName(),
+          Suggestions.closest(e.name(), api.enemyCallNames()));
       return Typed.ERROR;
     }
     ApiFunction function = found.get();
@@ -842,8 +880,17 @@ public final class Checker {
     }
     boolean ok = true;
     for (int i = 0; i < args.size(); i++) {
-      Type expected = type(parameters.get(i));
       Type found = args.get(i).type();
+      if (parameters.get(i) == ValueType.PRINTABLE) {
+        if (found == Type.ERROR) {
+          ok = false;
+        } else if (found == Type.VOID || found == Type.AMMO) {
+          report(ErrorCode.NOT_PRINTABLE, exprs.get(i).pos(), api.name(function), name(found));
+          ok = false;
+        }
+        continue;
+      }
+      Type expected = type(parameters.get(i));
       if (found == Type.ERROR) {
         ok = false;
       } else if (!assignable(found, expected)) {
@@ -970,6 +1017,15 @@ public final class Checker {
 
   // ------------------------------------------------------------------ helpers
 
+  /** The variable or constant in scope closest to a mistyped name, or {@code ""}. */
+  private String suggestSymbol(String name) {
+    Set<String> known = new HashSet<>(api.ammoConstantNames());
+    for (Map<String, Var> scope : scopes) {
+      known.addAll(scope.keySet());
+    }
+    return Suggestions.closest(name, known);
+  }
+
   private Var lookup(String name) {
     for (Map<String, Var> scope : scopes) {
       Var var = scope.get(name);
@@ -1049,6 +1105,7 @@ public final class Checker {
       case ENEMY_LIST -> Type.ENEMY_LIST;
       case AMMO -> Type.AMMO;
       case VOID -> Type.VOID;
+      case PRINTABLE -> throw new IllegalStateException("printable is checked apart");
     };
   }
 

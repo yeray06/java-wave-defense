@@ -3,6 +3,7 @@ package io.github.yeray06.wavedefense.sim.world;
 import io.github.yeray06.wavedefense.script.api.AmmoType;
 import io.github.yeray06.wavedefense.script.api.EnemyHandle;
 import io.github.yeray06.wavedefense.script.api.FireResult;
+import io.github.yeray06.wavedefense.script.api.PrintKind;
 import io.github.yeray06.wavedefense.script.api.TurretApi;
 import io.github.yeray06.wavedefense.script.diag.CycleOutcome;
 import io.github.yeray06.wavedefense.script.runtime.CompiledScript;
@@ -55,6 +56,7 @@ public final class Battle {
   private final DefaultTarget defaultTarget;
   private final SplitMix64 random;
   private final BattleEvents events = new BattleEvents(EVENT_CAPACITY);
+  private final OutputLog output = new OutputLog();
 
   // Spawn schedule, computed once.
   private final int[] spawnTicks;
@@ -456,6 +458,11 @@ public final class Battle {
   }
 
   /** Instant events for the render (D-40); the battle never reads them. */
+  /** What the turrets printed with {@code imprimir(x)}. */
+  public OutputLog output() {
+    return output;
+  }
+
   public BattleEvents events() {
     return events;
   }
@@ -717,6 +724,22 @@ public final class Battle {
     @Override
     public boolean armored(long enemy) {
       return enemies.resolve(enemy).armored;
+    }
+
+    @Override
+    public void print(PrintKind kind, long value, int line, boolean inLibrary) {
+      output.add(tick, turret.index, line, inLibrary, kind, value);
+    }
+
+    @Override
+    public void greet() {
+      turret.greetings++;
+      events.add(BattleEventType.GREET, tick, turret.index, 0, turret.x, turret.y);
+    }
+
+    @Override
+    public int wave() {
+      return wave;
     }
 
     @Override

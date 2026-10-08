@@ -49,6 +49,7 @@ public record WaveReport(
    * @param reloads every reload, by code or by hand
    * @param manualReloads reloads the player clicked
    * @param hungTicks ticks spent hung after exceptions
+   * @param greetings times its code ran {@code saludar()}
    */
   public record TurretReport(
       int shots,
@@ -57,9 +58,22 @@ public record WaveReport(
       int reloads,
       int manualReloads,
       int hungTicks,
-      List<FaultCount> faults) {
+      List<FaultCount> faults,
+      int greetings) {
     public TurretReport {
       faults = List.copyOf(faults);
+    }
+
+    /** A turret that never greeted. */
+    public TurretReport(
+        int shots,
+        int airShots,
+        int wastedOnDead,
+        int reloads,
+        int manualReloads,
+        int hungTicks,
+        List<FaultCount> faults) {
+      this(shots, airShots, wastedOnDead, reloads, manualReloads, hungTicks, faults, 0);
     }
 
     public int faultCount() {

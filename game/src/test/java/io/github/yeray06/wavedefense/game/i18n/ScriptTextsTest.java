@@ -23,6 +23,13 @@ class ScriptTextsTest {
               "Aún no has desbloqueado «Repetir (while)»", names.error(locked.errors().get(0)));
           var cut = data.compiler().compile("disparar()", Unlocks.of(1), 12);
           assertEquals("Se esperaba ; y hay el final del código", names.error(cut.errors().get(0)));
+          var typo = data.compiler().compile("disprar();", Unlocks.of(1), 12);
+          assertEquals(
+              "No existe la llamada disprar(). ¿Quisiste decir disparar()?",
+              names.error(typo.errors().get(0)));
+          var madeUp = data.compiler().compile("teletransportar();", Unlocks.of(1), 12);
+          assertEquals(
+              "No existe la llamada teletransportar()", names.error(madeUp.errors().get(0)));
           assertEquals(
               "Se cura si pasa 1 s sin recibir daño.", names.enemyInfo(EnemyKind.REGENERATOR));
           assertEquals(

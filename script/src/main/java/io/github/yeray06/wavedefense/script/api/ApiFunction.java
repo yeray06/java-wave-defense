@@ -18,6 +18,12 @@ public enum ApiFunction {
   ENEMIES(Receiver.TURRET, ValueType.ENEMY_LIST),
   AIM(Receiver.TURRET, ValueType.VOID, ValueType.ENEMY),
   USE_AMMO(Receiver.TURRET, ValueType.VOID, ValueType.AMMO),
+  /** {@code imprimir(x)}: writes a value to the output window. Takes no memory. */
+  PRINT(Receiver.TURRET, ValueType.VOID, ValueType.PRINTABLE),
+  /** {@code saludar()}: the turret spins round. Does nothing else. */
+  GREET(Receiver.TURRET, ValueType.VOID),
+  /** {@code oleada()}: the number of the wave being played. */
+  WAVE(Receiver.TURRET, ValueType.INT),
   HEALTH(Receiver.ENEMY, ValueType.INT),
   SPEED(Receiver.ENEMY, ValueType.INT),
   ARMORED(Receiver.ENEMY, ValueType.BOOLEAN),

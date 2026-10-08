@@ -51,6 +51,9 @@ class JavacAgreementTest {
         List<Enemigo> enemigos() { return List.of(); }
         void apuntar(Enemigo e) {}
         void usarMunicion(Municion m) {}
+        void imprimir(Object valor) {}
+        void saludar() {}
+        int oleada() { return 1; }
       }
       class Script extends Torreta {
       %s

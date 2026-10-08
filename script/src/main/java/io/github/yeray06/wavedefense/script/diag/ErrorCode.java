@@ -51,13 +51,13 @@ public enum ErrorCode {
   API_LOCKED_FEATURE,
   /** {0} the call name, {1} the wave number. */
   API_LOCKED_WAVE,
-  /** {0} the name. */
+  /** {0} the name, {1} the closest known name or "" («¿Quisiste decir…?»). */
   UNKNOWN_SYMBOL,
-  /** {0} the type name. */
+  /** {0} the type name, {1} the closest known type or "". */
   UNKNOWN_TYPE,
-  /** {0} the call name. */
+  /** {0} the call name, {1} the closest known call or "". */
   UNKNOWN_METHOD,
-  /** {0} the call name, {1} the enemy type name. */
+  /** {0} the call name, {1} the enemy type name, {2} the closest known call or "". */
   UNKNOWN_ENEMY_METHOD,
   /** {0} the receiver's type. */
   BAD_RECEIVER,
@@ -77,6 +77,8 @@ public enum ErrorCode {
   WRONG_ARGUMENT_COUNT,
   /** {0} the call name, {1} expected type, {2} found type. */
   ARGUMENT_TYPE_MISMATCH,
+  /** {0} the call name, {1} the type of what it was given. */
+  NOT_PRINTABLE,
   /** {0} what the code tried to assign to. */
   CANNOT_ASSIGN,
   ASSIGNMENT_NOT_ALLOWED_HERE,

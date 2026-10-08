@@ -31,6 +31,9 @@ final class TestApi {
     Map<ApiFunction, FunctionSpec> f = new EnumMap<>(ApiFunction.class);
     f.put(ApiFunction.FIRE, spec("disparar", new Requirement.Free()));
     f.put(ApiFunction.RELOAD, spec("recargar", new Requirement.Free()));
+    f.put(ApiFunction.PRINT, spec("imprimir", new Requirement.Free()));
+    f.put(ApiFunction.GREET, spec("saludar", new Requirement.Free()));
+    f.put(ApiFunction.WAVE, spec("oleada", VARIABLES));
     f.put(ApiFunction.AMMO, spec("municion", IF_ELSE));
     f.put(ApiFunction.HEAT, spec("calor", IF_ELSE));
     f.put(ApiFunction.HAS_ENEMIES, spec("hayEnemigos", IF_ELSE));
