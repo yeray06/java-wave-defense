@@ -514,7 +514,7 @@ deciden con ese dato, no antes.
 
 Releases:
 
-- [ ] Tras subir la etiqueta `v0.1.0`: la portada muestra la Release con los
+- [ ] Tras publicar la `v0.1.0`: la portada muestra la Release con los
   cuatro zips y las instrucciones; el de Windows se descarga y se juega.
 
 Fase 7 (Windows, sin usar Gradle):

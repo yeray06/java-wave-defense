@@ -63,10 +63,12 @@ Abrir).
 Sin compilar nada: en GitHub, *Actions* → *Package* → *Run workflow*. Al acabar,
 los zips están en *Artifacts* de esa ejecución (14 días).
 
-**Publicar una versión**: subir una etiqueta `v*` (por ejemplo
-`git tag v0.2.0 && git push origin v0.2.0`). El mismo workflow empaqueta con esa
-versión (`-PgameVersion=0.2.0`) y crea una **Release** con los cuatro zips y las
-instrucciones de `.github/release-notes.md`; las Releases no caducan.
+**Publicar una versión**: *Actions* → *Package* → *Run workflow*, escribir la
+versión (por ejemplo `0.2.0`) y lanzar. También vale subir una etiqueta
+(`git tag v0.2.0 && git push origin v0.2.0`). El workflow empaqueta con esa
+versión (`-PgameVersion=0.2.0`) y crea la etiqueta `v0.2.0` y una **Release** con
+los cuatro zips y las instrucciones de `.github/release-notes.md`; las Releases
+no caducan.
 
 El Java que va dentro es Temurin, descargado de sus *releases* de GitHub; su
 versión exacta está en `lwjgl3/build.gradle.kts` (`runtimeRelease`) y tiene

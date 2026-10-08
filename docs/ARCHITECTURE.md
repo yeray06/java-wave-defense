@@ -558,10 +558,12 @@ publicar (depots, Auto-Cloud por sistema, steamworks4j, SteamPipe) están en
 - **Workflow `Package`** (`.github/workflows/package.yml`): solo a mano o con
   una etiqueta `v*`. Pasa `./gradlew build`, genera los cuatro zips con nombres
   para jugadores (`JavaWaveDefense-Windows.zip`…) y los deja como *artifacts* 14
-  días. Con una etiqueta, además publica una **Release** con los zips y las
-  instrucciones de `.github/release-notes.md` (única vez que el workflow
-  escribe en el repo: `contents: write`). La versión del juego sale de la
-  etiqueta (`-PgameVersion`); a mano es `0.0.0-dev`. El CI normal no empaqueta: gasta minutos y no
+  días. Con una etiqueta, o a mano con el campo «version» relleno, además
+  publica una **Release** con los zips y las instrucciones de
+  `.github/release-notes.md`; a mano crea también la etiqueta `v<versión>` en el
+  commit empaquetado (única vez que el workflow escribe en el repo:
+  `contents: write`). La versión del juego sale de la etiqueta o del campo
+  (`-PgameVersion`); sin ninguno es `0.0.0-dev`. El CI normal no empaqueta: gasta minutos y no
   añade nada en cada commit.
 - Publicar en Steam: `docs/STEAM.md`.
 
