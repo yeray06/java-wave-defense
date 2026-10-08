@@ -5,6 +5,8 @@ public enum ValueType {
   INT,
   BOOLEAN,
   ENEMY,
+  /** The enemies in range, as a {@code List<Enemigo>}. */
+  ENEMY_LIST,
   AMMO,
   VOID
 }

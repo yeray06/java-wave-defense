@@ -22,6 +22,12 @@ class AllocationTest {
         n += 1 + n % 3 / 2;
         if (o != null && o.blindado() && o.distanciaAlNucleo() * 2 > 100) usarMunicion(PERFORANTE);
       }
+      for (Enemigo e : enemigos()) {
+        if (e.vida() < 50) n++;
+      }
+      for (int i = 0; i < enemigos().size() && i < 3; i++) {
+        n += enemigos().get(i).velocidad();
+      }
       disparar();
       """;
 
@@ -36,6 +42,7 @@ class AllocationTest {
     CompiledScript script = Scripts.ok(BUSY_SCRIPT);
     FakeTurret turret = new FakeTurret();
     turret.nearest = turret.addEnemy(1, 40, 80, true, 900);
+    turret.addEnemy(2, 60, 120, false, 700);
 
     // Warm up so the JIT has compiled the interpreter before measuring.
     for (int i = 0; i < 50_000; i++) {

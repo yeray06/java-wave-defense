@@ -16,9 +16,10 @@ import java.util.List;
 /**
  * Recursive-descent parser for the player's script: a method body, with Java's precedences.
  *
- * <p>Syntax the game knows but does not sell yet ({@code for}, {@code try}, methods, classes) is
- * reported as locked and skipped whole, never half-interpreted. After an error the parser
- * resynchronizes at the end of the statement so several errors can be shown at once.
+ * <p>Syntax the game knows but cannot run yet ({@code try}, methods, classes) is reported as locked
+ * and skipped whole, never half-interpreted. Syntax it runs ({@code if}, {@code while}, {@code
+ * for}…) is always parsed; whether the player owns it is the checker's business. After an error the
+ * parser resynchronizes at the end of the statement so several errors can be shown at once.
  */
 public final class Parser {
 
@@ -95,10 +96,7 @@ public final class Parser {
           advance();
           yield statement(nested);
         }
-        case FOR -> {
-          lockedFor(t);
-          yield null;
-        }
+        case FOR -> forStatement();
         case TRY, CATCH, FINALLY -> {
           lockedTry(t);
           yield null;
@@ -125,10 +123,7 @@ public final class Parser {
         }
         case INT, BOOLEAN, OTHER_PRIMITIVE -> declaration(nested);
         case IDENTIFIER -> {
-          boolean declaration =
-              peekKind(1) == TokenKind.IDENTIFIER
-                  || (peekKind(1) == TokenKind.LBRACKET && peekKind(2) == TokenKind.RBRACKET);
-          yield declaration ? declaration(nested) : expressionStatement();
+          yield startsDeclaration() ? declaration(nested) : expressionStatement();
         }
         default -> expressionStatement();
       };
@@ -164,6 +159,79 @@ public final class Parser {
     return new Stmt.While(pos(keyword), condition, body);
   }
 
+  /**
+   * {@code for (Enemigo e : enemigos())} or {@code for (init; condition; update)}. Both are always
+   * parsed; the checker decides whether the player owns {@code for}.
+   */
+  private Stmt forStatement() {
+    Token keyword = advance();
+    expect(TokenKind.LPAREN, "(");
+    if (forEachHeaderAhead()) {
+      TypeRef type = type();
+      Token name = advance();
+      advance(); // :
+      Expr iterable = expression();
+      expect(TokenKind.RPAREN, ")");
+      Stmt body = orEmpty(statement(true), keyword);
+      return new Stmt.ForEach(pos(keyword), type, pos(name), name.text(), iterable, body);
+    }
+    List<Stmt> init = new ArrayList<>();
+    if (!at(TokenKind.SEMICOLON)) {
+      if (startsDeclaration()
+          || at(TokenKind.INT)
+          || at(TokenKind.BOOLEAN)
+          || at(TokenKind.OTHER_PRIMITIVE)) {
+        Stmt declaration = forDeclaration();
+        if (declaration != null) {
+          init.add(declaration);
+        }
+      } else {
+        for (Expr e : statementExpressions()) {
+          init.add(new Stmt.ExprStmt(e.pos(), e));
+        }
+      }
+    }
+    expect(TokenKind.SEMICOLON, ";");
+    Expr condition = at(TokenKind.SEMICOLON) ? null : expression();
+    expect(TokenKind.SEMICOLON, ";");
+    List<Expr> update = at(TokenKind.RPAREN) ? List.of() : statementExpressions();
+    expect(TokenKind.RPAREN, ")");
+    Stmt body = orEmpty(statement(true), keyword);
+    return new Stmt.For(pos(keyword), init, condition, update, body);
+  }
+
+  /** Whether the tokens after {@code for (} are {@code Type name :}. */
+  private boolean forEachHeaderAhead() {
+    int offset;
+    if (at(TokenKind.INT) || at(TokenKind.BOOLEAN) || at(TokenKind.OTHER_PRIMITIVE)) {
+      offset = 1;
+    } else if (at(TokenKind.IDENTIFIER)) {
+      offset = genericArgumentAhead(1) ? 4 : 1;
+    } else {
+      return false;
+    }
+    Token colon = tokens.get(Math.min(index + offset + 1, tokens.size() - 1));
+    return peekKind(offset) == TokenKind.IDENTIFIER
+        && colon.kind() == TokenKind.UNSUPPORTED_OPERATOR
+        && colon.text().equals(":");
+  }
+
+  /** Comma-separated expressions that must each be a statement: a for's init or update. */
+  private List<Expr> statementExpressions() {
+    List<Expr> out = new ArrayList<>();
+    while (true) {
+      Expr expr = expression();
+      if (!isStatementLike(expr)) {
+        report(ErrorCode.NOT_A_STATEMENT, expr.pos());
+      }
+      out.add(expr);
+      if (!at(TokenKind.COMMA)) {
+        return out;
+      }
+      advance();
+    }
+  }
+
   private Expr parenthesizedCondition() {
     expect(TokenKind.LPAREN, "(");
     Expr condition = expression();
@@ -171,12 +239,21 @@ public final class Parser {
     return condition;
   }
 
+  /** The declaration in a {@code for} header: no {@code ;} of its own, the header has it. */
+  private Stmt forDeclaration() {
+    return declaration(false, true);
+  }
+
   private Stmt declaration(boolean nested) {
+    return declaration(nested, false);
+  }
+
+  private Stmt declaration(boolean nested, boolean inForHeader) {
     Token start = peek();
     TypeRef type = type();
     if (at(TokenKind.LBRACKET)) {
-      // Arrays come with "for y listas".
-      report(ErrorCode.FEATURE_LOCKED, peek(), Feature.FOR);
+      // Lists come from enemigos(); arrays are not part of the game.
+      report(ErrorCode.ARRAYS_NOT_SUPPORTED, peek());
       while (at(TokenKind.LBRACKET)) {
         skipBalanced(TokenKind.LBRACKET, TokenKind.RBRACKET);
       }
@@ -214,8 +291,29 @@ public final class Parser {
       }
       advance();
     }
-    endStatement();
+    if (!inForHeader) {
+      endStatement();
+    }
     return new Stmt.VarDecl(pos(start), type, declarators);
+  }
+
+  /**
+   * Whether a declaration starts here: {@code Type name}, {@code Type[] name} or {@code A<B> c}.
+   */
+  private boolean startsDeclaration() {
+    if (!at(TokenKind.IDENTIFIER)) {
+      return false;
+    }
+    return peekKind(1) == TokenKind.IDENTIFIER
+        || (peekKind(1) == TokenKind.LBRACKET && peekKind(2) == TokenKind.RBRACKET)
+        || (genericArgumentAhead(1) && peekKind(4) == TokenKind.IDENTIFIER);
+  }
+
+  /** Whether {@code <Name>} starts {@code offset} tokens ahead. */
+  private boolean genericArgumentAhead(int offset) {
+    return peekKind(offset) == TokenKind.LT
+        && peekKind(offset + 1) == TokenKind.IDENTIFIER
+        && peekKind(offset + 2) == TokenKind.GT;
   }
 
   private TypeRef type() {
@@ -223,7 +321,15 @@ public final class Parser {
     return switch (t.kind()) {
       case INT -> new TypeRef.IntType(pos(t));
       case BOOLEAN -> new TypeRef.BooleanType(pos(t));
-      case IDENTIFIER -> new TypeRef.Named(pos(t), t.text());
+      case IDENTIFIER -> {
+        if (!at(TokenKind.LT)) {
+          yield new TypeRef.Named(pos(t), t.text());
+        }
+        advance(); // <
+        TypeRef argument = type();
+        expect(TokenKind.GT, ">");
+        yield new TypeRef.Generic(pos(t), t.text(), argument);
+      }
       default -> {
         report(ErrorCode.UNSUPPORTED_TYPE, t, t.text());
         yield new TypeRef.Invalid(pos(t));
@@ -239,17 +345,20 @@ public final class Parser {
       advance();
       return null;
     }
-    boolean statementLike =
-        expr instanceof Expr.Call
-            || expr instanceof Expr.MethodCall
-            || expr instanceof Expr.Assign
-            || expr instanceof Expr.IncDec
-            || expr instanceof Expr.Invalid;
-    if (!statementLike) {
+    if (!isStatementLike(expr)) {
       report(ErrorCode.NOT_A_STATEMENT, expr.pos());
     }
     endStatement();
     return new Stmt.ExprStmt(pos(start), expr);
+  }
+
+  /** What Java accepts as an expression statement. */
+  private static boolean isStatementLike(Expr expr) {
+    return expr instanceof Expr.Call
+        || expr instanceof Expr.MethodCall
+        || expr instanceof Expr.Assign
+        || expr instanceof Expr.IncDec
+        || expr instanceof Expr.Invalid;
   }
 
   /** Consumes the closing {@code ;} or reports it missing. */
@@ -273,15 +382,6 @@ public final class Parser {
   }
 
   // ------------------------------------------------------- locked constructs
-
-  private void lockedFor(Token keyword) {
-    report(ErrorCode.FEATURE_LOCKED, keyword, Feature.FOR);
-    advance();
-    if (at(TokenKind.LPAREN)) {
-      skipBalanced(TokenKind.LPAREN, TokenKind.RPAREN);
-    }
-    skipConstruct();
-  }
 
   private void lockedTry(Token keyword) {
     report(ErrorCode.FEATURE_LOCKED, keyword, Feature.TRY_CATCH);
@@ -574,7 +674,7 @@ public final class Parser {
         advance();
         expr = new Expr.IncDec(pos(t), t.kind() == TokenKind.PLUS_PLUS, false, expr);
       } else if (t.kind() == TokenKind.LBRACKET) {
-        report(ErrorCode.FEATURE_LOCKED, t, Feature.FOR);
+        report(ErrorCode.ARRAYS_NOT_SUPPORTED, t);
         skipBalanced(TokenKind.LBRACKET, TokenKind.RBRACKET);
         expr = new Expr.Invalid(expr.pos());
       } else {

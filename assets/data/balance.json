@@ -5,7 +5,7 @@
   "enemyCount": { "base": 6, "perWave": 2, "max": 60 },
   "coreLivesPerWave": 10,
   "boss": { "everyWaves": 10 },
-  "lastWave": 10,
+  "lastWave": 13,
   "startingTurrets": 1,
   "startingStars": 0,
   "speeds": [1, 2, 3]

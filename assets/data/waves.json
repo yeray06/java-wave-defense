@@ -11,6 +11,9 @@
     { "wave": 7, "groups": [{ "type": "BASIC", "count": 4 }, { "type": "ARMORED", "count": 6 }, { "type": "REGENERATOR", "count": 6 }, { "type": "BASIC", "count": 4 }], "challenge": { "type": "MAX_SHOTS", "limit": 100 } },
     { "wave": 8, "groups": [{ "type": "BASIC", "count": 3 }, { "type": "REGENERATOR", "count": 3 }, { "type": "SWARM", "count": 10 }, { "type": "ARMORED", "count": 3 }, { "type": "BASIC", "count": 3 }], "challenge": { "type": "MAX_SHOTS", "limit": 90 } },
     { "wave": 9, "groups": [{ "type": "BASIC", "count": 2 }, { "type": "ARMORED", "count": 6 }, { "type": "SWARM", "count": 10 }, { "type": "REGENERATOR", "count": 4 }, { "type": "BASIC", "count": 2 }], "challenge": { "type": "MAX_MEMORY", "limit": 9 } },
-    { "wave": 10, "groups": [{ "type": "BASIC", "count": 3 }, { "type": "REGENERATOR", "count": 5 }, { "type": "SWARM", "count": 10 }, { "type": "ARMORED", "count": 5 }, { "type": "BASIC", "count": 3 }, { "type": "BOSS", "count": 1 }], "challenge": { "type": "NO_FAULTS", "limit": 0 } }
+    { "wave": 10, "groups": [{ "type": "BASIC", "count": 3 }, { "type": "REGENERATOR", "count": 5 }, { "type": "SWARM", "count": 10 }, { "type": "ARMORED", "count": 5 }, { "type": "BASIC", "count": 3 }, { "type": "BOSS", "count": 1 }], "challenge": { "type": "NO_FAULTS", "limit": 0 } },
+    { "wave": 11, "groups": [{ "type": "BASIC", "count": 4 }, { "type": "RUNNER", "count": 8 }, { "type": "REGENERATOR", "count": 4 }, { "type": "SWARM", "count": 10 }, { "type": "BASIC", "count": 2 }], "challenge": { "type": "NO_WASTED_SHOTS", "limit": 0 } },
+    { "wave": 12, "groups": [{ "type": "BASIC", "count": 2 }, { "type": "ARMORED", "count": 4 }, { "type": "RUNNER", "count": 10 }, { "type": "SWARM", "count": 10 }, { "type": "REGENERATOR", "count": 2 }, { "type": "BASIC", "count": 2 }], "challenge": { "type": "MAX_MEMORY", "limit": 10 } },
+    { "wave": 13, "groups": [{ "type": "RUNNER", "count": 6 }, { "type": "ARMORED", "count": 4 }, { "type": "SWARM", "count": 10 }, { "type": "RUNNER", "count": 6 }, { "type": "REGENERATOR", "count": 4 }, { "type": "BASIC", "count": 2 }], "challenge": { "type": "NO_FAULTS", "limit": 0 } }
   ]
 }

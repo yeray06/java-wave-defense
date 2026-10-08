@@ -48,6 +48,9 @@ public final class Checker {
 
   private record Var(String name, Type type, int id, int slot) {}
 
+  /** Java's list type: the only generic type, and its name is Java's, not the theme's. */
+  private static final String LIST_TYPE = "List";
+
   private final ScriptApi api;
   private final Unlocks unlocks;
   private final Diagnostics diagnostics;
@@ -112,6 +115,8 @@ public final class Checker {
       case Stmt.Empty e -> Nodes.empty();
       case Stmt.If s -> ifStatement(s, assigned);
       case Stmt.While s -> whileStatement(s, assigned);
+      case Stmt.For s -> forStatement(s, assigned);
+      case Stmt.ForEach s -> forEachStatement(s, assigned);
       case Stmt.VarDecl s -> declaration(s, assigned);
       case Stmt.ExprStmt s -> expressionStatement(s, assigned);
     };
@@ -143,8 +148,87 @@ public final class Checker {
     return Nodes.whileLoop(s.pos().line(), condition, body);
   }
 
+  /**
+   * The header is one memory line, like a {@code while}; its declaration and updates are part of
+   * it. Variables declared in it live until the end of the loop.
+   */
+  private Exec forStatement(Stmt.For s, BitSet assigned) {
+    memory.count(s.pos());
+    requireFeature(Feature.FOR, s.pos());
+    scopes.push(new HashMap<>());
+    List<Exec> init = new ArrayList<>();
+    for (Stmt statement : s.init()) {
+      init.add(
+          switch (statement) {
+            case Stmt.VarDecl d -> declarationBody(d, assigned);
+            case Stmt.ExprStmt e -> statementExpression(e.expr(), assigned);
+            default -> Nodes.empty();
+          });
+    }
+    BoolEval condition = s.condition() == null ? null : condition(s.condition(), assigned);
+    // Body and update may run zero times: their assignments do not count afterwards.
+    BitSet inLoop = (BitSet) assigned.clone();
+    Exec body = branch(s.body(), inLoop);
+    List<Exec> update = new ArrayList<>();
+    for (Expr e : s.update()) {
+      update.add(statementExpression(e, inLoop));
+    }
+    scopes.pop();
+    return Nodes.forLoop(
+        s.pos().line(),
+        Nodes.block(init.toArray(Exec[]::new)),
+        condition,
+        Nodes.block(update.toArray(Exec[]::new)),
+        body);
+  }
+
+  private Exec forEachStatement(Stmt.ForEach s, BitSet assigned) {
+    memory.count(s.pos());
+    requireFeature(Feature.FOR, s.pos());
+    Type elementType = declaredType(s.type());
+    Typed list = expression(s.iterable(), assigned);
+    boolean listOk = list.type() == Type.ENEMY_LIST;
+    if (list.type() != Type.ERROR && !listOk) {
+      report(ErrorCode.FOR_EACH_NOT_A_LIST, s.iterable().pos(), name(list.type()));
+    }
+    if (elementType != Type.ERROR && elementType != Type.ENEMY) {
+      report(ErrorCode.FOR_EACH_WRONG_TYPE, s.type().pos(), name(elementType), name(Type.ENEMY));
+    }
+    scopes.push(new HashMap<>());
+    Var var = null;
+    if (lookup(s.name()) != null) {
+      report(ErrorCode.DUPLICATE_VARIABLE, s.namePos(), s.name());
+    } else {
+      var = declare(s.name(), elementType == Type.ENEMY ? Type.ENEMY : Type.ERROR);
+    }
+    BitSet inLoop = (BitSet) assigned.clone();
+    if (var != null) {
+      inLoop.set(var.id());
+    }
+    Exec body = branch(s.body(), inLoop);
+    scopes.pop();
+    if (!listOk || var == null || var.type() != Type.ENEMY) {
+      return Nodes.empty();
+    }
+    return Nodes.forEach(s.pos().line(), list.asRef(), var.slot(), body);
+  }
+
+  /** A statement expression without its own memory line: a for's init or update. */
+  private Exec statementExpression(Expr expr, BitSet assigned) {
+    return switch (expr) {
+      case Expr.Assign a -> assignment(a, assigned);
+      case Expr.IncDec i -> incDec(i, assigned);
+      case Expr.Invalid i -> Nodes.empty();
+      default -> discard(expression(expr, assigned));
+    };
+  }
+
   private Exec declaration(Stmt.VarDecl s, BitSet assigned) {
     memory.count(s.pos());
+    return Nodes.statement(s.pos().line(), declarationBody(s, assigned));
+  }
+
+  private Exec declarationBody(Stmt.VarDecl s, BitSet assigned) {
     requireFeature(Feature.VARIABLES, s.pos());
     Type type = declaredType(s.type());
     List<Exec> stores = new ArrayList<>();
@@ -165,7 +249,7 @@ public final class Checker {
         stores.add(store(var, value));
       }
     }
-    return Nodes.statement(s.pos().line(), Nodes.block(stores.toArray(Exec[]::new)));
+    return Nodes.block(stores.toArray(Exec[]::new));
   }
 
   private Type declaredType(TypeRef ref) {
@@ -173,7 +257,24 @@ public final class Checker {
       case TypeRef.IntType t -> Type.INT;
       case TypeRef.BooleanType t -> Type.BOOLEAN;
       case TypeRef.Invalid t -> Type.ERROR;
+      case TypeRef.Generic t -> {
+        requireFeature(Feature.FOR, t.pos());
+        boolean enemyList =
+            t.name().equals(LIST_TYPE)
+                && t.argument() instanceof TypeRef.Named n
+                && n.name().equals(api.enemyTypeName());
+        if (enemyList) {
+          yield Type.ENEMY_LIST;
+        }
+        report(ErrorCode.UNSUPPORTED_TYPE, t.pos(), describe(t));
+        yield Type.ERROR;
+      }
       case TypeRef.Named t -> {
+        if (t.name().equals(LIST_TYPE)) {
+          // A raw List: javac takes it, but its elements would be Object.
+          report(ErrorCode.UNSUPPORTED_TYPE, t.pos(), t.name());
+          yield Type.ERROR;
+        }
         if (t.name().equals(api.enemyTypeName())) {
           yield Type.ENEMY;
         }
@@ -206,7 +307,7 @@ public final class Checker {
     return switch (value.type()) {
       case INT -> Nodes.discardInt(value.asInt());
       case BOOLEAN -> Nodes.discardBool(value.asBool());
-      case ENEMY, NULL -> Nodes.discardRef(value.asRef());
+      case ENEMY, ENEMY_LIST, NULL -> Nodes.discardRef(value.asRef());
       case VOID -> (Exec) value.node();
       case AMMO, ERROR -> Nodes.empty();
     };
@@ -280,7 +381,8 @@ public final class Checker {
       case INT -> value.type() == Type.INT ? Nodes.storeInt(var.slot(), value.asInt()) : null;
       case BOOLEAN ->
           value.type() == Type.BOOLEAN ? Nodes.storeBool(var.slot(), value.asBool()) : null;
-      case ENEMY -> value.type().isReference() ? Nodes.storeRef(var.slot(), value.asRef()) : null;
+      case ENEMY, ENEMY_LIST ->
+          assignable(value.type(), var.type()) ? Nodes.storeRef(var.slot(), value.asRef()) : null;
       default -> null;
     };
   }
@@ -309,7 +411,7 @@ public final class Checker {
       }
       case Expr.Name e -> name(e, assigned);
       case Expr.Call e -> turretCall(e, assigned);
-      case Expr.MethodCall e -> enemyCall(e, assigned);
+      case Expr.MethodCall e -> methodCall(e, assigned);
       case Expr.FieldAccess e -> {
         expression(e.receiver(), assigned);
         report(ErrorCode.FIELD_ACCESS, e.pos(), e.name());
@@ -338,6 +440,7 @@ public final class Checker {
         case INT -> new Typed(Type.INT, Nodes.intLocal(var.slot()));
         case BOOLEAN -> new Typed(Type.BOOLEAN, Nodes.boolLocal(var.slot()));
         case ENEMY -> new Typed(Type.ENEMY, Nodes.refLocal(var.slot()));
+        case ENEMY_LIST -> new Typed(Type.ENEMY_LIST, Nodes.refLocal(var.slot()));
         default -> Typed.ERROR;
       };
     }
@@ -370,6 +473,7 @@ public final class Checker {
       case HAS_ENEMIES -> new Typed(Type.BOOLEAN, Nodes.hasEnemies());
       case NEAREST_ENEMY -> new Typed(Type.ENEMY, Nodes.nearestEnemy());
       case TARGET -> new Typed(Type.ENEMY, Nodes.target());
+      case ENEMIES -> new Typed(Type.ENEMY_LIST, Nodes.enemies());
       case AIM -> new Typed(Type.VOID, Nodes.aim(args.get(0).asRef(), line));
       case USE_AMMO -> new Typed(Type.VOID, Nodes.useAmmo((AmmoType) args.get(0).node()));
       case HEALTH, SPEED, ARMORED, DISTANCE_TO_CORE ->
@@ -377,12 +481,62 @@ public final class Checker {
     };
   }
 
-  private Typed enemyCall(Expr.MethodCall e, BitSet assigned) {
+  private Typed methodCall(Expr.MethodCall e, BitSet assigned) {
     Typed receiver = expression(e.receiver(), assigned);
     List<Typed> args = arguments(e.args(), assigned);
     if (receiver.type() == Type.ERROR) {
       return Typed.ERROR;
     }
+    if (receiver.type() == Type.ENEMY_LIST) {
+      return listCall(e, receiver, args);
+    }
+    return enemyCall(e, receiver, args);
+  }
+
+  /**
+   * {@code size()}, {@code get(i)} and {@code isEmpty()}: Java's own names, not the theme's,
+   * because they belong to {@code List}.
+   */
+  private Typed listCall(Expr.MethodCall e, Typed receiver, List<Typed> args) {
+    int line = e.pos().line();
+    int expected =
+        switch (e.name()) {
+          case "size", "isEmpty" -> 0;
+          case "get" -> 1;
+          default -> -1;
+        };
+    if (expected < 0) {
+      report(ErrorCode.UNKNOWN_ENEMY_METHOD, e.pos(), e.name(), name(Type.ENEMY_LIST));
+      return Typed.ERROR;
+    }
+    if (args.size() != expected) {
+      report(ErrorCode.WRONG_ARGUMENT_COUNT, e.pos(), e.name(), expected, args.size());
+      return Typed.ERROR;
+    }
+    RefEval list = receiver.asRef();
+    return switch (e.name()) {
+      case "size" -> new Typed(Type.INT, Nodes.listSize(list, line));
+      case "isEmpty" -> new Typed(Type.BOOLEAN, Nodes.listIsEmpty(list, line));
+      default -> {
+        Typed index = args.get(0);
+        if (index.type() == Type.ERROR) {
+          yield Typed.ERROR;
+        }
+        if (index.type() != Type.INT) {
+          report(
+              ErrorCode.ARGUMENT_TYPE_MISMATCH,
+              e.args().get(0).pos(),
+              e.name(),
+              name(Type.INT),
+              name(index.type()));
+          yield Typed.ERROR;
+        }
+        yield new Typed(Type.ENEMY, Nodes.listGet(list, index.asInt(), line));
+      }
+    };
+  }
+
+  private Typed enemyCall(Expr.MethodCall e, Typed receiver, List<Typed> args) {
     if (receiver.type() != Type.ENEMY) {
       report(ErrorCode.BAD_RECEIVER, e.pos(), name(receiver.type()));
       return Typed.ERROR;
@@ -529,7 +683,7 @@ public final class Checker {
     if (l == Type.BOOLEAN && r == Type.BOOLEAN) {
       return new Typed(Type.BOOLEAN, Nodes.equalBools(negate, left.asBool(), right.asBool()));
     }
-    if (l.isReference() && r.isReference()) {
+    if (l.isReference() && r.isReference() && (l == r || l == Type.NULL || r == Type.NULL)) {
       return new Typed(Type.BOOLEAN, Nodes.equalRefs(negate, left.asRef(), right.asRef()));
     }
     report(ErrorCode.BAD_OPERAND_TYPES, e.pos(), e.op().symbol(), name(l), name(r));
@@ -567,7 +721,7 @@ public final class Checker {
   private Var declare(String name, Type type) {
     int slot =
         switch (type) {
-          case ENEMY -> refSlots++;
+          case ENEMY, ENEMY_LIST -> refSlots++;
           case INT, BOOLEAN -> intSlots++;
           default -> -1;
         };
@@ -594,7 +748,7 @@ public final class Checker {
     return found == expected
         || found == Type.ERROR
         || expected == Type.ERROR
-        || (expected == Type.ENEMY && found == Type.NULL);
+        || ((expected == Type.ENEMY || expected == Type.ENEMY_LIST) && found == Type.NULL);
   }
 
   /** Reports a locked feature once per line, so one line does not get the same error twice. */
@@ -630,6 +784,7 @@ public final class Checker {
       case INT -> Type.INT;
       case BOOLEAN -> Type.BOOLEAN;
       case ENEMY -> Type.ENEMY;
+      case ENEMY_LIST -> Type.ENEMY_LIST;
       case AMMO -> Type.AMMO;
       case VOID -> Type.VOID;
     };
@@ -641,10 +796,22 @@ public final class Checker {
       case INT -> "int";
       case BOOLEAN -> "boolean";
       case ENEMY -> api.enemyTypeName();
+      case ENEMY_LIST -> LIST_TYPE + "<" + api.enemyTypeName() + ">";
       case AMMO -> api.ammoTypeName();
       case NULL -> "null";
       case VOID -> "void";
       case ERROR -> "?";
+    };
+  }
+
+  /** A generic type as written, for messages. */
+  private static String describe(TypeRef type) {
+    return switch (type) {
+      case TypeRef.IntType t -> "int";
+      case TypeRef.BooleanType t -> "boolean";
+      case TypeRef.Named t -> t.name();
+      case TypeRef.Generic t -> t.name() + "<" + describe(t.argument()) + ">";
+      case TypeRef.Invalid t -> "?";
     };
   }
 

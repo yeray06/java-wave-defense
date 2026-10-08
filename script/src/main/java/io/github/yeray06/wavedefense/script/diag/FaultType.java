@@ -10,6 +10,8 @@ public enum FaultType {
   NULL_POINTER,
   INFINITE_LOOP,
   ARITHMETIC,
+  /** {@code lista.get(i)} with {@code i} outside {@code 0..size()-1}. */
+  INDEX_OUT_OF_BOUNDS,
   /** A bug in the interpreter or the simulation, not in the player's code. */
   INTERNAL_ERROR
 }

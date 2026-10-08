@@ -144,11 +144,28 @@ class FeatureGateTest {
                 disparar();
         }
         """;
-    List<CompileError> errors = Scripts.compile(plansWaveTwelveScript).errors();
+    List<CompileError> errors = Scripts.compile(plansWaveTwelveScript, Scripts.MVP).errors();
     assertEquals(1, errors.size(), () -> Scripts.describe(errors));
     assertEquals(ErrorCode.FEATURE_LOCKED, errors.get(0).code());
     assertEquals(List.of(Feature.FOR), errors.get(0).args());
     assertEquals(2, errors.get(0).line());
+    assertTrue(
+        Scripts.compile(plansWaveTwelveScript).succeeded(), "the plan's script, with for bought");
+  }
+
+  @Test
+  void listsComeWithFor() {
+    for (String source :
+        List.of(
+            "List<Enemigo> lista = null;",
+            "int n = enemigos().size();",
+            "for (int i = 0; i < 3; i++) {\n  disparar();\n}")) {
+      List<CompileError> errors = Scripts.compile(source, Scripts.MVP).errors();
+      assertTrue(
+          errors.stream().anyMatch(e -> e.args().contains(Feature.FOR)),
+          () -> source + " -> " + Scripts.describe(errors));
+      assertTrue(Scripts.compile(source).succeeded(), source);
+    }
   }
 
   @Test
@@ -161,7 +178,6 @@ class FeatureGateTest {
         "try {\n  disparar();\n} catch (Exception e) {\n} finally {\n}", Feature.TRY_CATCH);
     assertLocked("class Torreta {\n}", Feature.CLASSES);
     assertLocked("Enemigo e = new Enemigo();", Feature.CLASSES);
-    assertLocked("int[] lista;", Feature.FOR);
   }
 
   private static void assertLocked(String source, Feature feature) {

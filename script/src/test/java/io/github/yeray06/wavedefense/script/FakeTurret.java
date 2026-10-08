@@ -91,6 +91,29 @@ final class FakeTurret implements TurretApi {
     return false;
   }
 
+  /** Living enemies in slot order: the fake's "order they came out". */
+  @Override
+  public int enemyCount() {
+    int count = 0;
+    for (int slot = 1; slot <= MAX_ENEMIES; slot++) {
+      if (alive[slot]) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  @Override
+  public long enemyAt(int index) {
+    int seen = 0;
+    for (int slot = 1; slot <= MAX_ENEMIES; slot++) {
+      if (alive[slot] && seen++ == index) {
+        return slot;
+      }
+    }
+    throw new IllegalArgumentException("no enemy " + index);
+  }
+
   @Override
   public long nearestEnemy() {
     return nearest;

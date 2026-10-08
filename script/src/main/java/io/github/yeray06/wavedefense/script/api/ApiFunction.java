@@ -14,6 +14,8 @@ public enum ApiFunction {
   HAS_ENEMIES(Receiver.TURRET, ValueType.BOOLEAN),
   NEAREST_ENEMY(Receiver.TURRET, ValueType.ENEMY),
   TARGET(Receiver.TURRET, ValueType.ENEMY),
+  /** Enemies in range in the order they came out ({@code enemigos()}). */
+  ENEMIES(Receiver.TURRET, ValueType.ENEMY_LIST),
   AIM(Receiver.TURRET, ValueType.VOID, ValueType.ENEMY),
   USE_AMMO(Receiver.TURRET, ValueType.VOID, ValueType.AMMO),
   HEALTH(Receiver.ENEMY, ValueType.INT),

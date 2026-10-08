@@ -27,7 +27,12 @@ import java.util.Set;
  */
 final class DoubleRule {
   private static final HardwareKind[] HARDWARE = {
-    HardwareKind.EXTRA_TURRET, HardwareKind.DAMAGE, HardwareKind.MAGAZINE, HardwareKind.HEAT_SINK
+    HardwareKind.EXTRA_TURRET,
+    HardwareKind.DAMAGE,
+    HardwareKind.MAGAZINE,
+    HardwareKind.HEAT_SINK,
+    HardwareKind.PROCESSOR,
+    HardwareKind.MEMORY
   };
 
   record Entry(
@@ -146,7 +151,7 @@ final class DoubleRule {
 
   private Best bestK(int wave, Unlocks unlocks, Progress state) {
     Best best = null;
-    for (ReferencePlayer.ChosenScript script : player.variants(unlocks)) {
+    for (ReferencePlayer.ChosenScript script : player.variants(unlocks, state.memoryLines(data))) {
       double k = bestK(wave, script, state);
       if (best == null || k > best.k()) {
         best = new Best(k, script.name());

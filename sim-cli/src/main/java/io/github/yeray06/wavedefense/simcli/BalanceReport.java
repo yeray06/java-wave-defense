@@ -67,7 +67,7 @@ final class BalanceReport {
       ProgressionRun.Result withoutChallenges,
       List<DoubleRule.Entry> doubleRule,
       List<DoubleRule.Entry> doubleRuleWithoutCaps) {
-    line("# Balance del MVP (oleadas 1–10)");
+    line("# Balance (oleadas 1–%d)", data.balance().lastWave());
     line("");
     line("Generado por `sim-cli` con `./gradlew :sim-cli:run --args=\"--write docs/BALANCE.md\"`.");
     line("No editar a mano: se regenera con los datos de `assets/data/`. Los números que **no");
@@ -203,7 +203,10 @@ final class BalanceReport {
           "L3-ammo-b",
           "L4",
           "L4-ammo",
-          "L4-ammo-b"
+          "L4-ammo-b",
+          "L5",
+          "L5-ammo",
+          "L5-ammo-b"
         }) {
       String source = ReferencePlayer.resource(name);
       int memory =
@@ -226,10 +229,12 @@ final class BalanceReport {
   private void progression(ProgressionRun.Result run) {
     line("## 4. Partida simulada");
     line("");
-    if (run.bossDefeated()) {
+    int lastWave = data.balance().lastWave();
+    if (run.reachedTheEnd()) {
       line(
-          "El jugador de referencia derrota al Jefe 1 tras **%d oleadas jugadas**.",
-          run.rows().size());
+          "El jugador de referencia derrota al Jefe 1 tras **%d oleadas jugadas** y supera la"
+              + " última, la %d, tras **%d**.",
+          run.wavesToTheBoss(), lastWave, run.rows().size());
     } else if (run.lockedAt() != null) {
       line(
           "La partida queda **bloqueada** en la oleada %d: no puede comprar nada ni ganar más"
@@ -241,10 +246,12 @@ final class BalanceReport {
               + ": sin estrellas para comprar y ninguna oleada anterior que dé más.");
     } else {
       line(
-          "El jugador de referencia **no derrota al Jefe 1** en %d oleadas jugadas.",
-          run.rows().size());
+          "El jugador de referencia **no supera la oleada %d** en %d oleadas jugadas.",
+          lastWave, run.rows().size());
       contradictions.add(
-          "El jugador de referencia no llega a derrotar al Jefe 1 en "
+          "El jugador de referencia no llega a superar la oleada "
+              + lastWave
+              + " en "
               + run.rows().size()
               + " oleadas.");
     }
@@ -333,13 +340,14 @@ final class BalanceReport {
         end.starsEarned(), 3 * data.balance().lastWave(), end.stars(), end.trophies());
     line("");
     if (run.bossDefeated()) {
-      int before = 3 * (data.balance().lastWave() - 1);
+      int bossWave = data.balance().boss().everyWaves();
+      int before = 3 * (bossWave - 1);
       line(
           "Antes de vencer al Jefe 1 gastó **%d estrellas** de las %d que dan las oleadas 1–%d:"
               + " margen de %d para quien no las consiga todas.",
           run.starsSpentBeforeTheBoss(),
           before,
-          data.balance().lastWave() - 1,
+          bossWave - 1,
           before - run.starsSpentBeforeTheBoss());
       line("");
     }
@@ -419,7 +427,7 @@ final class BalanceReport {
   }
 
   private void playTime(ProgressionRun.Result run) {
-    double minutes = run.playSeconds() / 60;
+    double minutes = run.secondsToTheBoss() / 60;
     line("## 6. Tiempo hasta el Jefe 1");
     line("");
     line(
@@ -428,6 +436,12 @@ final class BalanceReport {
     line("el tiempo de escribir código). El plan apunta a 20–30 min «por comprobar con");
     line("jugadores», incluido el tiempo de escribir, así que este valor es un mínimo.");
     line("");
+    if (run.reachedTheEnd()) {
+      line(
+          "Hasta superar la oleada %d: **%s min**.",
+          data.balance().lastWave(), decimal(run.playSeconds() / 60));
+      line("");
+    }
     if (run.bossDefeated() && minutes < TARGET_MIN_MINUTES) {
       warnings.add(
           "Llegar al Jefe 1 lleva "

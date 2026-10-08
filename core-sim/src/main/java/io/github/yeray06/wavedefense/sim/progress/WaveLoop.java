@@ -174,7 +174,7 @@ public final class WaveLoop {
 
   /** Compiles code with the player's current unlocks and the turret's memory. */
   public CompileResult compile(String source) {
-    return data.compiler().compile(source, progress.unlocks(), data.turret().memoryLines());
+    return data.compiler().compile(source, progress.unlocks(), progress.memoryLines(data));
   }
 
   /**

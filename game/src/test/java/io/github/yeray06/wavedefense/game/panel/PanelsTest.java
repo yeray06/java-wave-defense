@@ -228,12 +228,25 @@ class PanelsTest {
               all(map).stream()
                   .filter(a -> a instanceof Image i && i.getDrawable() == skin.getDrawable("lock"))
                   .count();
-          assertEquals(data.balance().lastWave() - 1, locks, "only wave 1 is reached");
+          int actSize = data.balance().boss().everyWaves();
+          assertEquals(actSize - 1, locks, "act 1 is shown and only wave 1 is reached");
           long flags =
               all(map).stream()
                   .filter(a -> a instanceof Image i && i.getDrawable() == skin.getDrawable("flag"))
                   .count();
           assertEquals(1, flags);
+          // Act 2 shows its own waves, all locked, with their act-wave names.
+          button(map, names.texts().format("map.act.button", 2))
+              .fire(new ChangeListener.ChangeEvent());
+          assertTrue(
+              all(map).stream()
+                  .anyMatch(
+                      a ->
+                          a instanceof Label l
+                              && l.getText()
+                                  .toString()
+                                  .equals(names.texts().format("map.node", 2, 1))),
+              "wave 11 is 2-1");
           float[] first = map.position(1);
           float[] boss = map.position(data.balance().lastWave());
           assertTrue(boss[1] > first[1], "the road goes up to the boss");

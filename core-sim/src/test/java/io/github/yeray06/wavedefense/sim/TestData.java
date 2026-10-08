@@ -21,7 +21,7 @@ public final class TestData {
     return data;
   }
 
-  /** Compiles with every MVP piece and wave 10 reached; fails the test on errors. */
+  /** Compiles with every piece on sale and wave 13 reached; fails the test on errors. */
   public static CompiledScript script(String source) {
     CompileResult result =
         load()
@@ -29,7 +29,12 @@ public final class TestData {
             .compile(
                 source,
                 Unlocks.of(
-                    10, Feature.IF_ELSE, Feature.VARIABLES, Feature.LOGIC_OPS, Feature.WHILE),
+                    13,
+                    Feature.IF_ELSE,
+                    Feature.VARIABLES,
+                    Feature.LOGIC_OPS,
+                    Feature.WHILE,
+                    Feature.FOR),
                 100);
     if (!result.succeeded()) {
       throw new AssertionError("script does not compile: " + result.errors());

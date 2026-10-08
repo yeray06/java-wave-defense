@@ -186,6 +186,20 @@
           ]
         },
         {
+          "id": "CALL_ENEMIES",
+          "about": {
+            "call": "ENEMIES"
+          },
+          "examples": [
+            {
+              "code": "// cuantos enemigos hay a tiro ahora\nint n = enemigos().size();\nif (n >= 3) {\n  disparar();\n}"
+            },
+            {
+              "code": "// mira a cada enemigo de la lista\nfor (Enemigo e : enemigos()) {\n  if (e.blindado()) {\n    apuntar(e);\n  }\n}\ndisparar();"
+            }
+          ]
+        },
+        {
           "id": "CALL_AIM",
           "about": {
             "call": "AIM"
@@ -365,6 +379,44 @@
               "code": "while (hayEnemigos()) {\n  disparar();  // acaba sin balas\n}"
             }
           ]
+        },
+        {
+          "id": "SYNTAX_FOR",
+          "about": {
+            "feature": "FOR"
+          },
+          "examples": [
+            {
+              "code": "// recorre la lista: en cada vuelta,\n// e es un enemigo distinto\nfor (Enemigo e : enemigos()) {\n  if (e.velocidad() > 200) {\n    apuntar(e);  // el rapido primero\n  }\n}\ndisparar();"
+            },
+            {
+              "code": "// cuenta de 0 a 2: el bloque se repite 3 veces\nfor (int i = 0; i < 3; i++) {\n  if (municion() > 0 && calor() < 80) {\n    disparar();\n  }\n}"
+            },
+            {
+              "code": "// mal: i nunca llega a 3, porque no se suma\nfor (int i = 0; i < 3; ) {\n  municion();\n}"
+            }
+          ]
+        },
+        {
+          "id": "SYNTAX_LISTS",
+          "examples": [
+            {
+              "code": "List<Enemigo> lista = enemigos();\nif (!lista.isEmpty()) {\n  // el primero que salio\n  apuntar(lista.get(0));\n}",
+              "needs": [
+                {
+                  "feature": "FOR"
+                }
+              ]
+            },
+            {
+              "code": "List<Enemigo> lista = enemigos();\n// el ultimo es size() - 1, no size()\nint ultimo = lista.size() - 1;\nif (ultimo >= 0) {\n  apuntar(lista.get(ultimo));\n}",
+              "needs": [
+                {
+                  "feature": "FOR"
+                }
+              ]
+            }
+          ]
         }
       ]
     },
@@ -483,6 +535,30 @@
               ]
             }
           ]
+        },
+        {
+          "id": "FAULT_INDEX_OUT_OF_BOUNDS",
+          "about": {
+            "fault": "INDEX_OUT_OF_BOUNDS"
+          },
+          "examples": [
+            {
+              "code": "List<Enemigo> lista = enemigos();\n// si no hay nadie, no existe el 0\napuntar(lista.get(0));",
+              "needs": [
+                {
+                  "feature": "FOR"
+                }
+              ]
+            },
+            {
+              "code": "List<Enemigo> lista = enemigos();\nif (lista.size() > 0) {\n  apuntar(lista.get(0));\n}",
+              "needs": [
+                {
+                  "feature": "FOR"
+                }
+              ]
+            }
+          ]
         }
       ]
     },
@@ -559,6 +635,22 @@
               "needs": [
                 {
                   "feature": "WHILE"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ENEMY_RUNNER",
+          "about": {
+            "enemy": "RUNNER"
+          },
+          "examples": [
+            {
+              "code": "// apunta al que esta mas cerca del nucleo\nEnemigo peligro = null;\nfor (Enemigo e : enemigos()) {\n  if (peligro == null || e.distanciaAlNucleo()\n      < peligro.distanciaAlNucleo()) {\n    peligro = e;\n  }\n}\nif (peligro != null) apuntar(peligro);\ndisparar();",
+              "needs": [
+                {
+                  "feature": "FOR"
                 }
               ]
             }
@@ -669,6 +761,19 @@
           "examples": [
             {
               "code": "if (municion() == 0) recargar();\nEnemigo e = objetivo();\nif (e == null) e = enemigoMasCercano();\nif (e != null) {\n  apuntar(e);\n  if (e.blindado()) usarMunicion(PERFORANTE);\n  else usarMunicion(NORMAL);\n  while (municion() > 0 && calor() < 80) {\n    disparar();\n  }\n}"
+            }
+          ]
+        },
+        {
+          "id": "RECIPE_CLOSEST_TO_CORE",
+          "examples": [
+            {
+              "code": "if (municion() == 0) {\n  recargar();\n}\nEnemigo peligro = null;\nfor (Enemigo e : enemigos()) {\n  if (peligro == null || e.distanciaAlNucleo()\n      < peligro.distanciaAlNucleo()) {\n    peligro = e;\n  }\n}\nif (peligro != null) {\n  apuntar(peligro);\n  disparar();\n}",
+              "needs": [
+                {
+                  "feature": "FOR"
+                }
+              ]
             }
           ]
         }

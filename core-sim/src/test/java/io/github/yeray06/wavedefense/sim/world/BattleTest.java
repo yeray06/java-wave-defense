@@ -141,6 +141,46 @@ class BattleTest {
   }
 
   @Test
+  void theEnemyListHoldsWhoIsInRangeInTheOrderTheyCameOut() {
+    // Same speed: whoever came out first is nearer the core. Only the right order ever fires.
+    String rightOrder =
+        "List<Enemigo> l = enemigos();\n"
+            + "if (l.size() >= 2 && l.get(0).distanciaAlNucleo() < l.get(1).distanciaAlNucleo())"
+            + " disparar();";
+    String wrongOrder = rightOrder.replace(" < l.get(1)", " > l.get(1)");
+    Battle battle = battle(data(), 1, rightOrder, wrongOrder);
+    ticks(battle, 60 * 60);
+    assertTrue(battle.report().turrets().get(0).shots() > 0, "two at a time come in range");
+    assertEquals(0, battle.report().turrets().get(1).shots());
+  }
+
+  @Test
+  void anEmptyEnemyListHasNoFirstEnemy() {
+    Battle battle = battle(data(), 1, "apuntar(enemigos().get(0));");
+    battle.tick();
+    assertEquals(
+        FaultType.INDEX_OUT_OF_BOUNDS, battle.report().turrets().get(0).faults().get(0).type());
+  }
+
+  @Test
+  void theProcessorMakesTheTurretThinkMoreOften() {
+    GameData data = data();
+    Battle base =
+        new Battle(
+            data, new BattleSetup(1, List.of(TestData.script("disparar();")), Loadout.NONE, 1, 1L));
+    Battle fast =
+        new Battle(
+            data,
+            new BattleSetup(
+                1, List.of(TestData.script("disparar();")), new Loadout(0, 0, 0, 2), 1, 1L));
+    ticks(base, 60);
+    ticks(fast, 60);
+    // 2 cycles per second; two processor levels add 0.5 each: 3.
+    assertEquals(2, base.report().turrets().get(0).shots());
+    assertEquals(3, fast.report().turrets().get(0).shots());
+  }
+
+  @Test
   void armorTakesEightyPercentLessFromNormalAmmoButNotFromPiercing() {
     GameData armoredOnly = waveOneOf(new WaveTable.Group(EnemyKind.ARMORED, 1));
     WaveReport normal = battle(armoredOnly, 1, IF_SCRIPT).runToEnd();

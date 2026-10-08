@@ -14,8 +14,13 @@ import java.util.stream.Collectors;
 
 /** Compile helpers for tests. */
 final class Scripts {
-  /** Everything the MVP sells, and a wave past every wave requirement. */
+  /** Every piece the game runs, and a wave past every wave requirement. */
   static final Unlocks ALL =
+      Unlocks.of(
+          10, Feature.IF_ELSE, Feature.VARIABLES, Feature.LOGIC_OPS, Feature.WHILE, Feature.FOR);
+
+  /** The MVP's four pieces: {@code for} still locked. */
+  static final Unlocks MVP =
       Unlocks.of(10, Feature.IF_ELSE, Feature.VARIABLES, Feature.LOGIC_OPS, Feature.WHILE);
 
   static final Unlocks NOTHING = Unlocks.of(1);

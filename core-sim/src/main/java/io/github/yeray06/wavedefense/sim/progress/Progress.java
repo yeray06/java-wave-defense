@@ -277,6 +277,16 @@ public final class Progress {
     return new Loadout(
         levels.get(HardwareKind.DAMAGE),
         levels.get(HardwareKind.MAGAZINE),
-        levels.get(HardwareKind.HEAT_SINK));
+        levels.get(HardwareKind.HEAT_SINK),
+        levels.get(HardwareKind.PROCESSOR));
+  }
+
+  /** Memory lines each turret's code may use: the turret's plus the memory upgrades. */
+  public int memoryLines(GameData data) {
+    return (int)
+        Math.round(
+            data.turret().memoryLines()
+                + data.shop().hardware(HardwareKind.MEMORY).effectPerLevel()
+                    * levels.get(HardwareKind.MEMORY));
   }
 }

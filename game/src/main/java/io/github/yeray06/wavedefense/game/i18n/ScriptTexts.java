@@ -72,7 +72,7 @@ public final class ScriptTexts {
           case ARMORED -> decimal(data.enemies().armorDamageReduction() * 100);
           case SWARM -> type.groupSize();
           case BOSS -> decimal(type.armorToggleSeconds());
-          case BASIC -> "";
+          case BASIC, RUNNER -> "";
         };
     return texts.format("enemy." + kind.name() + ".info", argument);
   }
