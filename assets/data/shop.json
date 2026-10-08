@@ -43,8 +43,8 @@
       "price": 5,
       "requires": "WHILE",
       "arrivesAroundWave": 11,
-      "inMvp": false,
-      "example": null
+      "inMvp": true,
+      "example": "for (Enemigo e : enemigos()) {\n  if (e.velocidad() > 200) apuntar(e);\n}\nif (municion() == 0) recargar();\nelse disparar();"
     },
     {
       "feature": "METHODS",
@@ -129,8 +129,13 @@
         3
       ],
       "effectPerLevel": 4,
-      "inMvp": false,
-      "caps": []
+      "inMvp": true,
+      "caps": [
+        {
+          "untilFeature": "FOR",
+          "maxLevel": 0
+        }
+      ]
     },
     {
       "kind": "HEAT_SINK",
@@ -152,17 +157,28 @@
     {
       "kind": "PROCESSOR",
       "prices": [
+        2,
+        2,
         3,
+        3,
+        4,
         4
       ],
       "effectPerLevel": 0.5,
-      "inMvp": false,
-      "caps": []
+      "inMvp": true,
+      "caps": [
+        {
+          "untilFeature": "FOR",
+          "maxLevel": 0
+        }
+      ]
     },
     {
       "kind": "EXTRA_TURRET",
       "prices": [
-        2
+        2,
+        3,
+        4
       ],
       "effectPerLevel": 1,
       "inMvp": true,
@@ -170,6 +186,10 @@
         {
           "untilFeature": "LOGIC_OPS",
           "maxLevel": 0
+        },
+        {
+          "untilFeature": "FOR",
+          "maxLevel": 1
         }
       ]
     }

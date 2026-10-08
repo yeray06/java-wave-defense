@@ -22,7 +22,7 @@ class GameDataTest {
   @Test
   void loadsEveryShippedFile() {
     GameData data = TestData.load();
-    assertEquals(10, data.balance().lastWave());
+    assertEquals(13, data.balance().lastWave());
     assertEquals(20, data.turret().heatPerShot().get(AmmoType.NORMAL));
     assertEquals(40, data.turret().heatPerShot().get(AmmoType.PIERCING));
     assertEquals(0.8, data.enemies().armorDamageReduction());
@@ -83,8 +83,8 @@ class GameDataTest {
         "\"initialScript\": \"disparar();\"",
         "\"initialScript\": \"while (true) disparar();\"",
         "initialScript");
-    assertRejected(GameData.BALANCE, "\"lastWave\": 10", "\"lastWave\": 9", "lastWave");
-    assertRejected(GameData.BALANCE, "\"startingTurrets\": 1", "\"startingTurrets\": 3", "slots");
+    assertRejected(GameData.BALANCE, "\"lastWave\": 13", "\"lastWave\": 12", "lastWave");
+    assertRejected(GameData.BALANCE, "\"startingTurrets\": 1", "\"startingTurrets\": 5", "slots");
     assertRejected(GameData.BALANCE, "\"speeds\": [1, 2, 3]", "\"speeds\": [2, 3]", "start at 1");
     assertRejected(GameData.BALANCE, "\"speeds\": [1, 2, 3]", "\"speeds\": [1, 3, 2]", "grow");
     assertRejected(GameData.SHOP, "\"kind\": \"DAMAGE\"", "\"kind\": \"MEMORY\"", "exactly once");
@@ -97,7 +97,7 @@ class GameDataTest {
     assertRejected(
         GameData.SHOP,
         "\"untilFeature\": \"WHILE\"",
-        "\"untilFeature\": \"FOR\"",
+        "\"untilFeature\": \"METHODS\"",
         "outside the MVP");
     assertRejected(
         GameData.MAP, "{ \"x\": 1000, \"y\": 560 },", "{ \"x\": 0, \"y\": 560 },", "zero-length");

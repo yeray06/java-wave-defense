@@ -125,10 +125,18 @@ class ProgressionTest {
     Progress progress = atWave(10);
     WaveOutcome first = progression.apply(progress, report(10, true, 0, true, clean(50)), 0);
     assertEquals(1, first.trophies());
+    progress.currentWave = 10;
     WaveOutcome second = progression.apply(progress, report(10, true, 0, true, clean(50)), 0);
     assertEquals(0, second.trophies());
     assertEquals(1, progress.trophies());
-    assertEquals(10, progress.currentWave(), "the last wave repeats");
+  }
+
+  @Test
+  void theLastWaveRepeats() {
+    int last = data.balance().lastWave();
+    Progress progress = atWave(last);
+    progression.apply(progress, report(last, true, 0), 0);
+    assertEquals(last, progress.currentWave());
   }
 
   @Test
@@ -174,7 +182,8 @@ class ProgressionTest {
       spent += data.shop().syntax(f).price();
     }
     assertEquals(100 - spent, progress.stars());
-    assertEquals(PurchaseCheck.NOT_IN_MVP, shop.buy(progress, Feature.FOR));
+    assertEquals(PurchaseCheck.OK, shop.buy(progress, Feature.FOR));
+    assertEquals(PurchaseCheck.NOT_IN_MVP, shop.buy(progress, Feature.METHODS));
   }
 
   private static Progress withAllSyntax(int wave) {
@@ -198,7 +207,9 @@ class ProgressionTest {
       assertEquals(PurchaseCheck.OK, shop.buy(progress, HardwareKind.DAMAGE));
     }
     assertEquals(PurchaseCheck.MAX_LEVEL, shop.check(progress, HardwareKind.DAMAGE));
-    assertEquals(PurchaseCheck.NOT_IN_MVP, shop.check(progress, HardwareKind.MEMORY));
+    assertEquals(PurchaseCheck.NEEDS_SYNTAX, shop.check(progress, HardwareKind.MEMORY));
+    progress.features.add(Feature.FOR);
+    assertEquals(PurchaseCheck.OK, shop.check(progress, HardwareKind.MEMORY));
   }
 
   @Test
@@ -232,12 +243,30 @@ class ProgressionTest {
   }
 
   @Test
-  void theMvpHasTwoTurrets() {
+  void aThirdAndFourthTurretComeWithFor() {
     Progress progress = withAllSyntax(1);
     progress.stars = 1_000;
     assertEquals(PurchaseCheck.OK, shop.buy(progress, HardwareKind.EXTRA_TURRET));
     assertEquals(2, progress.turretCount());
+    assertEquals(PurchaseCheck.NEEDS_SYNTAX, shop.buy(progress, HardwareKind.EXTRA_TURRET));
+    progress.features.add(Feature.FOR);
+    assertEquals(PurchaseCheck.OK, shop.buy(progress, HardwareKind.EXTRA_TURRET));
+    assertEquals(PurchaseCheck.OK, shop.buy(progress, HardwareKind.EXTRA_TURRET));
+    assertEquals(data.map().turretSlots().size(), progress.turretCount());
     assertEquals(PurchaseCheck.MAX_LEVEL, shop.buy(progress, HardwareKind.EXTRA_TURRET));
+  }
+
+  @Test
+  void memoryUpgradesRaiseTheLinesEachScriptMayUse() {
+    Progress progress = withAllSyntax(11);
+    progress.features.add(Feature.FOR);
+    progress.stars = 1_000;
+    int base = data.turret().memoryLines();
+    assertEquals(base, progress.memoryLines(data));
+    shop.buy(progress, HardwareKind.MEMORY);
+    assertEquals(
+        base + (int) data.shop().hardware(HardwareKind.MEMORY).effectPerLevel(),
+        progress.memoryLines(data));
   }
 
   @Test

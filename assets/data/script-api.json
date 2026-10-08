@@ -17,6 +17,7 @@
     { "id": "HAS_ENEMIES", "name": "hayEnemigos", "unlock": { "feature": "IF_ELSE" } },
     { "id": "NEAREST_ENEMY", "name": "enemigoMasCercano", "unlock": { "feature": "VARIABLES" } },
     { "id": "TARGET", "name": "objetivo", "unlock": { "feature": "VARIABLES" } },
+    { "id": "ENEMIES", "name": "enemigos", "unlock": { "feature": "FOR" } },
     { "id": "AIM", "name": "apuntar", "unlock": { "feature": "VARIABLES" } },
     { "id": "USE_AMMO", "name": "usarMunicion", "unlock": { "wave": 6 } },
     { "id": "HEALTH", "name": "vida", "unlock": { "feature": "VARIABLES" } },

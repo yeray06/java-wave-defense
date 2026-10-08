@@ -100,7 +100,7 @@ class SaveCodecTest {
     GameData data = data();
     Progress.Snapshot fine = Progress.newGame(data).snapshot();
     assertRejected(data, withWaves(fine, 3, 2), "current wave");
-    assertRejected(data, withWaves(fine, 1, 11), "highest wave");
+    assertRejected(data, withWaves(fine, 1, data.balance().lastWave() + 1), "highest wave");
     assertRejected(
         data,
         new Progress.Snapshot(

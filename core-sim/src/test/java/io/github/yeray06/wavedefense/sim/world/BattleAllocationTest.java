@@ -24,6 +24,10 @@ class BattleAllocationTest {
         }
       }
       if (municion() == 0) recargar();
+      int lentos = 0;
+      for (Enemigo e : enemigos()) {
+        if (e.velocidad() < 100) lentos++;
+      }
       """;
 
   @Test

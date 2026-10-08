@@ -99,7 +99,9 @@ public final class Battle {
     Loadout loadout = setup.loadout();
 
     ticksPerSecond = data.balance().ticksPerSecond();
-    ticksPerCycle = Math.max(1, Math.round(ticksPerSecond / (float) turret.cyclesPerSecond()));
+    double cyclesPerSecond =
+        turret.cyclesPerSecond() + effect(HardwareKind.PROCESSOR) * loadout.processorLevel();
+    ticksPerCycle = Math.max(1, (int) Math.round(ticksPerSecond / cyclesPerSecond));
     hangTicks = (int) Math.round(turret.hangSeconds() * ticksPerSecond);
     rangeSquared = turret.rangeUnits() * turret.rangeUnits();
     bulletStep = turret.bulletSpeedUnitsPerSecond() / ticksPerSecond;
@@ -131,7 +133,6 @@ public final class Battle {
       MapConfig.Point slot = map.turretSlots().get(i);
       CompiledScript script = setup.scripts().get(i);
       turrets[i] = new Turret(i, slot.x(), slot.y(), script, magazine);
-      apis[i] = new Api(turrets[i]);
     }
 
     List<int[]> schedule = new ArrayList<>();
@@ -145,6 +146,10 @@ public final class Battle {
     }
     enemies = new EnemyPool(spawnTicks.length);
     bullets = new BulletPool(turrets.length * BULLETS_PER_TURRET);
+    // After the pool: each turret's enemy list is sized to it.
+    for (int i = 0; i < turrets.length; i++) {
+      apis[i] = new Api(turrets[i]);
+    }
     leaks = new WaveReport.Leak[spawnTicks.length];
   }
 
@@ -485,8 +490,55 @@ public final class Battle {
   private final class Api implements TurretApi {
     private final Turret turret;
 
+    /** Pool indexes of the enemies in range, in the order they came out; built once per tick. */
+    private final int[] inRange;
+
+    private int inRangeCount;
+    private int inRangeTick = -1;
+
     Api(Turret turret) {
       this.turret = turret;
+      this.inRange = new int[enemies.capacity()];
+    }
+
+    /**
+     * Enemies only move between turret cycles, so one list per tick serves every call of a script
+     * run. Insertion sort: a few dozen enemies, no allocation.
+     */
+    private void refreshInRange() {
+      if (inRangeTick == tick) {
+        return;
+      }
+      inRangeTick = tick;
+      inRangeCount = 0;
+      for (int i = 0; i < enemies.capacity(); i++) {
+        Enemy enemy = enemies.get(i);
+        if (!enemy.active || !inRange(turret, enemy)) {
+          continue;
+        }
+        int at = inRangeCount++;
+        while (at > 0 && cameOutAfter(enemies.get(inRange[at - 1]), enemy)) {
+          inRange[at] = inRange[at - 1];
+          at--;
+        }
+        inRange[at] = i;
+      }
+    }
+
+    private static boolean cameOutAfter(Enemy a, Enemy b) {
+      return a.spawnTick > b.spawnTick || (a.spawnTick == b.spawnTick && a.index > b.index);
+    }
+
+    @Override
+    public int enemyCount() {
+      refreshInRange();
+      return inRangeCount;
+    }
+
+    @Override
+    public long enemyAt(int index) {
+      refreshInRange();
+      return enemies.get(inRange[index]).handle();
     }
 
     @Override
