@@ -564,6 +564,11 @@ Fase 8 (`jugar.bat`):
 - [ ] El mapa: botones «Acto 1» y «Acto 2»; la oleada 11 se llama 2-1.
 - [ ] ¿Se distingue bien el Corredor (amarillo y pequeño) mientras pasa?
 
+Releases:
+
+- [ ] Tras subir la etiqueta `v0.1.0`: la portada muestra la Release con los
+  cuatro zips y las instrucciones; el de Windows se descarga y se juega.
+
 Fase 7 (Windows, sin usar Gradle):
 
 - [ ] Doble clic en `jugar.bat` (en la carpeta del repo): baja lo último y
