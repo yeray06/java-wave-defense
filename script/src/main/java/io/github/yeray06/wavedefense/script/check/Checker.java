@@ -15,6 +15,7 @@ import io.github.yeray06.wavedefense.script.diag.Diagnostics;
 import io.github.yeray06.wavedefense.script.diag.ErrorCode;
 import io.github.yeray06.wavedefense.script.runtime.BoolEval;
 import io.github.yeray06.wavedefense.script.runtime.Exec;
+import io.github.yeray06.wavedefense.script.runtime.Function;
 import io.github.yeray06.wavedefense.script.runtime.IntEval;
 import io.github.yeray06.wavedefense.script.runtime.Nodes;
 import io.github.yeray06.wavedefense.script.runtime.RefEval;
@@ -24,6 +25,7 @@ import java.util.BitSet;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -35,6 +37,9 @@ import java.util.SortedMap;
  * like javac, applies what the player has unlocked, counts memory lines and, as it goes, builds the
  * executable tree. Doing both in one pass avoids resolving every name twice; the tree is only used
  * when no error was reported.
+ *
+ * <p>It checks either a turret's script ({@link #check}) or the library ({@link #checkLibrary}).
+ * Each function (the script, or one method) has its own numbering of slots.
  */
 public final class Checker {
 
@@ -48,6 +53,19 @@ public final class Checker {
 
   private record Var(String name, Type type, int id, int slot) {}
 
+  /** The function being checked: where its slots are counted and what it must return. */
+  private static final class Current {
+    final Function function;
+    final Type returnType;
+    int intSlots;
+    int refSlots;
+
+    Current(Function function, Type returnType) {
+      this.function = function;
+      this.returnType = returnType;
+    }
+  }
+
   /** Java's list type: the only generic type, and its name is Java's, not the theme's. */
   private static final String LIST_TYPE = "List";
 
@@ -57,25 +75,49 @@ public final class Checker {
   private final MemoryUsage memory;
   private final Deque<Map<String, Var>> scopes = new ArrayDeque<>();
   private final Set<String> reportedLocks = new HashSet<>();
-  private int nextVarId;
-  private int intSlots;
-  private int refSlots;
 
-  private Checker(ScriptApi api, Unlocks unlocks, int memoryLimit, Diagnostics diagnostics) {
+  /** The library's methods: being declared ({@link #checkLibrary}) or already built. */
+  private final Map<String, Library.Method> methods;
+
+  /** Whether calls to the library must be refused because it has errors. */
+  private final boolean libraryBroken;
+
+  private Current current;
+  private int nextVarId;
+
+  private Checker(
+      ScriptApi api,
+      Unlocks unlocks,
+      int memoryLimit,
+      Diagnostics diagnostics,
+      Map<String, Library.Method> methods,
+      boolean libraryBroken) {
     this.api = api;
     this.unlocks = unlocks;
     this.diagnostics = diagnostics;
     this.memory = new MemoryUsage(memoryLimit);
+    this.methods = methods;
+    this.libraryBroken = libraryBroken;
   }
 
+  /** Checks a turret's script, which may call the methods of {@code library}. */
   public static Result check(
       List<Stmt> statements,
+      Library library,
       ScriptApi api,
       Unlocks unlocks,
       int memoryLimit,
       Diagnostics diagnostics) {
-    Checker checker = new Checker(api, unlocks, memoryLimit, diagnostics);
+    Map<String, Library.Method> methods = new HashMap<>();
+    for (String name : library.methodNames()) {
+      methods.put(name, library.method(name).orElseThrow());
+    }
+    Checker checker =
+        new Checker(api, unlocks, memoryLimit, diagnostics, methods, library.hasErrors());
+    Function script = new Function();
+    checker.current = new Current(script, Type.VOID);
     Exec root = checker.block(statements, new BitSet());
+    script.define(root, checker.current.intSlots, checker.current.refSlots);
     Pos over = checker.memory.firstOverLimit();
     if (over != null) {
       diagnostics.report(
@@ -86,7 +128,210 @@ public final class Checker {
           checker.memory.limit());
     }
     return new Result(
-        root, checker.intSlots, checker.refSlots, checker.memory.used(), checker.memory.byLine());
+        root,
+        checker.current.intSlots,
+        checker.current.refSlots,
+        checker.memory.used(),
+        checker.memory.byLine());
+  }
+
+  /**
+   * Checks the library: every header first, so methods can call each other in any order (and
+   * themselves), then every body. Library lines take no memory (the plan), so nothing is counted
+   * against a limit.
+   */
+  public static Library checkLibrary(
+      List<Stmt.MethodDecl> declarations, ScriptApi api, Unlocks unlocks, Diagnostics diagnostics) {
+    Map<String, Library.Method> methods = new LinkedHashMap<>();
+    Checker checker = new Checker(api, unlocks, Integer.MAX_VALUE - 1, diagnostics, methods, false);
+    List<Library.Method> headers = new ArrayList<>();
+    for (Stmt.MethodDecl declaration : declarations) {
+      headers.add(checker.header(declaration));
+    }
+    int maxInts = 0;
+    int maxRefs = 0;
+    for (int i = 0; i < declarations.size(); i++) {
+      Library.Method method = headers.get(i);
+      checker.body(declarations.get(i), method);
+      maxInts = Math.max(maxInts, method.function().intSlots());
+      maxRefs = Math.max(maxRefs, method.function().refSlots());
+    }
+    return new Library(methods, diagnostics.hasErrors(), maxInts, maxRefs);
+  }
+
+  // ------------------------------------------------------------------- methods
+
+  /** Resolves a method's signature and registers it, unless its name is taken. */
+  private Library.Method header(Stmt.MethodDecl d) {
+    requireFeature(Feature.METHODS, d.pos());
+    Type returnType =
+        d.returnType() instanceof TypeRef.VoidType ? Type.VOID : declaredType(d.returnType());
+    List<Type> params = new ArrayList<>();
+    int[] paramSlots = new int[d.params().size()];
+    int ints = 0;
+    int refs = 0;
+    for (int i = 0; i < d.params().size(); i++) {
+      Type type = declaredType(d.params().get(i).type());
+      params.add(type);
+      paramSlots[i] = type.isReference() ? refs++ : ints++;
+    }
+    Library.Method method =
+        new Library.Method(d.name(), returnType, params, paramSlots, new Function());
+    if (methods.containsKey(d.name())) {
+      report(ErrorCode.DUPLICATE_METHOD, d.namePos(), d.name());
+    } else if (api.turretCall(d.name()).isPresent()) {
+      report(ErrorCode.METHOD_NAME_TAKEN, d.namePos(), d.name());
+    } else {
+      methods.put(d.name(), method);
+    }
+    return method;
+  }
+
+  private void body(Stmt.MethodDecl d, Library.Method method) {
+    current = new Current(method.function(), method.returnType());
+    scopes.clear();
+    scopes.push(new HashMap<>());
+    BitSet assigned = new BitSet();
+    for (int i = 0; i < d.params().size(); i++) {
+      Stmt.Param param = d.params().get(i);
+      if (lookup(param.name()) != null) {
+        report(ErrorCode.DUPLICATE_VARIABLE, param.pos(), param.name());
+        continue;
+      }
+      Type type = method.params().get(i);
+      Var var = declare(param.name(), type);
+      assigned.set(var.id());
+    }
+    Exec body = block(d.body().statements(), assigned);
+    scopes.pop();
+    Type returns = method.returnType();
+    if (returns != Type.VOID && returns != Type.ERROR && completes(d.body())) {
+      report(ErrorCode.MISSING_RETURN, d.namePos(), d.name());
+    }
+    method.function().define(body, current.intSlots, current.refSlots);
+  }
+
+  /**
+   * Whether running {@code statement} can reach its end, as javac decides it, so a method that
+   * returns something cannot fall off its end. Like javac, an {@code if} can always end; unlike
+   * javac, only the literal {@code true} counts as an endless loop's condition (javac also folds
+   * expressions such as {@code 1 == 1}).
+   */
+  private static boolean completes(Stmt statement) {
+    return switch (statement) {
+      case Stmt.Block b -> b.statements().stream().allMatch(Checker::completes);
+      case Stmt.If s ->
+          s.elseBranch() == null || completes(s.thenBranch()) || completes(s.elseBranch());
+      case Stmt.While s -> !isTrue(s.condition());
+      case Stmt.For s -> s.condition() != null && !isTrue(s.condition());
+      case Stmt.Return s -> false;
+      default -> true;
+    };
+  }
+
+  private static boolean isTrue(Expr condition) {
+    return condition instanceof Expr.BoolLiteral literal && literal.value();
+  }
+
+  private Exec returnStatement(Stmt.Return s, BitSet assigned) {
+    memory.count(s.pos());
+    requireFeature(Feature.METHODS, s.pos());
+    Type expected = current.returnType;
+    int line = s.pos().line();
+    if (s.value() == null) {
+      if (expected != Type.VOID && expected != Type.ERROR) {
+        report(ErrorCode.MISSING_RETURN_VALUE, s.pos(), name(expected));
+      }
+      return Nodes.statement(line, Nodes.returnVoid());
+    }
+    Typed value = expression(s.value(), assigned);
+    if (expected == Type.VOID) {
+      report(ErrorCode.UNEXPECTED_RETURN_VALUE, s.value().pos());
+      return Nodes.empty();
+    }
+    requireAssignable(value.type(), expected, s.value().pos());
+    if (value.type() == Type.ERROR || !assignable(value.type(), expected)) {
+      return Nodes.empty();
+    }
+    Exec returns =
+        switch (expected) {
+          case INT -> Nodes.returnInt(value.asInt());
+          case BOOLEAN -> Nodes.returnBool(value.asBool());
+          case ENEMY, ENEMY_LIST -> Nodes.returnRef(value.asRef());
+          default -> Nodes.empty();
+        };
+    return Nodes.statement(line, returns);
+  }
+
+  /** A method where only statements may go: the library is the place for methods. */
+  private Exec misplacedMethod(Stmt.MethodDecl d) {
+    if (unlocks.has(Feature.METHODS)) {
+      report(ErrorCode.METHOD_NOT_ALLOWED_HERE, d.pos());
+    } else {
+      requireFeature(Feature.METHODS, d.pos());
+    }
+    return Nodes.empty();
+  }
+
+  /** A call to one of the library's methods. */
+  private Typed libraryCall(Expr.Call e, Library.Method method, List<Typed> args) {
+    requireFeature(Feature.METHODS, e.pos());
+    Type returns = method.returnType();
+    Typed failed = returns == Type.VOID ? new Typed(Type.VOID, Nodes.empty()) : Typed.ERROR;
+    if (libraryBroken) {
+      report(ErrorCode.LIBRARY_HAS_ERRORS, e.pos(), e.name());
+      return failed;
+    }
+    List<Type> params = method.params();
+    if (args.size() != params.size()) {
+      report(ErrorCode.WRONG_ARGUMENT_COUNT, e.pos(), e.name(), params.size(), args.size());
+      return failed;
+    }
+    boolean ok = true;
+    Exec[] stores = new Exec[args.size()];
+    boolean[] isRef = new boolean[args.size()];
+    int[] from = new int[args.size()];
+    for (int i = 0; i < args.size(); i++) {
+      Type expected = params.get(i);
+      Typed arg = args.get(i);
+      if (arg.type() == Type.ERROR || expected == Type.ERROR) {
+        ok = false;
+        continue;
+      }
+      if (!assignable(arg.type(), expected)) {
+        report(
+            ErrorCode.ARGUMENT_TYPE_MISMATCH,
+            e.args().get(i).pos(),
+            e.name(),
+            name(expected),
+            name(arg.type()));
+        ok = false;
+        continue;
+      }
+      isRef[i] = expected.isReference();
+      from[i] = isRef[i] ? current.refSlots++ : current.intSlots++;
+      stores[i] =
+          switch (expected) {
+            case INT -> Nodes.storeInt(from[i], arg.asInt());
+            case BOOLEAN -> Nodes.storeBool(from[i], arg.asBool());
+            default -> Nodes.storeRef(from[i], arg.asRef());
+          };
+    }
+    if (!ok || returns == Type.ERROR) {
+      return failed;
+    }
+    Function caller = current.function;
+    Function callee = method.function();
+    int[] to = method.paramSlots().clone();
+    int line = e.pos().line();
+    return switch (returns) {
+      case VOID ->
+          new Typed(Type.VOID, Nodes.callVoid(caller, callee, stores, isRef, from, to, line));
+      case INT -> new Typed(Type.INT, Nodes.callInt(caller, callee, stores, isRef, from, to, line));
+      case BOOLEAN ->
+          new Typed(Type.BOOLEAN, Nodes.callBool(caller, callee, stores, isRef, from, to, line));
+      default -> new Typed(returns, Nodes.callRef(caller, callee, stores, isRef, from, to, line));
+    };
   }
 
   // ---------------------------------------------------------------- statements
@@ -119,6 +364,8 @@ public final class Checker {
       case Stmt.ForEach s -> forEachStatement(s, assigned);
       case Stmt.VarDecl s -> declaration(s, assigned);
       case Stmt.ExprStmt s -> expressionStatement(s, assigned);
+      case Stmt.Return s -> returnStatement(s, assigned);
+      case Stmt.MethodDecl d -> misplacedMethod(d);
     };
   }
 
@@ -133,9 +380,16 @@ public final class Checker {
     if (s.elseBranch() != null) {
       elseBranch = branch(s.elseBranch(), afterElse);
     }
-    // Definitely assigned after the if only if assigned on both paths.
-    afterThen.and(afterElse);
-    assigned.or(afterThen);
+    // Definitely assigned after the if only if assigned on both paths; a path that cannot reach
+    // the end (it returns) does not count.
+    if (s.elseBranch() != null && !completes(s.thenBranch())) {
+      assigned.or(afterElse);
+    } else if (s.elseBranch() != null && !completes(s.elseBranch())) {
+      assigned.or(afterThen);
+    } else {
+      afterThen.and(afterElse);
+      assigned.or(afterThen);
+    }
     return Nodes.ifElse(s.pos().line(), condition, thenBranch, elseBranch);
   }
 
@@ -257,6 +511,10 @@ public final class Checker {
       case TypeRef.IntType t -> Type.INT;
       case TypeRef.BooleanType t -> Type.BOOLEAN;
       case TypeRef.Invalid t -> Type.ERROR;
+      case TypeRef.VoidType t -> {
+        report(ErrorCode.UNSUPPORTED_TYPE, t.pos(), "void");
+        yield Type.ERROR;
+      }
       case TypeRef.Generic t -> {
         requireFeature(Feature.FOR, t.pos());
         boolean enemyList =
@@ -455,6 +713,9 @@ public final class Checker {
   private Typed turretCall(Expr.Call e, BitSet assigned) {
     List<Typed> args = arguments(e.args(), assigned);
     Optional<ApiFunction> found = api.turretCall(e.name());
+    if (found.isEmpty() && methods.containsKey(e.name())) {
+      return libraryCall(e, methods.get(e.name()), args);
+    }
     if (found.isEmpty()) {
       report(ErrorCode.UNKNOWN_METHOD, e.pos(), e.name());
       return Typed.ERROR;
@@ -476,7 +737,7 @@ public final class Checker {
       case ENEMIES -> new Typed(Type.ENEMY_LIST, Nodes.enemies());
       case AIM -> new Typed(Type.VOID, Nodes.aim(args.get(0).asRef(), line));
       case USE_AMMO -> new Typed(Type.VOID, Nodes.useAmmo((AmmoType) args.get(0).node()));
-      case HEALTH, SPEED, ARMORED, DISTANCE_TO_CORE ->
+      case HEALTH, SPEED, ARMORED, MUTANT, DISTANCE_TO_CORE ->
           throw new IllegalStateException("Enemy call resolved as turret call: " + function);
     };
   }
@@ -558,6 +819,7 @@ public final class Checker {
       case SPEED -> new Typed(Type.INT, Nodes.speed(enemy, line));
       case DISTANCE_TO_CORE -> new Typed(Type.INT, Nodes.distanceToCore(enemy, line));
       case ARMORED -> new Typed(Type.BOOLEAN, Nodes.armored(enemy, line));
+      case MUTANT -> new Typed(Type.BOOLEAN, Nodes.mutant(enemy, line));
       default -> throw new IllegalStateException("Turret call resolved as enemy call: " + function);
     };
   }
@@ -721,8 +983,8 @@ public final class Checker {
   private Var declare(String name, Type type) {
     int slot =
         switch (type) {
-          case ENEMY, ENEMY_LIST -> refSlots++;
-          case INT, BOOLEAN -> intSlots++;
+          case ENEMY, ENEMY_LIST -> current.refSlots++;
+          case INT, BOOLEAN -> current.intSlots++;
           default -> -1;
         };
     Var var = new Var(name, type, nextVarId++, slot);
@@ -809,6 +1071,7 @@ public final class Checker {
     return switch (type) {
       case TypeRef.IntType t -> "int";
       case TypeRef.BooleanType t -> "boolean";
+      case TypeRef.VoidType t -> "void";
       case TypeRef.Named t -> t.name();
       case TypeRef.Generic t -> t.name() + "<" + describe(t.argument()) + ">";
       case TypeRef.Invalid t -> "?";

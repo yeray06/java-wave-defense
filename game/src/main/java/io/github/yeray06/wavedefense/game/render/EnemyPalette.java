@@ -15,6 +15,8 @@ public final class EnemyPalette {
     put(EnemyKind.SWARM, new Color(0.95f, 0.65f, 0.30f, 1f), 7);
     // Small and bright: the eye has to catch it slipping past.
     put(EnemyKind.RUNNER, new Color(0.95f, 0.95f, 0.35f, 1f), 9);
+    // Cyan, unlike any other: its weakness changes, so it must be easy to tell apart.
+    put(EnemyKind.MUTANT, new Color(0.30f, 0.85f, 0.90f, 1f), 13);
     put(EnemyKind.BOSS, new Color(0.70f, 0.40f, 0.90f, 1f), 26);
   }
 

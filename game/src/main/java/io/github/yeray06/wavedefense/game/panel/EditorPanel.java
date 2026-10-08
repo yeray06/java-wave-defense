@@ -15,16 +15,21 @@ import io.github.yeray06.wavedefense.game.editor.EditorDocument;
 import io.github.yeray06.wavedefense.game.i18n.ScriptTexts;
 import io.github.yeray06.wavedefense.game.ui.UiSkin;
 import io.github.yeray06.wavedefense.script.CompileResult;
+import io.github.yeray06.wavedefense.script.LibraryResult;
+import io.github.yeray06.wavedefense.script.api.Feature;
 import io.github.yeray06.wavedefense.script.diag.CompileError;
 import io.github.yeray06.wavedefense.sim.progress.WaveLoop;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
 
 /**
- * The code panel: one tab per built turret, each with its own {@link CodeEditor}. Every change is
- * compiled at once; code that compiles goes to the turret (the next wave, or the waiting one), code
- * with errors stays in the editor and the turret keeps its last compiling script (D-51). Shows the
- * memory counter (D-06) and the errors with their line.
+ * The code panel: one tab per built turret, each with its own {@link CodeEditor}, and once methods
+ * are bought, one more for the library they all share. Every change is compiled at once; code that
+ * compiles goes to the turret (the next wave, or the waiting one), code with errors stays in the
+ * editor and the turret keeps its last compiling script (D-51). Shows the memory counter (D-06) and
+ * the errors with their line. A change to the library recompiles every turret against it.
  */
 public final class EditorPanel extends Table {
   private static final int ERRORS_SHOWN = 4;
@@ -37,6 +42,12 @@ public final class EditorPanel extends Table {
   private final CodeEditor[] editors;
   private final int[] compiledVersion;
   private final CompileResult[] results;
+
+  /** Index of the library's document and editor, after the turrets'. */
+  private final int library;
+
+  private LibraryResult libraryResult;
+  private boolean libraryShown;
   private final Table tabs = new Table();
   private final ScrollPane scroll;
   private final Label memory;
@@ -53,19 +64,21 @@ public final class EditorPanel extends Table {
     this.loop = loop;
     this.names = names;
     this.skin = skin;
-    documents = new EditorDocument[slots];
-    editors = new CodeEditor[slots];
-    compiledVersion = new int[slots];
+    library = slots;
+    documents = new EditorDocument[slots + 1];
+    editors = new CodeEditor[slots + 1];
+    compiledVersion = new int[slots + 1];
     results = new CompileResult[slots];
     TextureRegion white = new TextureRegion(skin.get("white", Texture.class));
-    for (int i = 0; i < slots; i++) {
-      documents[i] = new EditorDocument(loop.draft(i));
+    for (int i = 0; i <= slots; i++) {
+      documents[i] = new EditorDocument(i == library ? loop.libraryDraft() : loop.draft(i));
       editors[i] = new CodeEditor(documents[i], skin.getFont("code"), white);
       compiledVersion[i] = -1;
     }
     scroll = new ScrollPane(editors[0], skin);
     scroll.setFadeScrollBars(false);
     memory = new Label("", skin);
+    memory.setWrap(true);
     status = new Label("", skin, "small");
     status.setWrap(true);
     errors = new Label("", skin, "warning");
@@ -74,7 +87,7 @@ public final class EditorPanel extends Table {
     top().left();
     add(tabs).left().padBottom(6).row();
     add(scroll).width(WIDTH).height(330).row();
-    add(memory).left().padTop(6).row();
+    add(memory).left().width(WIDTH).padTop(6).row();
     add(status).left().width(WIDTH).padTop(2).row();
     add(errors).left().width(WIDTH).padTop(4).row();
     Label help = new Label(names.texts().get("editor.help"), skin, "small");
@@ -90,9 +103,26 @@ public final class EditorPanel extends Table {
     return documents[slot];
   }
 
-  /** The latest compilation of the open turret's draft. */
+  /** The library's draft, as the player is writing it. */
+  public EditorDocument libraryDocument() {
+    return documents[library];
+  }
+
+  /** The latest compilation of the open turret's draft; {@code null} while the library is open. */
   public CompileResult result() {
-    return results[slot];
+    return slot == library ? null : results[slot];
+  }
+
+  /** The latest compilation of the library. */
+  public LibraryResult libraryResult() {
+    return libraryResult;
+  }
+
+  /** Opens the library's tab, if methods are owned. */
+  public void openLibrary() {
+    if (libraryShown) {
+      select(library);
+    }
   }
 
   /** Puts the keyboard on the open turret's editor. */
@@ -111,8 +141,12 @@ public final class EditorPanel extends Table {
   @Override
   public void act(float delta) {
     super.act(delta);
-    if (tabCount != loop.progress().turretCount()) {
+    if (tabCount != loop.progress().turretCount() || libraryShown != ownsMethods()) {
       rebuildTabs();
+    }
+    // The library first: the turrets compile against it.
+    if (libraryShown && compiledVersion[library] != documents[library].version()) {
+      compile(library);
     }
     for (int i = 0; i < loop.progress().turretCount(); i++) {
       if (compiledVersion[i] != documents[i].version()) {
@@ -127,9 +161,14 @@ public final class EditorPanel extends Table {
     }
   }
 
+  private boolean ownsMethods() {
+    return loop.progress().unlocks().has(Feature.METHODS);
+  }
+
   private void rebuildTabs() {
     tabCount = loop.progress().turretCount();
-    if (slot >= tabCount) {
+    libraryShown = ownsMethods();
+    if (slot >= tabCount && !(slot == library && libraryShown)) {
       select(0);
     }
     tabs.clearChildren();
@@ -137,7 +176,8 @@ public final class EditorPanel extends Table {
     for (int i = 0; i < tabCount; i++) {
       int index = i;
       TextButton tab = new TextButton(names.texts().format("editor.turret", i + 1), skin);
-      tab.pad(4, 12, 4, 12);
+      // Four turret tabs must fit the panel's width.
+      tab.pad(4, 8, 4, 8);
       tab.setChecked(i == slot);
       group.add(tab);
       tab.addListener(
@@ -149,7 +189,25 @@ public final class EditorPanel extends Table {
               }
             }
           });
-      tabs.add(tab).padRight(6);
+      tabs.add(tab).padRight(4);
+    }
+    if (libraryShown) {
+      // Its own row: shared by every turret, not one more of them.
+      tabs.row();
+      TextButton tab = new TextButton(names.texts().get("editor.library.tab"), skin);
+      tab.pad(4, 8, 4, 8);
+      tab.setChecked(slot == library);
+      group.add(tab);
+      tab.addListener(
+          new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+              if (tab.isChecked()) {
+                select(library);
+              }
+            }
+          });
+      tabs.add(tab).colspan(Math.max(1, tabCount)).left().padTop(4);
     }
   }
 
@@ -164,20 +222,53 @@ public final class EditorPanel extends Table {
   private void compile(int index) {
     EditorDocument document = documents[index];
     compiledVersion[index] = document.version();
-    CompileResult result = loop.setScript(index, document.text());
-    results[index] = result;
+    List<CompileError> found;
+    SortedMap<Integer, Integer> memoryByLine;
+    if (index == library) {
+      String before = loop.library();
+      libraryResult = loop.setLibrary(document.text());
+      found = libraryResult.errors();
+      memoryByLine = java.util.Collections.emptySortedMap();
+      if (!loop.library().equals(before)) {
+        // Every turret's code is checked again against the new library.
+        java.util.Arrays.fill(compiledVersion, 0, library, -1);
+      }
+    } else {
+      CompileResult result = loop.setScript(index, document.text());
+      results[index] = result;
+      found = result.errors();
+      memoryByLine = result.memoryByLine();
+    }
     Map<Integer, Integer> errorColumns = new HashMap<>();
-    for (CompileError error : result.errors()) {
+    for (CompileError error : found) {
       errorColumns.putIfAbsent(error.line(), error.column());
     }
-    editors[index].setDiagnostics(result.memoryByLine(), errorColumns);
+    editors[index].setDiagnostics(memoryByLine, errorColumns);
     if (index == slot) {
       showStatus();
       showErrors();
     }
   }
 
+  /** The errors of the open tab's latest compilation. */
+  private List<CompileError> shownErrors() {
+    if (slot == library) {
+      return libraryResult == null ? List.of() : libraryResult.errors();
+    }
+    return results[slot] == null ? List.of() : results[slot].errors();
+  }
+
   private void showStatus() {
+    if (slot == library) {
+      memory.setText(names.texts().get("editor.library.hint"));
+      memory.setColor(com.badlogic.gdx.graphics.Color.WHITE);
+      List<CompileError> found = shownErrors();
+      status.setText(
+          found.isEmpty()
+              ? names.texts().get("editor.library.ok")
+              : names.texts().format("editor.errors", found.size()));
+      return;
+    }
     CompileResult result = results[slot];
     memory.setText(
         names.texts().format("editor.memory", result.memoryUsed(), result.memoryLimit()));
@@ -200,8 +291,8 @@ public final class EditorPanel extends Table {
 
   /** The errors on the hovered line first (the tooltip of ARCHITECTURE §6), then the rest. */
   private void showErrors() {
-    CompileResult result = results[slot];
-    if (result == null || result.errors().isEmpty()) {
+    List<CompileError> found = shownErrors();
+    if (found.isEmpty()) {
       errors.setText("");
       return;
     }
@@ -209,7 +300,7 @@ public final class EditorPanel extends Table {
     StringBuilder text = new StringBuilder();
     int shown = 0;
     for (int pass = 0; pass < 2 && shown < ERRORS_SHOWN; pass++) {
-      for (CompileError error : result.errors()) {
+      for (CompileError error : found) {
         boolean onHover = error.line() == hovered;
         if ((pass == 0) != onHover || shown >= ERRORS_SHOWN) {
           continue;

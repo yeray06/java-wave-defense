@@ -70,6 +70,7 @@ public final class ScriptTexts {
         switch (kind) {
           case REGENERATOR -> decimal(type.regenDelaySeconds());
           case ARMORED -> decimal(data.enemies().armorDamageReduction() * 100);
+          case MUTANT -> decimal(data.enemies().mutantDamageReduction() * 100);
           case SWARM -> type.groupSize();
           case BOSS -> decimal(type.armorToggleSeconds());
           case BASIC, RUNNER -> "";

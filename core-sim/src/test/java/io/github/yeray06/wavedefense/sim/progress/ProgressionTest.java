@@ -149,7 +149,7 @@ class ProgressionTest {
   void everyChallengeReadsTheReport() {
     WaveReport.TurretReport messy =
         new WaveReport.TurretReport(
-            40, 2, 3, 4, 1, 90, List.of(new WaveReport.FaultCount(FaultType.NO_AMMO, 1, 1)));
+            40, 2, 3, 4, 1, 90, List.of(new WaveReport.FaultCount(FaultType.NO_AMMO, 1, false, 1)));
     WaveReport won = report(1, true, 0, false, messy);
     WaveReport cleanWin = report(1, true, 0, false, clean(40));
     for (Challenge.Type type : Challenge.Type.values()) {
@@ -183,7 +183,8 @@ class ProgressionTest {
     }
     assertEquals(100 - spent, progress.stars());
     assertEquals(PurchaseCheck.OK, shop.buy(progress, Feature.FOR));
-    assertEquals(PurchaseCheck.NOT_IN_MVP, shop.buy(progress, Feature.METHODS));
+    assertEquals(PurchaseCheck.OK, shop.buy(progress, Feature.METHODS));
+    assertEquals(PurchaseCheck.NOT_IN_MVP, shop.buy(progress, Feature.TRY_CATCH));
   }
 
   private static Progress withAllSyntax(int wave) {

@@ -19,7 +19,7 @@ import java.util.Map;
  */
 public final class SaveCodec {
   /** The format this game writes. Raise it, and add a migration from the old one, on any change. */
-  public static final int VERSION = 2;
+  public static final int VERSION = 3;
 
   /** Turns a file of version {@link #from()} into version {@code from() + 1}. */
   public interface Migration {
@@ -57,7 +57,7 @@ public final class SaveCodec {
 
   /** The game's codec: the current version and every migration to it. */
   public static SaveCodec standard() {
-    return new SaveCodec(VERSION, List.of(new MoneyToStars()));
+    return new SaveCodec(VERSION, List.of(new MoneyToStars(), new AddLibrary()));
   }
 
   public String write(SaveGame save) {

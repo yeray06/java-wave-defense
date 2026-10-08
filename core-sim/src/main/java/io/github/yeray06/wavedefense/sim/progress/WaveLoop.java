@@ -1,6 +1,8 @@
 package io.github.yeray06.wavedefense.sim.progress;
 
 import io.github.yeray06.wavedefense.script.CompileResult;
+import io.github.yeray06.wavedefense.script.LibraryResult;
+import io.github.yeray06.wavedefense.script.check.Library;
 import io.github.yeray06.wavedefense.script.runtime.CompiledScript;
 import io.github.yeray06.wavedefense.sim.data.GameData;
 import io.github.yeray06.wavedefense.sim.world.Battle;
@@ -36,6 +38,9 @@ public final class WaveLoop {
   private final Progression progression;
   private final List<String> sources;
   private final List<String> drafts;
+  private String librarySource = "";
+  private String libraryDraft = "";
+  private Library library = Library.EMPTY;
   private Battle battle;
   private State state;
   private WaveReport lastReport;
@@ -59,14 +64,37 @@ public final class WaveLoop {
   }
 
   /**
+   * The player's code, as saved.
+   *
+   * @param scripts what each turret runs
+   * @param drafts what the editor held for each turret
+   * @param library the library that runs
+   * @param libraryDraft what the editor held for the library
+   */
+  public record Code(
+      List<String> scripts, List<String> drafts, String library, String libraryDraft) {
+    public Code {
+      scripts = List.copyOf(scripts);
+      drafts = List.copyOf(drafts);
+    }
+  }
+
+  /**
    * A saved game: its progress, the code each turret runs and what the editor held. The current
    * wave waits for {@link #deploy()} even if it was beaten, so loading never starts a wave by
-   * itself. A saved script that no longer compiles (the data changed) falls back to the initial
-   * script; its draft is kept so the player sees their code.
+   * itself. Saved code that no longer compiles (the data changed) falls back: the library to empty,
+   * a script to the initial one; its draft is kept so the player sees their code.
    */
-  public static WaveLoop restore(
-      GameData data, Progress progress, List<String> scripts, List<String> drafts, long battles) {
+  public static WaveLoop restore(GameData data, Progress progress, Code code, long battles) {
     WaveLoop loop = new WaveLoop(data, progress);
+    LibraryResult library = loop.compileLibrary(code.library());
+    if (library.succeeded()) {
+      loop.librarySource = code.library();
+      loop.library = library.library();
+    }
+    loop.libraryDraft = code.libraryDraft();
+    List<String> scripts = code.scripts();
+    List<String> drafts = code.drafts();
     for (int i = 0; i < loop.sources.size(); i++) {
       if (i < scripts.size() && loop.compile(scripts.get(i)).succeeded()) {
         loop.sources.set(i, scripts.get(i));
@@ -131,6 +159,46 @@ public final class WaveLoop {
     return result;
   }
 
+  /**
+   * The player's library: methods every turret can call. If it compiles it replaces the running
+   * one, and a waiting wave is rebuilt with it; turret scripts that call a method it no longer has
+   * stop compiling, and their turrets stay idle until fixed. If it does not compile, the last one
+   * that did keeps running.
+   *
+   * @return the compilation, for the editor's errors
+   */
+  public LibraryResult setLibrary(String source) {
+    if (!source.equals(libraryDraft)) {
+      libraryDraft = source;
+      revision++;
+    }
+    LibraryResult result = compileLibrary(source);
+    if (result.succeeded() && !source.equals(librarySource)) {
+      librarySource = source;
+      library = result.library();
+      revision++;
+      if (state == State.AWAITING_DEPLOY) {
+        build(true);
+      }
+    }
+    return result;
+  }
+
+  /** The library's code that runs: the last that compiled. */
+  public String library() {
+    return librarySource;
+  }
+
+  /** What the editor holds for the library, even broken. */
+  public String libraryDraft() {
+    return libraryDraft;
+  }
+
+  /** Compiles a library with the player's current unlocks. */
+  public LibraryResult compileLibrary(String source) {
+    return data.compiler().compileLibrary(source, progress.unlocks());
+  }
+
   /** The script a slot runs: the last one that compiled, or the initial script (D-14). */
   public String script(int slot) {
     return sources.get(slot);
@@ -172,9 +240,9 @@ public final class WaveLoop {
     }
   }
 
-  /** Compiles code with the player's current unlocks and the turret's memory. */
+  /** Compiles a turret's code with the library, the player's unlocks and the turret's memory. */
   public CompileResult compile(String source) {
-    return data.compiler().compile(source, progress.unlocks(), progress.memoryLines(data));
+    return data.compiler().compile(source, library, progress.unlocks(), progress.memoryLines(data));
   }
 
   /**

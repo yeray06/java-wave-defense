@@ -9,6 +9,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import io.github.yeray06.wavedefense.game.i18n.ScriptTexts;
 import io.github.yeray06.wavedefense.game.render.EnemyPalette;
+import io.github.yeray06.wavedefense.script.api.AmmoType;
 import io.github.yeray06.wavedefense.sim.data.Challenge;
 import io.github.yeray06.wavedefense.sim.data.EnemyKind;
 import io.github.yeray06.wavedefense.sim.data.GameData;
@@ -87,6 +88,15 @@ public final class BriefingPanel extends Table {
       Label info = new Label(names.enemyInfo(entry.getKey()), skin, "small");
       info.setWrap(true);
       text.add(info).left().width(360);
+      AmmoType weakness = data.waves().wave(wave).mutantWeakness();
+      if (entry.getKey() == EnemyKind.MUTANT && weakness != null) {
+        // What changes every wave: the one thing to update in the library.
+        String ammo = data.scriptApi().api().ammoName(weakness);
+        text.row();
+        text.add(new Label(names.texts().format("mutant.weakness", ammo), skin, "warning"))
+            .left()
+            .padTop(2);
+      }
       add(text).left().expandX().padBottom(8).row();
     }
     add(new Label(

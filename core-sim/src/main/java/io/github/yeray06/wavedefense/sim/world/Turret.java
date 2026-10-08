@@ -25,6 +25,7 @@ public final class Turret {
 
   FaultType lastFault;
   int lastFaultLine;
+  boolean lastFaultInLibrary;
 
   int shots;
   int airShots;
@@ -80,6 +81,11 @@ public final class Turret {
 
   public int lastFaultLine() {
     return lastFaultLine;
+  }
+
+  /** Whether {@link #lastFaultLine()} is a line of the library rather than of the turret's code. */
+  public boolean lastFaultInLibrary() {
+    return lastFaultInLibrary;
   }
 
   /** Whether a script is loaded; a turret whose code does not compile stands idle. */

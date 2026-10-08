@@ -38,7 +38,10 @@ public record WaveReport(
    */
   public record Leak(EnemyKind kind, double healthFraction, double lastDefendedDistance) {}
 
-  public record FaultCount(FaultType type, int line, int count) {}
+  /**
+   * @param inLibrary whether {@code line} is a line of the library rather than of the turret's code
+   */
+  public record FaultCount(FaultType type, int line, boolean inLibrary, int count) {}
 
   /**
    * @param airShots shots fired with no enemy in range

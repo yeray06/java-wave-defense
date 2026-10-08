@@ -1,19 +1,22 @@
 {
-  "notFromPlan": ["spawnWindowSeconds", "waves", "waves[].challenge"],
+  "notFromPlan": ["spawnWindowSeconds", "waves", "waves[].challenge", "waves[].mutantWeakness"],
   "spawnWindowSeconds": 20,
   "waves": [
-    { "wave": 1, "groups": [{ "type": "BASIC", "count": 8 }], "challenge": { "type": "NO_AIR_SHOTS", "limit": 0 } },
-    { "wave": 2, "groups": [{ "type": "BASIC", "count": 10 }], "challenge": { "type": "NO_MANUAL_RELOADS", "limit": 0 } },
-    { "wave": 3, "groups": [{ "type": "BASIC", "count": 12 }], "challenge": { "type": "MAX_MEMORY", "limit": 4 } },
-    { "wave": 4, "groups": [{ "type": "BASIC", "count": 5 }, { "type": "REGENERATOR", "count": 4 }, { "type": "BASIC", "count": 5 }], "challenge": { "type": "NO_WASTED_SHOTS", "limit": 0 } },
-    { "wave": 5, "groups": [{ "type": "BASIC", "count": 5 }, { "type": "REGENERATOR", "count": 6 }, { "type": "BASIC", "count": 5 }], "challenge": { "type": "MAX_SHOTS", "limit": 52 } },
-    { "wave": 6, "groups": [{ "type": "BASIC", "count": 4 }, { "type": "ARMORED", "count": 5 }, { "type": "REGENERATOR", "count": 5 }, { "type": "BASIC", "count": 4 }], "challenge": { "type": "MAX_MEMORY", "limit": 10 } },
-    { "wave": 7, "groups": [{ "type": "BASIC", "count": 4 }, { "type": "ARMORED", "count": 6 }, { "type": "REGENERATOR", "count": 6 }, { "type": "BASIC", "count": 4 }], "challenge": { "type": "MAX_SHOTS", "limit": 100 } },
-    { "wave": 8, "groups": [{ "type": "BASIC", "count": 3 }, { "type": "REGENERATOR", "count": 3 }, { "type": "SWARM", "count": 10 }, { "type": "ARMORED", "count": 3 }, { "type": "BASIC", "count": 3 }], "challenge": { "type": "MAX_SHOTS", "limit": 90 } },
-    { "wave": 9, "groups": [{ "type": "BASIC", "count": 2 }, { "type": "ARMORED", "count": 6 }, { "type": "SWARM", "count": 10 }, { "type": "REGENERATOR", "count": 4 }, { "type": "BASIC", "count": 2 }], "challenge": { "type": "MAX_MEMORY", "limit": 9 } },
-    { "wave": 10, "groups": [{ "type": "BASIC", "count": 3 }, { "type": "REGENERATOR", "count": 5 }, { "type": "SWARM", "count": 10 }, { "type": "ARMORED", "count": 5 }, { "type": "BASIC", "count": 3 }, { "type": "BOSS", "count": 1 }], "challenge": { "type": "NO_FAULTS", "limit": 0 } },
-    { "wave": 11, "groups": [{ "type": "BASIC", "count": 4 }, { "type": "RUNNER", "count": 8 }, { "type": "REGENERATOR", "count": 4 }, { "type": "SWARM", "count": 10 }, { "type": "BASIC", "count": 2 }], "challenge": { "type": "NO_WASTED_SHOTS", "limit": 0 } },
-    { "wave": 12, "groups": [{ "type": "BASIC", "count": 2 }, { "type": "ARMORED", "count": 4 }, { "type": "RUNNER", "count": 10 }, { "type": "SWARM", "count": 10 }, { "type": "REGENERATOR", "count": 2 }, { "type": "BASIC", "count": 2 }], "challenge": { "type": "MAX_MEMORY", "limit": 10 } },
-    { "wave": 13, "groups": [{ "type": "RUNNER", "count": 6 }, { "type": "ARMORED", "count": 4 }, { "type": "SWARM", "count": 10 }, { "type": "RUNNER", "count": 6 }, { "type": "REGENERATOR", "count": 4 }, { "type": "BASIC", "count": 2 }], "challenge": { "type": "NO_FAULTS", "limit": 0 } }
+    { "wave": 1, "groups": [{ "type": "BASIC", "count": 8 }], "challenge": { "type": "NO_AIR_SHOTS", "limit": 0 }, "mutantWeakness": null },
+    { "wave": 2, "groups": [{ "type": "BASIC", "count": 10 }], "challenge": { "type": "NO_MANUAL_RELOADS", "limit": 0 }, "mutantWeakness": null },
+    { "wave": 3, "groups": [{ "type": "BASIC", "count": 12 }], "challenge": { "type": "MAX_MEMORY", "limit": 4 }, "mutantWeakness": null },
+    { "wave": 4, "groups": [{ "type": "BASIC", "count": 5 }, { "type": "REGENERATOR", "count": 4 }, { "type": "BASIC", "count": 5 }], "challenge": { "type": "NO_WASTED_SHOTS", "limit": 0 }, "mutantWeakness": null },
+    { "wave": 5, "groups": [{ "type": "BASIC", "count": 5 }, { "type": "REGENERATOR", "count": 6 }, { "type": "BASIC", "count": 5 }], "challenge": { "type": "MAX_SHOTS", "limit": 52 }, "mutantWeakness": null },
+    { "wave": 6, "groups": [{ "type": "BASIC", "count": 4 }, { "type": "ARMORED", "count": 5 }, { "type": "REGENERATOR", "count": 5 }, { "type": "BASIC", "count": 4 }], "challenge": { "type": "MAX_MEMORY", "limit": 10 }, "mutantWeakness": null },
+    { "wave": 7, "groups": [{ "type": "BASIC", "count": 4 }, { "type": "ARMORED", "count": 6 }, { "type": "REGENERATOR", "count": 6 }, { "type": "BASIC", "count": 4 }], "challenge": { "type": "MAX_SHOTS", "limit": 100 }, "mutantWeakness": null },
+    { "wave": 8, "groups": [{ "type": "BASIC", "count": 3 }, { "type": "REGENERATOR", "count": 3 }, { "type": "SWARM", "count": 10 }, { "type": "ARMORED", "count": 3 }, { "type": "BASIC", "count": 3 }], "challenge": { "type": "MAX_SHOTS", "limit": 90 }, "mutantWeakness": null },
+    { "wave": 9, "groups": [{ "type": "BASIC", "count": 2 }, { "type": "ARMORED", "count": 6 }, { "type": "SWARM", "count": 10 }, { "type": "REGENERATOR", "count": 4 }, { "type": "BASIC", "count": 2 }], "challenge": { "type": "MAX_MEMORY", "limit": 9 }, "mutantWeakness": null },
+    { "wave": 10, "groups": [{ "type": "BASIC", "count": 3 }, { "type": "REGENERATOR", "count": 5 }, { "type": "SWARM", "count": 10 }, { "type": "ARMORED", "count": 5 }, { "type": "BASIC", "count": 3 }, { "type": "BOSS", "count": 1 }], "challenge": { "type": "NO_FAULTS", "limit": 0 }, "mutantWeakness": null },
+    { "wave": 11, "groups": [{ "type": "BASIC", "count": 4 }, { "type": "RUNNER", "count": 8 }, { "type": "REGENERATOR", "count": 4 }, { "type": "SWARM", "count": 10 }, { "type": "BASIC", "count": 2 }], "challenge": { "type": "NO_WASTED_SHOTS", "limit": 0 }, "mutantWeakness": null },
+    { "wave": 12, "groups": [{ "type": "BASIC", "count": 2 }, { "type": "ARMORED", "count": 4 }, { "type": "RUNNER", "count": 10 }, { "type": "SWARM", "count": 10 }, { "type": "REGENERATOR", "count": 2 }, { "type": "BASIC", "count": 2 }], "challenge": { "type": "MAX_MEMORY", "limit": 10 }, "mutantWeakness": null },
+    { "wave": 13, "groups": [{ "type": "RUNNER", "count": 6 }, { "type": "ARMORED", "count": 4 }, { "type": "SWARM", "count": 10 }, { "type": "RUNNER", "count": 6 }, { "type": "REGENERATOR", "count": 4 }, { "type": "BASIC", "count": 2 }], "challenge": { "type": "NO_FAULTS", "limit": 0 }, "mutantWeakness": null },
+    { "wave": 14, "groups": [{ "type": "BASIC", "count": 4 }, { "type": "MUTANT", "count": 6 }, { "type": "RUNNER", "count": 6 }, { "type": "SWARM", "count": 10 }, { "type": "MUTANT", "count": 6 }, { "type": "BASIC", "count": 2 }], "challenge": { "type": "NO_FAULTS", "limit": 0 }, "mutantWeakness": "PIERCING" },
+    { "wave": 15, "groups": [{ "type": "ARMORED", "count": 4 }, { "type": "MUTANT", "count": 8 }, { "type": "RUNNER", "count": 8 }, { "type": "SWARM", "count": 10 }, { "type": "MUTANT", "count": 4 }, { "type": "REGENERATOR", "count": 2 }], "challenge": { "type": "MAX_MEMORY", "limit": 8 }, "mutantWeakness": "NORMAL" },
+    { "wave": 16, "groups": [{ "type": "MUTANT", "count": 6 }, { "type": "ARMORED", "count": 4 }, { "type": "SWARM", "count": 10 }, { "type": "RUNNER", "count": 8 }, { "type": "MUTANT", "count": 8 }, { "type": "BASIC", "count": 2 }], "challenge": { "type": "NO_AIR_SHOTS", "limit": 0 }, "mutantWeakness": "PIERCING" }
   ]
 }

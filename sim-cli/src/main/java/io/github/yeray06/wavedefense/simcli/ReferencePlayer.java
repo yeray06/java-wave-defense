@@ -1,9 +1,12 @@
 package io.github.yeray06.wavedefense.simcli;
 
 import io.github.yeray06.wavedefense.script.CompileResult;
+import io.github.yeray06.wavedefense.script.LibraryResult;
 import io.github.yeray06.wavedefense.script.ScriptCompiler;
+import io.github.yeray06.wavedefense.script.api.AmmoType;
 import io.github.yeray06.wavedefense.script.api.Feature;
 import io.github.yeray06.wavedefense.script.api.Unlocks;
+import io.github.yeray06.wavedefense.script.check.Library;
 import io.github.yeray06.wavedefense.script.runtime.CompiledScript;
 import io.github.yeray06.wavedefense.sim.data.GameData;
 import io.github.yeray06.wavedefense.sim.data.ShopConfig;
@@ -18,13 +21,23 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * A player who writes the best reference script their syntax allows and clicks reload by hand when
  * a turret runs dry. Scripts live in {@code reference/scripts/L<n>[-ammo].txt}, where {@code n} is
- * how many shop pieces are owned and {@code -ammo} uses the wave-6 ammo switch.
+ * how many shop pieces are owned and {@code -ammo} uses the wave-6 ammo switch. A script with
+ * methods has its library next to it, in {@code L<n>…lib.txt}.
+ *
+ * <p>The player reads each wave's briefing and rewrites one condition for it: {@value
+ * #PIERCING_IF}, in a script or library, becomes when to use piercing ammo on the target {@code o}:
+ * armored, or a Mutant weak to it. Without methods that line is in every turret's script; with
+ * them, in the library once.
  */
 final class ReferencePlayer {
+  /** Written where a script decides to use piercing ammo on {@code o}. */
+  static final String PIERCING_IF = "{PERFORANTE_SI}";
+
   private final GameData data;
   private final PlayerConfig config;
   private final ScriptCompiler compiler;
@@ -60,21 +73,36 @@ final class ReferencePlayer {
     for (String base : candidates(level(unlocks))) {
       List<ChosenScript> found = new ArrayList<>();
       for (String suffix : new String[] {"", "-b", "-c"}) {
-        String name = base + suffix;
-        String source = resource(name);
-        if (source == null) {
-          continue;
-        }
-        CompileResult result = compiler.compile(source, unlocks, memory);
-        if (result.succeeded()) {
-          found.add(new ChosenScript(name, source, result.memoryUsed(), unlocks));
-        }
+        load(base + suffix, unlocks, memory).ifPresent(found::add);
       }
       if (!found.isEmpty()) {
         return List.copyOf(found);
       }
     }
     throw new IllegalStateException("no reference script compiles with " + unlocks);
+  }
+
+  /** A reference script and its library, if both exist and compile with these unlocks. */
+  private Optional<ChosenScript> load(String name, Unlocks unlocks, int memory) {
+    String source = resource(name);
+    if (source == null) {
+      return Optional.empty();
+    }
+    String library = resource(name + ".lib");
+    library = library == null ? "" : library;
+    String condition = piercingIf(null);
+    LibraryResult compiledLibrary =
+        compiler.compileLibrary(library.replace(PIERCING_IF, condition), unlocks);
+    if (!compiledLibrary.succeeded()) {
+      return Optional.empty();
+    }
+    CompileResult result =
+        compiler.compile(
+            source.replace(PIERCING_IF, condition), compiledLibrary.library(), unlocks, memory);
+    if (!result.succeeded()) {
+      return Optional.empty();
+    }
+    return Optional.of(new ChosenScript(name, source, library, result.memoryUsed(), unlocks));
   }
 
   /**
@@ -89,14 +117,7 @@ final class ReferencePlayer {
     List<ChosenScript> found = new ArrayList<>();
     for (String base : candidates(level(unlocks))) {
       for (String suffix : new String[] {"", "-b", "-c"}) {
-        String source = resource(base + suffix);
-        if (source == null) {
-          continue;
-        }
-        CompileResult result = compiler.compile(source, unlocks, memory);
-        if (result.succeeded()) {
-          found.add(new ChosenScript(base + suffix, source, result.memoryUsed(), unlocks));
-        }
+        load(base + suffix, unlocks, memory).ifPresent(found::add);
       }
     }
     return found;
@@ -132,13 +153,20 @@ final class ReferencePlayer {
 
   /** Plays one wave with a given script on every turret. */
   WaveReport play(int wave, ChosenScript script, int turrets, Loadout loadout, double healthScale) {
+    String condition = piercingIf(data.waves().wave(wave).mutantWeakness());
+    Library library =
+        compiler
+            .compileLibrary(script.library().replace(PIERCING_IF, condition), script.unlocks())
+            .library();
+    String source = script.source().replace(PIERCING_IF, condition);
     List<CompiledScript> scripts = new ArrayList<>();
     for (int i = 0; i < turrets; i++) {
       // One compiled instance per turret: a CompiledScript is not shared between turrets.
       scripts.add(
           compiler
               .compile(
-                  script.source(),
+                  source,
+                  library,
                   script.unlocks(),
                   Math.max(data.turret().memoryLines(), script.memoryUsed()))
               .script()
@@ -162,6 +190,16 @@ final class ReferencePlayer {
     return battle.report();
   }
 
+  /**
+   * When to use piercing ammo on {@code o}, for Mutants weak to {@code weakness} ({@code null}
+   * without Mutants): always on armor, and on a Mutant only if piercing is its weak spot.
+   */
+  private static String piercingIf(AmmoType weakness) {
+    return weakness == AmmoType.PIERCING
+        ? "o.blindado() || o.mutante()"
+        : "o.blindado() && !o.mutante()";
+  }
+
   static String resource(String name) {
     try (InputStream in =
         ReferencePlayer.class.getResourceAsStream("/reference/scripts/" + name + ".txt")) {
@@ -179,5 +217,9 @@ final class ReferencePlayer {
         .toList();
   }
 
-  record ChosenScript(String name, String source, int memoryUsed, Unlocks unlocks) {}
+  /**
+   * @param library the library the script calls; empty without methods
+   */
+  record ChosenScript(
+      String name, String source, String library, int memoryUsed, Unlocks unlocks) {}
 }

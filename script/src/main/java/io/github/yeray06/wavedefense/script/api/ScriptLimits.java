@@ -9,13 +9,17 @@ package io.github.yeray06.wavedefense.script.api;
  *     loops cannot stall the game
  * @param maxNestingDepth deepest nesting of statements and expressions the parser accepts, so no
  *     script can overflow the Java stack
+ * @param maxCallDepth library calls that may be running at once; the next one raises
+ *     StackOverflowError, so endless recursion stops like in Java
  */
-public record ScriptLimits(int maxLoopIterations, int maxStepsPerCycle, int maxNestingDepth) {
+public record ScriptLimits(
+    int maxLoopIterations, int maxStepsPerCycle, int maxNestingDepth, int maxCallDepth) {
 
   public ScriptLimits {
     requirePositive("maxLoopIterations", maxLoopIterations);
     requirePositive("maxStepsPerCycle", maxStepsPerCycle);
     requirePositive("maxNestingDepth", maxNestingDepth);
+    requirePositive("maxCallDepth", maxCallDepth);
   }
 
   private static void requirePositive(String name, int value) {

@@ -9,7 +9,7 @@ if (municion() == 0 || calor() >= 70) {
     }
     if (o != null) {
         apuntar(o);
-        if (o.blindado()) usarMunicion(PERFORANTE); else usarMunicion(NORMAL);
+        if ({PERFORANTE_SI}) usarMunicion(PERFORANTE); else usarMunicion(NORMAL);
         disparar();
     }
 }

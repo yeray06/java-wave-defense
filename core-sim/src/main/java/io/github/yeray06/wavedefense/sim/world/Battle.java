@@ -43,6 +43,10 @@ public final class Battle {
 
   private final GameData data;
   private final int wave;
+
+  /** The ammo this wave's Mutants are weak to, or {@code null} without Mutants. */
+  private final AmmoType mutantWeakness;
+
   private final PathTrack path;
   private final EnemyPool enemies;
   private final BulletPool bullets;
@@ -90,6 +94,7 @@ public final class Battle {
     if (wave > data.waves().waves().size()) {
       throw new IllegalArgumentException("no data for wave " + wave);
     }
+    this.mutantWeakness = data.waves().wave(wave).mutantWeakness();
     TurretConfig turret = data.turret();
     MapConfig map = data.map();
     if (setup.scripts().size() > map.turretSlots().size()) {
@@ -260,9 +265,11 @@ public final class Battle {
     if (outcome == CycleOutcome.RELOADING) {
       startReload(turret, false);
     } else if (outcome == CycleOutcome.FAULT) {
-      turret.faults.record(turret.script.faultType(), turret.script.faultLine());
+      turret.faults.record(
+          turret.script.faultType(), turret.script.faultLine(), turret.script.faultInLibrary());
       turret.lastFault = turret.script.faultType();
       turret.lastFaultLine = turret.script.faultLine();
+      turret.lastFaultInLibrary = turret.script.faultInLibrary();
       turret.hungTicksLeft = hangTicks;
       events.add(
           BattleEventType.FAULT,
@@ -315,10 +322,14 @@ public final class Battle {
 
   private void hit(Enemy enemy, Bullet bullet) {
     double damage = bullet.damage;
-    boolean blocked = enemy.armored && bullet.ammo == AmmoType.NORMAL;
-    if (blocked) {
+    boolean armorStops = enemy.armored && bullet.ammo == AmmoType.NORMAL;
+    boolean wrongAmmo = enemy.type.mutant() && bullet.ammo != mutantWeakness;
+    if (armorStops) {
       damage *= 1 - data.enemies().armorDamageReduction();
+    } else if (wrongAmmo) {
+      damage *= 1 - data.enemies().mutantDamageReduction();
     }
+    boolean blocked = armorStops || wrongAmmo;
     enemy.health -= damage;
     enemy.lastDamageTick = tick;
     events.add(BattleEventType.HIT, tick, enemy.kind.ordinal(), blocked ? 1 : 0, enemy.x, enemy.y);
@@ -706,6 +717,11 @@ public final class Battle {
     @Override
     public boolean armored(long enemy) {
       return enemies.resolve(enemy).armored;
+    }
+
+    @Override
+    public boolean mutant(long enemy) {
+      return enemies.resolve(enemy).type.mutant();
     }
 
     @Override

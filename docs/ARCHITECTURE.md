@@ -179,9 +179,11 @@ texto ─► Lexer ─► tokens ─► Parser ─► AST ─► Checker ─► 
   que aún no se usan (`for`, `try`, `class`…). Comentarios `//` y `/* */`.
 - **Parser**: descendente recursivo, con precedencias de Java. Recuperación en
   modo pánico (sincroniza en `;` y `}`) para dar varios errores a la vez.
-  Si encuentra una construcción conocida pero no implementada en el MVP
-  (`for`, `try`, `class`, declaración de método) emite
-  `FEATURE_LOCKED` y no la interpreta a medias.
+  Si encuentra una construcción conocida pero aún no implementada (`try`,
+  `class`) emite `FEATURE_LOCKED` y no la interpreta a medias. Tiene dos
+  entradas: `parse` para el script de una torreta (el cuerpo de un método) y
+  `parseLibrary` para la biblioteca (una lista de métodos, como el cuerpo de
+  una clase; fase 9).
 - **AST**: `sealed interface Stmt` / `sealed interface Expr` con records. Cada
   nodo guarda su línea y columna. Añadir `for`, `try/catch`, métodos y clases
   es añadir records y casos al `switch`; el compilador de Java avisa de los
@@ -198,10 +200,12 @@ texto ─► Lexer ─► tokens ─► Parser ─► AST ─► Checker ─► 
   nodos tipados: cero reservas de memoria por ciclo (lo comprueba
   `AllocationTest`: 0 bytes en 100.000 ciclos) y ninguna comprobación de tipo
   en ejecución.
-- **Fachada**: `ScriptCompiler.compile(texto, desbloqueos, memoria)` devuelve
-  `CompileResult` (errores ordenados, script ejecutable si no hay errores,
-  memoria usada por línea para el editor). Nunca lanza: un fallo del propio
-  compilador se convierte en `INTERNAL_ERROR`.
+- **Fachada**: `ScriptCompiler.compile(texto, biblioteca, desbloqueos,
+  memoria)` devuelve `CompileResult` (errores ordenados, script ejecutable si
+  no hay errores, memoria usada por línea para el editor);
+  `compileLibrary(texto, desbloqueos)` devuelve `LibraryResult` con la
+  `Library` (§4.9). Nunca lanzan: un fallo del propio compilador se convierte
+  en `INTERNAL_ERROR`.
 - **Errores**: cada uno es un `ErrorCode` con línea, columna y argumentos. El
   texto en español está en `i18n/messages.properties` (`script.error.*`); el
   módulo no contiene ningún texto para el jugador. Máximo 50 errores por
@@ -210,10 +214,10 @@ texto ─► Lexer ─► tokens ─► Parser ─► AST ─► Checker ─► 
 ### 4.3 Desbloqueos (`Feature`)
 
 `enum Feature { IF_ELSE, VARIABLES, LOGIC_OPS, WHILE, FOR, METHODS, TRY_CATCH, CLASSES }`.
-El checker recibe el conjunto comprado; desde la fase 8 se venden los cinco
+El checker recibe el conjunto comprado; desde la fase 9 se venden los seis
 primeros. El parser lee siempre lo que el juego sabe ejecutar (`if`, `while`,
-`for`…) y es el checker quien dice si está comprado; lo que aún no se ejecuta
-(`try`, métodos, clases) se marca como bloqueado y se salta entero.
+`for`, métodos…) y es el checker quien dice si está comprado; lo que aún no se
+ejecuta (`try`, clases) se marca como bloqueado y se salta entero.
 
 | Pieza | Qué habilita (D-07) |
 |---|---|
@@ -223,6 +227,7 @@ primeros. El parser lee siempre lo que el juego sabe ejecutar (`if`, `while`,
 | `&&`, `||`, `!` | Solo esos tres operadores. |
 | while | Solo el bucle `while`. |
 | for («Recorrer (for)», fase 8) | Las dos formas: contar, `for (int i = 0; i < n; i++)` (varias inicializaciones y actualizaciones separadas por comas, condición opcional), y recorrer, `for (Enemigo e : lista)`. El tipo `List<Enemigo>` con `size()`, `get(i)` e `isEmpty()` (nombres de Java, no del tema). La llamada `enemigos()`. |
+| Métodos («Reutilizar código (métodos)», fase 9) | Declarar métodos en la biblioteca, con parámetros (`int`, `boolean`, `Enemigo`, `List<Enemigo>`) y lo que devuelven (esos tipos o `void`); `return` con o sin valor, también en el script de una torreta (acaba el ciclo); llamarlos desde cualquier torreta y desde otros métodos, también a sí mismos. |
 | Oleada 6 (no se compra) | `usarMunicion(NORMAL)` / `usarMunicion(PERFORANTE)`. |
 
 Usar algo no desbloqueado da error de compilación con el texto del plan:
@@ -236,8 +241,10 @@ Usar algo no desbloqueado da error de compilación con el texto del plan:
 comentarios y las líneas en blanco no ocupan».
 
 - Cuentan 1: cada declaración, asignación, llamada, cabecera de `if`
-  (un `else if` es otro `if`), cabecera de `while` y cabecera de `for` (con lo
-  que lleve dentro de los paréntesis).
+  (un `else if` es otro `if`), cabecera de `while`, cabecera de `for` (con lo
+  que lleve dentro de los paréntesis) y `return`.
+- La biblioteca no cuenta (el plan: «no cuentan para el límite de 12
+  líneas»); llamar a uno de sus métodos desde una torreta es 1 línea.
 - Cuentan 0: `else`, llaves, líneas en blanco y comentarios.
 
 Motivo: si contaran líneas físicas, el jugador metería todo en una línea y el
@@ -260,7 +267,8 @@ plan con `if/else` ocupa 3 líneas de memoria; el de `for` de la oleada 12,
 - **Profundidad**: el parser corta a 64 niveles de anidamiento (sentencias y
   expresiones; un paréntesis gasta 2) para que ningún script provoque
   `StackOverflowError`. Probado con 100.000 llaves, paréntesis, `!` y `=`.
-- Los límites (1.000, 100.000, 64) están en `data/script-api.json`.
+- Los límites (1.000, 100.000, 64 de anidamiento y 64 de llamadas) están en
+  `data/script-api.json`.
 - **Ninguna excepción de Java sale del intérprete**: las excepciones del juego
   son un `ScriptFault` (tipo + línea) que el ejecutor devuelve como resultado,
   no como `throw` hacia la simulación. Como red de seguridad, el `Executor`
@@ -269,8 +277,11 @@ plan con `if/else` ocupa 3 líneas de memoria; el de `for` de la oleada 12,
   cuelga la torreta como cualquier otra excepción.
 - Excepciones: `SinMunicionException`, `SobrecalentamientoException`,
   `NullPointerException`, `BucleInfinitoException`, `ArithmeticException`
-  (división o resto entre cero, como en Java real; D-08) e
-  `IndexOutOfBoundsException` (`get(i)` fuera de `0..size()-1`, fase 8).
+  (división o resto entre cero, como en Java real; D-08),
+  `IndexOutOfBoundsException` (`get(i)` fuera de `0..size()-1`, fase 8) y
+  `StackOverflowError` (más de 64 llamadas a la biblioteca en marcha a la
+  vez, casi siempre un método que se llama a sí mismo sin parar; fase 9). Un
+  fallo dentro de un método dice la línea de la biblioteca.
   `for` tiene el mismo límite de vueltas que `while`. Todas cuelgan la
   torreta 3 s y muestran su línea. Los `int` desbordan como en Java.
 - Implementación: una única señal precreada y sin traza de pila desenrolla el
@@ -293,7 +304,8 @@ public interface TurretApi {           // lo único que ve un script
   void useAmmo(AmmoType type);
   boolean exists(long enemy);          // el intérprete lo consulta antes de cada uso
   int health(long enemy);  int speed(long enemy);
-  boolean armored(long enemy);  int distanceToCore(long enemy);
+  boolean armored(long enemy);  boolean mutant(long enemy);   // e.mutante() (fase 9)
+  int distanceToCore(long enemy);
   int enemyCount();  long enemyAt(int index);   // enemigos() (fase 8)
 }
 ```
@@ -349,14 +361,51 @@ rechaza lo que javac rechaza. Las desviaciones están listadas en el test:
   solo como instrucción propia; `break`, `continue`, `switch`, `?:`, `&`,
   `|`, `<<`, conversiones de tipo, `double`, literales hexadecimales,
   octales y con sufijo; variables de tipo `Municion`; `System` y cualquier
-  clase fuera de la API. `return` se trata como parte de «métodos». Arrays
+  clase fuera de la API. Arrays
   (`int[]`, `a[0]`): no existen; las listas del juego son `List<Enemigo>` y
   salen de `enemigos()` (fase 8). Un `List` sin `<Enemigo>`, comparar una lista
   con un enemigo (javac lo deja: interfaz frente a clase no final) y los
-  métodos de `List` que no sean `size()`, `get(i)` e `isEmpty()`.
+  métodos de `List` que no sean `size()`, `get(i)` e `isEmpty()`. En la
+  biblioteca (fase 9): dos métodos con el mismo nombre (javac admite
+  sobrecargas), un método con el nombre de una orden del juego (javac lo toma
+  como sobrescribirla), modificadores (`static`, `public`, `final`…, también
+  en variables), variables fuera de un método (serían de todas las torretas a
+  la vez) y bucles infinitos cuya condición no es el literal `true` (javac
+  pliega `1 == 1` y no pide `return` detrás).
 - **Más permisivo que Java**: no se comprueba el código inalcanzable
-  (`while (true) {}` seguido de otra instrucción); en el juego ese bucle lanza
-  BucleInfinitoException, que enseña lo mismo.
+  (`while (true) {}` seguido de otra instrucción, o algo detrás de un
+  `return`); en el juego ese bucle lanza BucleInfinitoException, que enseña lo
+  mismo.
+
+### 4.9 Métodos y biblioteca (fase 9)
+
+El plan: «Los métodos se escriben en una biblioteca compartida por todas las
+torretas y no cuentan para el límite de 12 líneas».
+
+- **Una biblioteca para todas**: `compileLibrary` comprueba primero todas las
+  cabeceras (así un método puede llamar a otro escrito más abajo, o a sí
+  mismo) y luego los cuerpos. El resultado, `Library`, es inmutable y sus
+  nodos no guardan estado: todas las torretas lo ejecutan a la vez. Los
+  scripts de las torretas se compilan contra ella; si tiene errores, llamar a
+  uno de sus métodos da «La biblioteca tiene errores: arréglalos para poder
+  usar rafaga()».
+- **Ranuras en pila, sin reservar memoria**: cada función (el script o un
+  método) numera sus variables desde 0. En ejecución, `Frame` tiene un único
+  array de ranuras dimensionado para el script más 64 llamadas del método más
+  grande; cada llamada usa una región por encima de la de quien llama
+  (`intBase`/`refBase`). Los argumentos se evalúan, de izquierda a derecha, en
+  ranuras de quien llama, para que una llamada dentro de un argumento no
+  pise los ya evaluados; luego se copian a los parámetros. `return` desenrolla
+  con otra señal precreada y sin traza. `AllocationTest` lo comprueba con
+  recursión, listas y `return`: 0 bytes.
+- **Fallos en la biblioteca**: la señal de fallo sabe si saltó dentro de un
+  método (`faultInLibrary`), y la torreta, el informe y el HUD dicen
+  «biblioteca, línea N».
+- **Comprobaciones como javac**: tipos de parámetros y de lo que se devuelve,
+  número de argumentos, «tiene que devolver algo en todos los caminos»
+  (`MISSING_RETURN`: un `if` sin `else` puede acabar; un `while (true)` o un
+  `for (;;)` no), y la asignación definitiva sabe que una rama que acaba en
+  `return` no llega al final.
 
 ### 4.8 Convención de datos: `notFromPlan`
 
@@ -436,7 +485,9 @@ Así se ve en el propio dato qué es provisional.
   palabra clave es lo que el juego lee como tal. Números de línea, una barra
   azul por instrucción que ocupa memoria (D-06), línea roja y subrayado en
   cada error, y debajo los errores con su línea (primero los de la línea bajo
-  el ratón). Contador «Memoria: N/12». Una pestaña por torreta construida.
+  el ratón). Contador «Memoria: N/12». Una pestaña por torreta construida y,
+  con los métodos comprados, la pestaña «Biblioteca» (sin contador de
+  memoria): cambiarla vuelve a compilar todas las torretas contra ella.
   Compila con cada cambio: el código que compila pasa a la torreta y entra
   en la siguiente oleada (o en la que espera); el que no, se queda en el
   editor y la torreta sigue con su última versión buena (D-51).
@@ -447,7 +498,8 @@ Así se ve en el propio dato qué es provisional.
   algún nivel llevan «Devolver (+N)» (D-59). Al final, los
   trofeos de jefe, que se gastarán en los actos siguientes. Al comprar una
   pieza se abre su tarjeta con el ejemplo de `shop.json`, que se valida al
-  cargar: compila con esa pieza y cabe en `exampleLines` (5, plan). El
+  cargar: compila con esa pieza y cabe en `exampleLines` (5, plan). El de
+  métodos es una biblioteca (`exampleInLibrary`) y la tarjeta lo dice. El
   hardware muestra nivel, efecto y precio; la torreta extra aparece en el
   siguiente hueco.
 - **Mapa de oleadas** (D-49): un acto cada vez (tantas oleadas como el ritmo de
@@ -490,8 +542,9 @@ Así se ve en el propio dato qué es provisional.
   `"version"`, el progreso (`Progress.Snapshot`: estrellas, trofeos, sintaxis,
   hardware, oleada actual y máxima, avance automático, oleadas superadas, sin
   fugas, con el reto cumplido y jefes derribados), el código que corre cada
-  torreta, el borrador de cada editor y el contador de batallas (semilla).
-  Versión 2 (fase 6c): la migración `MoneyToStars` cambia el dinero de la
+  torreta, el borrador de cada editor, la biblioteca (la que corre y su
+  borrador) y el contador de batallas (semilla). Versión 3 (fase 9): la
+  migración `AddLibrary` añade una biblioteca vacía. Versión 2 (fase 6c): la migración `MoneyToStars` cambia el dinero de la
   versión 1 por las estrellas que habrían dado sus metas (superadas + sin
   fugas) y un trofeo por jefe derribado. Un nivel de hardware por encima del
   último que vende `shop.json` se queda en el último. Al cargar se aplican las
@@ -501,7 +554,8 @@ Así se ve en el propio dato qué es provisional.
 - **Carga comprobada**: `Progress.restore` valida contra los datos (oleadas
   en rango, cada pieza con la que exige, hardware que se vende, torretas que
   caben). Un script guardado que ya no compila vuelve al inicial y se
-  conserva su borrador. La oleada actual espera a «Desplegar» aunque esté
+  conserva su borrador; una biblioteca que ya no compila se vacía y también
+  conserva el suyo. La oleada actual espera a «Desplegar» aunque esté
   superada: cargar nunca arranca una oleada sola (D-55).
 - **Carga tolerante**: si `save.json` no se puede leer se prueba `.bak` y se
   avisa («se ha recuperado la copia anterior»); si tampoco, partida nueva y
@@ -633,6 +687,7 @@ los JSON y en `docs/BALANCE.md`.
 | Recompensa del jefe | 1.er derribo = 1 trofeo; los siguientes, nada (D-57) | Yeray (D-57; sustituye a D-10) |
 | Básico | 100 u/s | No viene del plan (D-12, D-22) |
 | Corredor (acto 2) | 300 u/s (el triple); vida ×0,5 | Triple Plan; vida PROVISIONAL (D-60) |
+| Mutante (acto 2, desde la 14) | Débil a una munición que cambia cada oleada (`mutantWeakness` en `waves.json`, la dice el parte); la otra le hace un 80 % menos; vida ×1,5; 100 u/s; `e.mutante()` lo reconoce (con Variables) | «Su punto débil cambia cada oleada» Plan; la munición como punto débil, Yeray (D-61); números PROVISIONAL |
 | Duración | ~45 s: camino de 2.500 u, velocidad base 100 u/s (25 s), salidas repartidas en 20 s | ~45 s Plan; números No viene del plan |
 
 Composición (No viene del plan, D-12). B = Básico, R = Regenerador,
@@ -653,6 +708,9 @@ Bl = Blindado, E = Enjambre:
 | 11 | 28 | 6 B + 8 C + 4 R + 10 E (C = Corredor) |
 | 12 | 30 | 4 B + 4 Bl + 10 C + 10 E + 2 R |
 | 13 | 32 | 12 C + 4 Bl + 10 E + 4 R + 2 B |
+| 14 | 34 | 6 B + 12 M + 6 C + 10 E (M = Mutante, débil a PERFORANTE) |
+| 15 | 36 | 4 Bl + 12 M + 8 C + 10 E + 2 R (débil a NORMAL) |
+| 16 | 38 | 14 M + 4 Bl + 10 E + 8 C + 2 B (débil a PERFORANTE) |
 
 ### 10.3 Economía, tienda y progreso
 
@@ -663,13 +721,13 @@ retos son PROVISIONAL: salen de calibrar con `sim-cli` (ver
 | Regla | Valor | Origen |
 |---|---|---|
 | Estrellas por oleada | 3, cada una **una sola vez**: superarla, superarla sin fugas y cumplir su reto. Repetir no paga | Yeray (D-57) |
-| Retos | Uno fijo por oleada en `waves.json`: 1 ningún disparo al aire · 2 no recargar a mano · 3 memoria ≤ 4 · 4 ninguna bala a enemigos ya derribados · 5 ≤ 52 disparos · 6 memoria ≤ 10 · 7 ≤ 100 disparos · 8 ≤ 90 disparos · 9 memoria ≤ 9 · 10 ninguna excepción · 11 ninguna bala a enemigos ya derribados · 12 memoria ≤ 10 · 13 ninguna excepción. Cuentan todas las torretas juntas; memoria = la torreta que más ocupa | Yeray (uno fijo por oleada); retos PROVISIONAL |
+| Retos | Uno fijo por oleada en `waves.json`: 1 ningún disparo al aire · 2 no recargar a mano · 3 memoria ≤ 4 · 4 ninguna bala a enemigos ya derribados · 5 ≤ 52 disparos · 6 memoria ≤ 10 · 7 ≤ 100 disparos · 8 ≤ 90 disparos · 9 memoria ≤ 9 · 10 ninguna excepción · 11 ninguna bala a enemigos ya derribados · 12 memoria ≤ 10 · 13 ninguna excepción · 14 ninguna excepción · 15 memoria ≤ 8 (pensado para la biblioteca) · 16 ningún disparo al aire. Cuentan todas las torretas juntas; memoria = la torreta que más ocupa | Yeray (uno fijo por oleada); retos PROVISIONAL |
 | Trofeos | 1 por jefe, la primera vez que cae. Se gastarán en mejoras especiales en los actos siguientes | Yeray (D-57) |
 | Estrellas al empezar | 0 | PROVISIONAL |
-| Sintaxis | if 1 · Variables 2 (req. if) · `&& || !` 3 (req. Variables) · while 4 (req. `&&`) · for 4 (req. while, fase 8); aún sin vender: métodos 6, try/catch 7, clases 8 | Orden y requisitos Plan; precios PROVISIONAL (D-57, D-60) |
+| Sintaxis | if 1 · Variables 2 (req. if) · `&& || !` 3 (req. Variables) · while 4 (req. `&&`) · for 4 (req. while, fase 8) · métodos 6 (req. for, fase 9); aún sin vender: try/catch 7, clases 8 | Orden y requisitos Plan; precios PROVISIONAL (D-57, D-60) |
 | Árbol visible | Las 8 piezas con precio desde el inicio; las 4 de fuera del MVP, bloqueadas | Plan |
 | Hardware | Daño, cargador y disipador: 4 niveles a 1 estrella cada uno. Con for: memoria (+4 líneas por nivel) 2 y 3; procesador (+0,5 ciclos/s, máximo 5) 2, 2, 3, 3, 4, 4. Torretas extra 2, 3 y 4 | PROVISIONAL (D-57, D-60) |
-| Todo lo que se vende | 14 en sintaxis + 44 en hardware; las oleadas 1–13 dan 39 estrellas | PROVISIONAL (D-60) |
+| Todo lo que se vende | 20 en sintaxis + 44 en hardware; las oleadas 1–16 dan 48 estrellas | PROVISIONAL (D-60, D-61) |
 | Efecto por nivel | Aditivo sobre la base: daño 5 → 6,25 → 7,5 | Plan («cada nivel… da lo mismo») + PROVISIONAL (D-13) |
 | Ámbito del hardware | Global, para todas las torretas | PROVISIONAL (D-13) |
 | Torretas | «Torreta extra»: la 2.ª con `&&`, la 3.ª y la 4.ª con for; 4 huecos (los dos nuevos junto a los tramos del medio) | Plan (3 o 4 en el acto 2) + PROVISIONAL (D-60) |
@@ -729,7 +787,8 @@ obliga a regenerarlo y a ver el efecto en el mismo PR.
   derrota en una oleada nueva y su primera victoria, ahora para sacar
   estrellas que faltaban. Regla del plan: ≤ 5.
 - **Regla del doble** (PROVISIONAL D-17, métrica cambiada en la fase 3): para
-  cada pieza, desde el estado justo antes de comprarla y en la oleada en que
+  cada pieza, desde el estado justo antes de comprarla (o, si nunca la
+  compra, desde que empezó a ahorrar para ella) y en la oleada en que
   «llega» (`shop.json`), `k` = mayor multiplicador de vida enemiga con el que
   la oleada sale **sin fugas**. Se compara la pieza con su script frente al
   mejor hardware del mismo precio en estrellas **dentro de los topes** (D-34). Variables es
@@ -741,6 +800,13 @@ obliga a regenerarlo y a ver el efecto en el mismo PR.
   oleadas 1–6 no se pueden perder y `k` se saturaba en el máximo.
 - **Caso D-20**: la fila VARIABLES es la oleada 4, la primera con
   regeneradores.
+- **Biblioteca y Mutante** (fase 9): un script de referencia puede llevar su
+  biblioteca al lado (`L6-ammo.lib.txt`). El jugador lee el parte: donde pone
+  `{PERFORANTE_SI}` escribe cuándo usar perforante con el objetivo `o`
+  (blindado, o un Mutante si esa oleada es débil a perforante). Sin métodos
+  esa línea está en cada torreta; con métodos, una vez en la biblioteca. El
+  simulador no mide lo que cuesta cambiar cuatro scripts: por eso los métodos
+  no le dan fuerza.
 - **Barrido del Regenerador**: `--sweep-regenerator FILE` juega una partida
   entera y mide la regla del doble de Variables para cada combinación de
   espera, curación, vida y separación del Regenerador (rejilla en
@@ -847,6 +913,7 @@ provisional contradice el plan.
 | D-58 | Nombres y manual para principiantes | CERRADA (Yeray) | Las piezas se llaman «Decidir (if/else)», «Recordar (variables)», «Combinar condiciones (&&, ||, !)» y «Repetir (while)» (y «Contar (for)», «Reutilizar código (métodos)», «Atrapar errores (try/catch)», «Tipos de torreta (clases)»). Cambia el texto del plan: «Aún no has desbloqueado «Repetir (while)»». El manual se escribe para quien nunca ha programado: capítulo «Empieza aquí», «Símbolos y palabras» (cada símbolo, glosario y cómo leer el código en voz alta), títulos que dicen qué hace cada orden y ejemplos comentados. |
 | D-59 | Devolver mejoras | CERRADA (Yeray) | Con estrellas que no se repiten, una mejora inútil podía dejar la partida sin salida. Daño, cargador y disipador se devuelven nivel a nivel (el último primero) por lo que costaron, en cualquier momento; la oleada en curso sigue con lo que empezó. La sintaxis no (el código que la usa dejaría de compilar) ni la torreta extra (se perdería su código y su pestaña). No cambia el guardado: los niveles ya se guardan. |
 | D-60 | Fase 8: for y el inicio del acto 2 | PROVISIONAL (las piezas las pidió Yeray; los números son míos) | La pieza se llama «Recorrer (for)» y trae las dos formas. `enemigos()` da los enemigos a tiro en el orden en que salieron. De `List` solo `size()`, `get(i)` e `isEmpty()`; sin arrays. Corredor a 300 u/s (plan) con vida ×0,5 y 8/10/12 en las oleadas 11–13, para que elegir a quién disparar importe. for a 4 estrellas; memoria y procesador esperan a for. Huecos 3 y 4 en (380, 430) y (850, 190). El juego acaba por ahora en la oleada 13. El mapa enseña un acto cada vez. |
+| D-61 | Fase 9: métodos y el Mutante | CERRADA la mecánica del Mutante y la recursión (Yeray); números PROVISIONAL | Los métodos van en una biblioteca compartida que no gasta memoria (plan), con parámetros, `return` y recursión hasta 64 llamadas (`StackOverflowError`, como Java). Sin sobrecargas, modificadores ni variables fuera de un método. El Mutante es débil a NORMAL o a PERFORANTE según la oleada (lo dice el parte) y la otra munición le hace un 80 % menos; `e.mutante()` lo reconoce. Oleadas 14–16; métodos a 6 estrellas. El juego acaba por ahora en la oleada 16. Guardado versión 3. |
 | D-54 | Manual del jugador (fase 5b) | CERRADA la idea (Yeray, no viene del plan); contenido PROVISIONAL | Un libro dentro del juego con cada llamada, pieza de sintaxis, excepción y enemigo, ejemplos que se copian con un botón y recetas. Todo visible desde el principio; lo no desbloqueado, con candado y qué lo trae, como el árbol de la tienda. Textos y ejemplos escritos por mí; los ejemplos se compilan al cargar y los números salen de los datos. |
 | D-44 | Semilla de cada batalla | PROVISIONAL | Un contador de batallas de la partida: las mismas acciones repiten la misma partida. Hoy solo la usa el objetivo «al azar», que no está activo. |
 | D-45 | Medida de la decisión C | PROVISIONAL | En la oleada 1, segundos reales desde que una torreta se queda sin balas hasta el clic que la recarga, más un resumen al acabar la oleada. Se escribe en la consola (`Gdx.app.log`, etiqueta `wave-defense`); el log a fichero llega en la fase 6. |

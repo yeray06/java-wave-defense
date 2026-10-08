@@ -8,6 +8,9 @@ public sealed interface TypeRef {
 
   record BooleanType(Pos pos) implements TypeRef {}
 
+  /** {@code void}: only as what a method returns. */
+  record VoidType(Pos pos) implements TypeRef {}
+
   /** A type written by name, such as the enemy type. Resolved by the checker. */
   record Named(Pos pos, String name) implements TypeRef {}
 

@@ -21,6 +21,7 @@ import io.github.yeray06.wavedefense.game.ui.UiSkin;
 import io.github.yeray06.wavedefense.script.CompileResult;
 import io.github.yeray06.wavedefense.script.api.Requirement;
 import io.github.yeray06.wavedefense.script.api.Unlocks;
+import io.github.yeray06.wavedefense.script.check.Library;
 import io.github.yeray06.wavedefense.sim.data.GameData;
 import io.github.yeray06.wavedefense.sim.data.ManualConfig;
 import io.github.yeray06.wavedefense.sim.progress.Progress;
@@ -211,16 +212,14 @@ public final class ManualPanel extends Table {
     code.setScrollingDisabled(false, true);
     code.setFadeScrollBars(false);
     box.add(code).left().width(WIDTH).colspan(2).padTop(4).row();
-    CompileResult compiled = compile(page, example);
-    box.add(
-            wrapped(
-                texts.format(
-                    "manual.example.memory", compiled.memoryUsed(), compiled.memoryLimit()),
-                "small"))
-        .left()
-        .expandX()
-        .fillX()
-        .padTop(4);
+    String where;
+    if (example.inLibrary()) {
+      where = texts.get("manual.example.library");
+    } else {
+      CompileResult compiled = compile(page, example);
+      where = texts.format("manual.example.memory", compiled.memoryUsed(), compiled.memoryLimit());
+    }
+    box.add(wrapped(where, "small")).left().expandX().fillX().padTop(4);
     TextButton copy = button(texts.get("manual.copy"), () -> {});
     copy.addListener(
         new ChangeListener() {
@@ -239,12 +238,23 @@ public final class ManualPanel extends Table {
     return box;
   }
 
-  /** The example compiled as the page's owner would: for its memory count. */
+  /**
+   * The example compiled as the page's owner would, against the page's library examples: for its
+   * memory count.
+   */
   private CompileResult compile(ManualConfig.Page page, ManualConfig.Example example) {
     List<ManualConfig.Topic> topics = new ArrayList<>(page.topics());
+    StringBuilder libraryCode = new StringBuilder();
+    for (ManualConfig.Example other : page.examples()) {
+      if (other.inLibrary()) {
+        libraryCode.append(other.code()).append('\n');
+        topics.addAll(other.needs());
+      }
+    }
     topics.addAll(example.needs());
-    return data.compiler()
-        .compile(example.code(), data.unlocksFor(topics), data.turret().memoryLines());
+    Unlocks unlocks = data.unlocksFor(topics);
+    Library library = data.compiler().compileLibrary(libraryCode.toString(), unlocks).library();
+    return data.compiler().compile(example.code(), library, unlocks, data.turret().memoryLines());
   }
 
   private Label wrapped(String text, String style) {

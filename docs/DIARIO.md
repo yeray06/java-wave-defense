@@ -319,3 +319,35 @@ posterior», por fases. Esta es la primera: for.
 | Las oleadas 11–13 se pasaban sin comprar for. | El Corredor pasa a tener la mitad de vida y viene en más cantidad. Aun así, for rinde 0,86 frente al plan, que pide 2: lo dejo apuntado para Yeray en vez de forzar los números. |
 | El mejor script con for ocupa 13 líneas. | Necesita la mejora de memoria; el simulador la compra cambiando un nivel de daño (la devolución de D-59 en acción). |
 | El índice del manual se desplazaba en horizontal por un título largo. | Título más corto: «IndexOutOfBoundsException · fuera de la lista». |
+
+## Fase 9 · 8 de octubre · métodos, el Mutante y las oleadas 14–16
+
+**Lo que pidió Yeray**: la siguiente pieza, «Reutilizar código (métodos)».
+Eligió cómo es el Mutante (débil a una munición que cambia cada oleada) y que
+un método pueda llamarse a sí mismo, con un límite, como en Java.
+
+- La **biblioteca**: una pestaña más del editor, compartida por todas las
+  torretas, donde se escriben los métodos. No gasta memoria (lo dice el plan).
+- Métodos con datos (`boolean peligroso(Enemigo e)`), `return`, recursión y
+  su fallo, `StackOverflowError`.
+- El **Mutante**: el parte de la oleada dice a qué munición es débil, y
+  cambia de una oleada a otra. Con la biblioteca se cambia una línea en vez
+  de cuatro scripts. `e.mutante()` lo reconoce.
+- Oleadas 14–16, guardado versión 3 y seis páginas nuevas en el manual.
+
+![Parte de la oleada 14: el Mutante es débil a PERFORANTE](capturas/fase9-01-parte-oleada-14-mutante.png)
+![La pestaña Biblioteca con tres métodos](capturas/fase9-02-editor-biblioteca.png)
+![Una torreta que usa la biblioteca: 7 líneas de memoria](capturas/fase9-03-torreta-llama-a-la-biblioteca.png)
+![Los Mutantes (cian) en el camino](capturas/fase9-04-mutantes-en-el-camino.png)
+![El manual de métodos; detrás, la oleada 15 ya es débil a NORMAL](capturas/fase9-05-manual-metodos-y-oleada-15-debil-a-normal.png)
+
+| Problema | Solución |
+|---|---|
+| Cada llamada necesita sus propias variables, y crear un objeto por llamada rompería la regla de no reservar memoria en el bucle del juego. | Las variables van en una pila de ranuras creada al compilar, con sitio para 64 llamadas a la vez; cada llamada usa la zona de encima de la de quien la hace. La prueba de memoria da 0 bytes, también con recursión. |
+| En `resta(9, cinco())`, la llamada a `cinco()` pisaba el 9, que ya estaba evaluado. | Los argumentos se guardan primero en ranuras de quien llama y solo después se copian al método. Hay una prueba para eso. |
+| javac exige que un método que devuelve algo llegue siempre a un `return`. | El comprobador sigue las reglas de javac: un `if` sin `else` puede acabar; un `while (true)` no. Sabe también que una rama que acaba en `return` no deja variables sin valor. |
+| Un fallo dentro de un método decía una línea que no estaba en el script de la torreta. | El fallo sabe si salió de la biblioteca: «StackOverflowError (biblioteca, línea 2)», también en el informe. |
+| Los ejemplos del manual y de la tienda se compilaban como scripts de torreta. | Un ejemplo puede ir marcado como de biblioteca; los de una página forman su biblioteca y los demás se compilan contra ella. |
+| Con cuatro torretas, la pestaña «Biblioteca» se salía del panel, y su aviso, más ancho que el panel, lo descuadraba. | Va en una segunda fila; el aviso se ajusta al ancho. |
+| Al añadir el Mutante a los scripts del simulador, ocupaban dos líneas más, no cabían en 12 y la partida se bloqueaba en la oleada 13. | El jugador de referencia reescribe en cada oleada la condición del perforante (mismas líneas). Con métodos, esa línea va en la biblioteca. |
+| El jugador de referencia nunca compra los métodos, ni a 4 estrellas: los muros de las oleadas 14–16 se le llevan todo en hardware, y en fuerza los métodos no le dan nada (0,19 frente a una torreta más). | Es un dato para Yeray, no lo he forzado: su ventaja es no tener que cambiar cuatro scripts, y eso el simulador no lo mide. Queda en «A observar en el playtest». |

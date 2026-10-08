@@ -20,7 +20,11 @@ public final class ScriptApiLoader {
   record FileContents(
       List<String> notFromPlan, Limits limits, Types types, List<Call> calls, List<Ammo> ammo) {}
 
-  record Limits(Integer maxLoopIterations, Integer maxStepsPerCycle, Integer maxNestingDepth) {}
+  record Limits(
+      Integer maxLoopIterations,
+      Integer maxStepsPerCycle,
+      Integer maxNestingDepth,
+      Integer maxCallDepth) {}
 
   record Types(String enemy, String ammo) {}
 
@@ -66,7 +70,8 @@ public final class ScriptApiLoader {
           new ScriptLimits(
               required(limits.maxLoopIterations(), "limits.maxLoopIterations"),
               required(limits.maxStepsPerCycle(), "limits.maxStepsPerCycle"),
-              required(limits.maxNestingDepth(), "limits.maxNestingDepth"));
+              required(limits.maxNestingDepth(), "limits.maxNestingDepth"),
+              required(limits.maxCallDepth(), "limits.maxCallDepth"));
       return new ScriptApiData(api, scriptLimits);
     } catch (IllegalArgumentException e) {
       throw new DataException(FILE, e.getMessage(), e);
