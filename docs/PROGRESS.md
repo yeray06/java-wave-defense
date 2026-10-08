@@ -23,6 +23,7 @@ capturas está en [`DIARIO.md`](DIARIO.md).
 | 7. Empaquetado y documentación | ✅ Fusionada | `phase-7-empaquetado` |
 | 8. for, Corredor y oleadas 11–13 (acto 2) | ✅ Fusionada | `phase-8-for` |
 | 9. Métodos, Mutante y oleadas 14–16 | ✅ Hecha, en PR | `phase-9-methods` |
+| 9b. Ideas de The Farmer Was Replaced | ✅ Hecha, en PR | `phase-9b-ideas` |
 | 10. try/catch y Jefe 2 | Siguiente | — |
 | 11. Clases y acto 3 | Pendiente | — |
 
@@ -488,6 +489,40 @@ Resultado del simulador (`docs/BALANCE.md`):
 - El reto de la 15 (memoria ≤ 8) está pensado para la biblioteca y por eso
   el jugador de referencia no lo cumple.
 
+## Fase 9b: ideas de The Farmer Was Replaced (hecha)
+
+Yeray pidió investigar *The Farmer Was Replaced* y aplicar lo que mejor
+encajara («haz todo y de la manera que creas mejor»). Las 20 ideas de la
+lista, agrupadas:
+
+- **Programar mejor**: `imprimir(x)` (no gasta memoria) y una ventana de
+  **Salida** con lo que imprime cada torreta y sus excepciones;
+  `saludar()` y `oleada()`; «¿Quisiste decir disparar()?» en los nombres mal
+  escritos; **autocompletado** con lo que ya tienes (Tab, flechas, Esc,
+  Ctrl+Espacio).
+- **Depurador**: puntos de parada con un clic en el número de línea; la
+  oleada se pausa y el ciclo de la torreta se recorre paso a paso, con la
+  línea en amarillo, las variables de cada paso y su valor al pasar el ratón.
+- **Ventanas**: el código de una torreta, una página del manual, la salida y
+  el depurador en ventanas que se mueven, cambian de tamaño, se pliegan y se
+  cierran.
+- **Metas propias** (sin tocar las estrellas): récords por oleada (tiempo,
+  disparos, memoria), una racha con puntuación que crece más que lineal,
+  16 logros (también para Steam), sombreros que dan los logros, nombres de
+  torreta en el Taller, y «Probar» en el parte para ver cómo saldría una
+  oleada sin jugarla.
+- **Manual**: capítulo «Herramientas», historias al principio de las páginas
+  de sintaxis y de algunos enemigos, «Mostrar pista», «Ver también» y
+  «Abrir en ventana».
+- **Partida experta**: toda la sintaxis desde el principio, para quien ya
+  programa.
+- Avisos al pasar el ratón por un enemigo (tipo y vida) o una torreta
+  (nombre, balas y calor). Guardado versión 4, con migración.
+
+Lo que **no** hice, a propósito: `comprar()` y `estrellas()` (gastar
+estrellas desde un bucle se salta las decisiones de la tienda, D-68). El
+balance no cambia: `docs/BALANCE.md` sigue igual.
+
 ## Siguiente
 
 Fase 10: try/catch, el Saboteador y el Jefe 2 (oleadas 17–20). Cuando Yeray
@@ -577,6 +612,14 @@ Números de balance que no vienen del plan (D-12): están en la lista
 Preguntas de diseño que solo responde alguien jugando. Se apuntan aquí y se
 deciden con ese dato, no antes.
 
+- [ ] **Depurador y salida** (D-62, D-67): ¿los usa quien no ha programado
+  nunca sin que nadie se lo explique? Si no, que el manual o el primer error
+  los señale.
+- [ ] **Logros y racha** (D-63): ¿hacen que se repitan oleadas ya con las
+  tres estrellas? ¿Algún logro es imposible o demasiado fácil?
+- [ ] **«Probar»** (D-65): ¿se usa para tantear antes de desplegar, o le
+  quita gracia a desplegar? Si estorba, puede pedir haber superado la oleada.
+
 - [ ] **Métodos contra el Mutante** (D-61): ¿compensa comprar los métodos
   para no cambiar cuatro scripts en cada oleada? El simulador no lo puede
   medir (0,19 en fuerza) y nunca los compra porque los muros se llevan las
@@ -599,6 +642,32 @@ deciden con ese dato, no antes.
   así: empujan a programar «dispara solo si hay enemigos». D-05 cerrada.
 
 ## Pendiente de probar en local
+
+Fase 9b (`jugar.bat`):
+
+- [ ] La partida de antes carga, conserva todo y ya tiene los logros que le
+  tocan (por ejemplo «Primer día»).
+- [ ] Escribir en el editor: salen sugerencias; Tab escribe la elegida, las
+  flechas cambian, Esc cierra. Tras `e.` salen las llamadas del enemigo.
+- [ ] Escribir `dispara();`: el error dice «¿Quisiste decir disparar()?».
+- [ ] Clic en el número de una línea: punto rojo. Desplegar: la oleada se
+  para, se abre «Depurar», la línea sale en amarillo y las variables tienen
+  su valor; «< Paso», «Paso >», «Continuar», «Siguiente ciclo» y cerrar la
+  ventana hacen lo que dicen.
+- [ ] `imprimir(municion());` y abrir «Salida»: una línea por ciclo con el
+  nombre de la torreta.
+- [ ] «Separar en ventana»: escribir en la ventana se ve en la pestaña y al
+  revés; mover, cambiar de tamaño, plegar y cerrar las ventanas.
+- [ ] «Probar» en el parte: el informe sale al momento y dice que es una
+  prueba; no da estrellas.
+- [ ] «Logros»: racha, logros con lo que falta; en el Taller, poner nombre y
+  sombrero a una torreta y verlo en el campo.
+- [ ] Pasar el ratón por un enemigo y por una torreta: sale el aviso.
+- [ ] Manual: «Herramientas», «Mostrar pista», «Ver también» y «Abrir en
+  ventana».
+- [ ] Ajustes → «Nueva partida experta»: toda la sintaxis comprada en la
+  oleada 1.
+- [ ] `saludar()`: se ve el anillo dorado alrededor de la torreta.
 
 Fase 9 (`jugar.bat`):
 

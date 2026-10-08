@@ -351,3 +351,47 @@ un método pueda llamarse a sí mismo, con un límite, como en Java.
 | Con cuatro torretas, la pestaña «Biblioteca» se salía del panel, y su aviso, más ancho que el panel, lo descuadraba. | Va en una segunda fila; el aviso se ajusta al ancho. |
 | Al añadir el Mutante a los scripts del simulador, ocupaban dos líneas más, no cabían en 12 y la partida se bloqueaba en la oleada 13. | El jugador de referencia reescribe en cada oleada la condición del perforante (mismas líneas). Con métodos, esa línea va en la biblioteca. |
 | El jugador de referencia nunca compra los métodos, ni a 4 estrellas: los muros de las oleadas 14–16 se le llevan todo en hardware, y en fuerza los métodos no le dan nada (0,19 frente a una torreta más). | Es un dato para Yeray, no lo he forzado: su ventaja es no tener que cambiar cuatro scripts, y eso el simulador no lo mide. Queda en «A observar en el playtest». |
+
+## Fase 9b · 8 de octubre · ideas de The Farmer Was Replaced
+
+**Lo que pidió Yeray**: investigar *The Farmer Was Replaced* y traer al
+juego lo que encaje: el manual, las varias pantallas de código como
+ventanas, la jugabilidad y el avance. Con el informe que me pasó hice una
+lista de 20 cambios y me dijo «haz todo y de la manera que creas mejor».
+
+- **Ver qué pasa dentro**: `imprimir(x)` (no gasta memoria) y la ventana
+  «Salida»; el **depurador** con puntos de parada, paso a paso y el valor de
+  cada variable; «¿Quisiste decir disparar()?» cuando un nombre está mal
+  escrito; y **autocompletado** en el editor.
+- **Ventanas**: el código de una torreta, una página del manual, la salida y
+  el depurador, varias a la vez, que se mueven, cambian de tamaño, se
+  pliegan y se cierran.
+- **Metas propias que no tocan las estrellas**: récords por oleada, una
+  racha con puntos, 16 logros con 8 sombreros, nombres de torreta (el
+  Taller) y «Probar» en el parte.
+- **Manual**: capítulo «Herramientas», historias, pistas que se destapan y
+  «Ver también».
+- **Partida experta** para quien ya programa. `saludar()` y `oleada()`.
+  Avisos al pasar el ratón por enemigos y torretas. Guardado versión 4.
+
+![El parte con «Probar»; las torretas con sombreros](capturas/fase9b-01-parte-con-probar-y-sombreros.png)
+![La prueba de la oleada 15: «la perderías»](capturas/fase9b-02-prueba-de-la-oleada.png)
+![Logros y racha](capturas/fase9b-03-logros-y-racha.png)
+![El Taller: nombres y sombreros](capturas/fase9b-04-taller-nombres-y-sombreros.png)
+![Autocompletado tras «o.»](capturas/fase9b-05-autocompletar.png)
+![El depurador parado en la línea 7, con el valor de o](capturas/fase9b-06-depurador-paso-a-paso.png)
+![La ventana de salida con lo que imprime Lola](capturas/fase9b-07-ventana-de-salida.png)
+![Una página del manual en ventana; al lado, la pista del Jefe](capturas/fase9b-08-manual-en-ventana-y-pista.png)
+
+| Problema | Solución |
+|---|---|
+| Grabar cada paso de un ciclo para el depurador no puede reservar memoria en el bucle del juego. | La grabación (`Tracer`) se crea al poner el primer punto de parada, con sitio para 4.096 pasos; luego solo copia ranuras en arrays. Sin puntos de parada no graba nada. `AllocationTest` da 0 bytes. |
+| Volver a ejecutar un paso para enseñarlo cambiaría la partida. | No se vuelve a ejecutar: el mundo no se mueve mientras corre el código de una torreta, así que la grabación ya es exactamente lo que pasó. Un test comprueba que depurar no cambia el resultado de la oleada. |
+| Si cerrabas la ventana del depurador, la oleada se quedaba en pausa para siempre. | Cerrarla es «he terminado»: la oleada sigue. |
+| Lo que imprimía una torreta en el último tick de una oleada se perdía, porque la oleada siguiente se crea en ese mismo tick. | La salida lee después de cada tick y, cuando cambia la batalla, acaba de leer la anterior. |
+| Al cerrar una ventana de código, la ventana se llamaba a sí misma para cerrarse sin fin (`StackOverflowError` en un test). | Cerrar es idempotente y cada ventana admite varios avisos de cierre. |
+| A 720 px, el parte de la oleada 15 y el panel de código con errores tapaban la barra de botones. | Los datos del parte y el panel de código se desplazan; los botones «Desplegar» y «Probar» se quedan siempre a la vista. |
+| Una partida cargada no tenía los logros que ya le tocaban («Políglota: 6 de 6» sin conseguir). | Al cargar se desbloquean los que ya se cumplen, y al arrancar se mandan todos a Steam. |
+| Los sombreros oscuros no se leían en los botones del Taller. | El nombre va en un tono más claro que el sombrero. |
+| «Mostrar pista» dejaba un hueco vacío del tamaño de la pista. | La pista ocupa el sitio del botón al pulsarlo. |
+| ¿`comprar()` y `estrellas()` desde el código, como en el juego investigado? | No: un bucle podría gastar todas las estrellas sin pensar y se saltaría la tienda, que es parte del diseño. Queda explicado en D-68. |

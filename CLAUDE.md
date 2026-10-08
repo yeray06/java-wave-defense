@@ -39,6 +39,12 @@ Desde la fase 8 Yeray pidió el resto de la sintaxis, por fases (una por sesión
   bloqueada. Las mejoras se devuelven por lo que costaron (D-59).
 - El manual es para quien nunca ha programado: frases cortas, cada símbolo
   explicado y ejemplos comentados (D-58).
+- Fase 9b (ideas de *The Farmer Was Replaced*, pedidas por Yeray):
+  `imprimir(x)` (gratis, sin memoria), `saludar()`, `oleada()`, «¿Quisiste
+  decir…?», autocompletado, depurador con puntos de parada (D-62), ventanas
+  flotantes (D-67), carrera con récords, racha, logros, sombreros y nombres
+  (D-63, no pagan estrellas), «Probar» (D-65) y partida experta (D-64).
+  Nunca `comprar()` ni `estrellas()` desde el código (D-68).
 - AÚN FUERA (fases siguientes): try/catch, clases, modificadores, Nueva
   versión, arrays. No implementarlos antes de su fase, pero la
   arquitectura debe admitirlos.
@@ -69,7 +75,11 @@ Desde la fase 8 Yeray pidió el resto de la sintaxis, por fases (una por sesión
   tests) y colorea con el lexer del intérprete: nada de un segundo parser.
 - Manual del jugador (D-54): `data/manual.json` + `manual.*`. Toda llamada,
   pieza, enemigo o excepción nueva necesita su página (lo exige `GameData`)
-  y sus ejemplos compilan al cargar.
+  y sus ejemplos compilan al cargar. Partes opcionales: `.story`, `.hint` y
+  `seeAlso`. Todo logro de `data/career.json` necesita
+  `achievement.<ID>.name/.description` y su sombrero `hat.<FORMA>`.
+- El depurador graba sin reservar memoria (`Tracer`) y no cambia la
+  partida; la salida (`OutputLog`) es un anillo de primitivos.
 - Steam solo a través de `PlatformServices` (implementación vacía en el MVP).
   Cómo publicar: `docs/STEAM.md`.
 - Empaquetado con Construo: `./gradlew :lwjgl3:packageWinX64` (y Linux, Mac)

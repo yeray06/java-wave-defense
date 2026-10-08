@@ -407,6 +407,34 @@ torretas y no cuentan para el límite de 12 líneas».
   `for (;;)` no), y la asignación definitiva sabe que una rama que acaba en
   `return` no llega al final.
 
+### 4.10 Salida, depurador y sugerencias (fase 9b)
+
+- **`imprimir(x)`** escribe un `int`, un `boolean`, un enemigo, una lista o
+  `null` en la ventana de salida; el tipo `PRINTABLE` solo existe para su
+  parámetro. No gasta memoria (como los comentarios): sirve para mirar dentro
+  y quitarlo después. La torreta lo pasa a `TurretApi.print(kind, value,
+  línea, enBiblioteca)` y la batalla lo guarda en `OutputLog`, un anillo de
+  512 entradas en columnas primitivas (sin reservar memoria). `saludar()` no
+  hace nada más que contar y lanzar un suceso para el render (un anillo
+  dorado) y `oleada()` da el número de la oleada (D-68).
+- **«¿Quisiste decir…?»**: `Suggestions.closest` (Levenshtein con
+  transposiciones, sin mayúsculas; distancia 1 hasta 4 letras, 2 hasta 8 y 3
+  más) añade el nombre parecido como último argumento de los errores de
+  nombre, tipo, llamada o llamada de enemigo desconocidos; `ScriptTexts` usa
+  entonces la variante `.suggest` del texto.
+- **Depurador** (D-62): cada función compilada (`Function`) lleva su nombre y
+  el checker apunta cada variable (`DebugVar`: función, nombre, tipo, ranura
+  y línea donde se declara). `CompiledScript.setBreakpoints` crea un
+  `Tracer` la primera vez (fuera del bucle caliente): 4.096 pasos con línea,
+  si es de la biblioteca, la función y una copia de sus ranuras. Mientras
+  hay puntos de parada (o «pausar en el siguiente ciclo»), cada paso del
+  ciclo se graba sin reservar memoria (`AllocationTest`); si alguno toca un
+  punto, `stopped()`. El mundo no se mueve mientras corre un script, así que
+  recorrer la grabación hacia atrás y hacia delante enseña exactamente lo
+  que pasó, sin volver a ejecutar nada. La batalla avisa
+  (`takeDebugStop`) y `WaveLoop` deja de avanzar hasta `resumeDebug()`;
+  depurar no cambia la partida (`WaveLoopTest`).
+
 ### 4.8 Convención de datos: `notFromPlan`
 
 Cada fichero de `assets/data/` lleva una lista `notFromPlan` con la ruta de
@@ -434,6 +462,20 @@ Así se ve en el propio dato qué es provisional.
   fugas, el reto con `ChallengeJudge`) y suma una estrella por cada una; el
   primer derribo de un jefe suma un trofeo. Cada meta es un bit por oleada en
   `Progress`, así que repetir no paga.
+- **Carrera** (fase 9b, D-63): `Career` guarda lo que no es economía:
+  récords por oleada (`WaveRecord`: la más rápida, la de menos disparos y la
+  de menos memoria), la racha y su puntuación, saludos, excepciones vistas,
+  logros, y el nombre y el sombrero de cada torreta. `Career.apply` corre
+  después de `Progression.apply` y devuelve un `CareerOutcome` (marcas
+  nuevas, racha, puntos y logros nuevos). Los logros salen de
+  `data/career.json` (tipo, objetivo, sombrero); `GameData` comprueba que
+  cada objetivo sea alcanzable. Al cargar una partida se desbloquean los ya
+  alcanzados.
+- **«Probar»** (D-65): `WaveLoop.trial(oleada)` juega una oleada ya
+  alcanzada de principio a fin al momento, con el código actual y recargando
+  a mano en cuanto una torreta se vacía, con semilla negativa (nunca la de
+  una batalla de verdad). No toca el progreso, la carrera, la revisión ni el
+  contador de batallas.
 - **Datos**: cada JSON se valida al cargar (rangos, referencias cruzadas, que
   la composición de cada oleada sume `min(6 + 2n, 60)`). Un dato inválido da
   un error con fichero y campo, nunca un valor por defecto silencioso.
@@ -521,6 +563,46 @@ Así se ve en el propio dato qué es provisional.
   MVP, enemigo y excepción, y compila cada ejemplo con lo que pide su página.
   Los textos van en `manual.*` y citan los números de los datos por nombre
   (`{cargador}`, `ManualFacts`), sin `MessageFormat`.
+- **Fase 9b**:
+  - **Ventanas** (D-67): `FloatingWindow` (se mueve por el título, cambia de
+    tamaño por los bordes, se pliega con – y se cierra con ×) y `Windows`
+    (una por clave; abrir una que ya está la trae delante). En ventana van el
+    código separado de una pestaña («Separar en ventana»: otro `CodeEditor`
+    sobre el mismo `EditorDocument`, con los mismos errores y puntos de
+    parada; cerrarla no borra nada), una página del manual, la salida y el
+    depurador. Los paneles de la derecha siguen como en D-52; el de código
+    y el parte se desplazan si no caben (a 720 px tapaban la barra).
+  - **Salida** (`OutputPanel`): lee el `OutputLog` de la batalla después de
+    cada tick (también acaba de leer la batalla que termina) y apunta cada
+    excepción que cuelga una torreta. Guarda las últimas 200 líneas y
+    separa las oleadas.
+  - **Depurador** (`DebuggerPanel`): se abre solo cuando una torreta se para;
+    «< Paso» y «Paso >» recorren la grabación, la línea se marca en amarillo
+    en el editor (abre su pestaña), lista las variables de la función de ese
+    paso declaradas hasta su línea y, con el ratón sobre un nombre en el
+    código, dice cuánto vale. «Continuar», «Siguiente ciclo» y cerrar la
+    ventana siguen la oleada. Los puntos de parada se ponen con un clic en
+    el número de línea (punto rojo) y no se guardan.
+  - **Autocompletado** (D-66): `Completer` (Java puro, con el lexer del
+    intérprete para sacar las variables y métodos del propio código) y
+    `Vocabulary` (llamadas, palabras y constantes que el jugador ya tiene, y
+    los métodos de la biblioteca). Tab acepta, flechas eligen, Esc cierra,
+    Ctrl+Espacio abre; tras un punto, las llamadas del enemigo y de la lista.
+  - **Logros y Taller** (`CareerPanel`): racha, cada logro con lo que falta y
+    su sombrero; en el Taller, nombre y sombrero de cada torreta. Un logro
+    nuevo sale como aviso y va a `PlatformServices.unlockAchievement`; al
+    arrancar se le mandan todos (por si la tienda se perdió alguno).
+  - **Mundo**: `WorldRenderer` gana `enemyAt` (para el aviso al pasar el
+    ratón por un enemigo o una torreta) y `setHat` (el sombrero de cada
+    hueco, cosmético; D-40 sigue: el render no lee la carrera, se lo dan).
+  - **Parte e informe**: el parte enseña los récords de la oleada y el botón
+    «Probar», cuyo informe (`ReportLines.trial`) dice que es una prueba; el
+    informe de una oleada añade los récords batidos, la racha y los logros.
+  - **Manual**: capítulo «Herramientas» (ventanas, salida, depurador, probar
+    y logros); una página puede abrir con una historia (`.story`), esconder
+    una pista tras «Mostrar pista» (`.hint`) y acabar con «Ver también»
+    (`seeAlso` en `manual.json`, comprobado al cargar); «Abrir en ventana».
+  - **Ajustes**: «Nueva partida experta» (D-64).
 - **Textos**: `I18NBundle` con `messages.properties` en español. El código
   solo usa claves. Los módulos puros devuelven códigos + argumentos; quien
   pinta el texto es `game` (o `sim-cli`, que lee el mismo fichero).
@@ -543,7 +625,10 @@ Así se ve en el propio dato qué es provisional.
   hardware, oleada actual y máxima, avance automático, oleadas superadas, sin
   fugas, con el reto cumplido y jefes derribados), el código que corre cada
   torreta, el borrador de cada editor, la biblioteca (la que corre y su
-  borrador) y el contador de batallas (semilla). Versión 3 (fase 9): la
+  borrador), el contador de batallas (semilla) y la carrera
+  (`Career.Snapshot`: récords, racha, saludos, excepciones vistas, logros,
+  nombres, sombreros y si es una partida experta). Versión 4 (fase 9b): la
+  migración `AddCareer` añade una carrera vacía. Versión 3 (fase 9): la
   migración `AddLibrary` añade una biblioteca vacía. Versión 2 (fase 6c): la migración `MoneyToStars` cambia el dinero de la
   versión 1 por las estrellas que habrían dado sus metas (superadas + sin
   fugas) y un trofeo por jefe derribado. Un nivel de hardware por encima del
@@ -914,6 +999,13 @@ provisional contradice el plan.
 | D-59 | Devolver mejoras | CERRADA (Yeray) | Con estrellas que no se repiten, una mejora inútil podía dejar la partida sin salida. Daño, cargador y disipador se devuelven nivel a nivel (el último primero) por lo que costaron, en cualquier momento; la oleada en curso sigue con lo que empezó. La sintaxis no (el código que la usa dejaría de compilar) ni la torreta extra (se perdería su código y su pestaña). No cambia el guardado: los niveles ya se guardan. |
 | D-60 | Fase 8: for y el inicio del acto 2 | PROVISIONAL (las piezas las pidió Yeray; los números son míos) | La pieza se llama «Recorrer (for)» y trae las dos formas. `enemigos()` da los enemigos a tiro en el orden en que salieron. De `List` solo `size()`, `get(i)` e `isEmpty()`; sin arrays. Corredor a 300 u/s (plan) con vida ×0,5 y 8/10/12 en las oleadas 11–13, para que elegir a quién disparar importe. for a 4 estrellas; memoria y procesador esperan a for. Huecos 3 y 4 en (380, 430) y (850, 190). El juego acaba por ahora en la oleada 13. El mapa enseña un acto cada vez. |
 | D-61 | Fase 9: métodos y el Mutante | CERRADA la mecánica del Mutante y la recursión (Yeray); números PROVISIONAL | Los métodos van en una biblioteca compartida que no gasta memoria (plan), con parámetros, `return` y recursión hasta 64 llamadas (`StackOverflowError`, como Java). Sin sobrecargas, modificadores ni variables fuera de un método. El Mutante es débil a NORMAL o a PERFORANTE según la oleada (lo dice el parte) y la otra munición le hace un 80 % menos; `e.mutante()` lo reconoce. Oleadas 14–16; métodos a 6 estrellas. El juego acaba por ahora en la oleada 16. Guardado versión 3. |
+| D-62 | Depurador (fase 9b) | PROVISIONAL (lo pidió Yeray en la lista de ideas; la forma es mía) | Puntos de parada con un clic en el número de línea, en el código de cada torreta y en la biblioteca; no se guardan. Cuando una torreta llega a uno, la oleada se pausa al acabar ese tick y se graba su ciclo entero (hasta 4.096 pasos): se recorre hacia atrás y hacia delante con las variables de cada paso, sin volver a ejecutar. «Continuar», «Siguiente ciclo» y cerrar la ventana siguen la oleada. Depurar no cambia la partida. |
+| D-63 | Carrera: récords, racha, logros, sombreros y nombres (fase 9b) | PROVISIONAL (no viene del plan) | Nada de esto da ni cuesta estrellas o trofeos (D-57 no cambia). Récords por oleada ganada: más rápida, menos disparos, menos memoria. Racha: oleadas ganadas seguidas, cada una más alta que la anterior; cada una suma su número × la longitud de la racha; repetir una oleada empieza otra y perder la corta. 16 logros en `career.json` (no vienen del plan), 8 con sombrero; el último, «Coleccionista», pide todos los demás. Nombre de torreta de hasta 14 letras, números, espacios y `- _ .`. Guardado versión 4. |
+| D-64 | Partida experta (fase 9b) | PROVISIONAL (no viene del plan) | Opción de «Nueva partida» en Ajustes para quien ya sabe programar: empieza con toda la sintaxis del MVP; estrellas, hardware y oleadas como siempre. La partida normal no cambia. |
+| D-65 | «Probar» (fase 9b) | PROVISIONAL (no viene del plan) | En el parte, juega la oleada al momento con el código actual y recargando a mano en cuanto hace falta, y enseña su informe. No paga, no cuenta récords ni racha y no cambia la semilla de las batallas de verdad; cada prueba usa la suya, así que es una muestra, no una predicción. |
+| D-66 | Autocompletado (fase 9b) | PROVISIONAL | Solo ofrece lo que el jugador ya tiene (piezas compradas, llamadas desbloqueadas) y lo que su código declara; como mucho 8; primero lo que empieza igual. No sugiere sintaxis sin comprar para no enseñarla antes de tiempo. |
+| D-67 | Ventanas (fase 9b) | PROVISIONAL (amplía D-52) | Código separado, páginas del manual, salida y depurador en ventanas flotantes, varias a la vez. Tienda, mapa, informe, logros y ajustes siguen en el panel de la derecha, uno cada vez. |
+| D-68 | `imprimir`, `saludar` y `oleada` (fase 9b) | PROVISIONAL (no vienen del plan) | `imprimir(x)` y `saludar()` gratis desde el principio; `imprimir` no gasta memoria. `oleada()` llega con Variables (para guardarla). **No** hay `comprar()` ni `estrellas()`: comprar desde el código dejaría que un bucle gastara las estrellas sin pensar y se saltaría las decisiones de la tienda, que son parte del diseño (D-57). |
 | D-54 | Manual del jugador (fase 5b) | CERRADA la idea (Yeray, no viene del plan); contenido PROVISIONAL | Un libro dentro del juego con cada llamada, pieza de sintaxis, excepción y enemigo, ejemplos que se copian con un botón y recetas. Todo visible desde el principio; lo no desbloqueado, con candado y qué lo trae, como el árbol de la tienda. Textos y ejemplos escritos por mí; los ejemplos se compilan al cargar y los números salen de los datos. |
 | D-44 | Semilla de cada batalla | PROVISIONAL | Un contador de batallas de la partida: las mismas acciones repiten la misma partida. Hoy solo la usa el objetivo «al azar», que no está activo. |
 | D-45 | Medida de la decisión C | PROVISIONAL | En la oleada 1, segundos reales desde que una torreta se queda sin balas hasta el clic que la recarga, más un resumen al acabar la oleada. Se escribe en la consola (`Gdx.app.log`, etiqueta `wave-defense`); el log a fichero llega en la fase 6. |
