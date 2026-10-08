@@ -36,6 +36,7 @@ final class TestApi {
     f.put(ApiFunction.HAS_ENEMIES, spec("hayEnemigos", IF_ELSE));
     f.put(ApiFunction.NEAREST_ENEMY, spec("enemigoMasCercano", VARIABLES));
     f.put(ApiFunction.TARGET, spec("objetivo", VARIABLES));
+    f.put(ApiFunction.ENEMIES, spec("enemigos", Feature.FOR));
     f.put(ApiFunction.AIM, spec("apuntar", VARIABLES));
     f.put(ApiFunction.USE_AMMO, spec("usarMunicion", new Requirement.NeedsWave(WAVE_FOR_AMMO)));
     f.put(ApiFunction.HEALTH, spec("vida", VARIABLES));

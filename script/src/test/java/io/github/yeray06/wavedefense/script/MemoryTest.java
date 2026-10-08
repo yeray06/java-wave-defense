@@ -72,6 +72,17 @@ class MemoryTest {
   }
 
   @Test
+  void aForHeaderIsOneLineWhateverItHolds() {
+    // header, call
+    assertEquals(
+        2, compile("for (int i = 0, j = 9; i < j; i++, j--) {\n  disparar();\n}").memoryUsed());
+    // header, if, call
+    assertEquals(
+        3,
+        compile("for (Enemigo e : enemigos()) {\n  if (e.blindado()) disparar();\n}").memoryUsed());
+  }
+
+  @Test
   void twelveStatementsFitAndTheThirteenthIsReportedWhereItIs() {
     assertTrue(compile("disparar();\n".repeat(TURRET_MEMORY)).succeeded());
 

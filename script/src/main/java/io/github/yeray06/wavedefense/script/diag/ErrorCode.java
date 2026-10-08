@@ -39,6 +39,8 @@ public enum ErrorCode {
   UNSUPPORTED_TYPE,
   /** {0} the {@link io.github.yeray06.wavedefense.script.api.Feature}. */
   FEATURE_LOCKED,
+  /** {@code int[]} or {@code a[0]}: the game's lists come from {@code enemigos()}. */
+  ARRAYS_NOT_SUPPORTED,
 
   // Semantic
   /** {0} the call name, {1} the {@link io.github.yeray06.wavedefense.script.api.Feature}. */
@@ -76,6 +78,10 @@ public enum ErrorCode {
   ASSIGNMENT_NOT_ALLOWED_HERE,
   /** {0} lines used, {1} the limit. */
   MEMORY_EXCEEDED,
+  /** {0} the type of what a for-each tried to go through. */
+  FOR_EACH_NOT_A_LIST,
+  /** {0} the type of the for-each variable, {1} the type of the list's elements. */
+  FOR_EACH_WRONG_TYPE,
 
   /** A bug in the compiler, not in the player's code. */
   INTERNAL_ERROR

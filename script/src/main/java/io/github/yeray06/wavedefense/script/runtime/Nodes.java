@@ -1,6 +1,7 @@
 package io.github.yeray06.wavedefense.script.runtime;
 
 import io.github.yeray06.wavedefense.script.api.AmmoType;
+import io.github.yeray06.wavedefense.script.api.EnemyHandle;
 import io.github.yeray06.wavedefense.script.api.FireResult;
 import io.github.yeray06.wavedefense.script.ast.Expr.BinaryOp;
 import io.github.yeray06.wavedefense.script.diag.FaultType;
@@ -65,6 +66,53 @@ public final class Nodes {
         if (++iterations > frame.maxLoopIterations()) {
           throw frame.fault(FaultType.INFINITE_LOOP, line);
         }
+        body.exec(frame);
+        frame.step(line);
+      }
+      frame.loopLine = outerLoop;
+    };
+  }
+
+  /**
+   * {@code for (init; condition; update) body}. Same limits as {@link #whileLoop}; a missing
+   * condition ({@code null}) is always true.
+   */
+  public static Exec forLoop(int line, Exec init, BoolEval condition, Exec update, Exec body) {
+    BoolEval test = condition != null ? condition : frame -> true;
+    return frame -> {
+      int outerLoop = frame.loopLine;
+      frame.loopLine = line;
+      int iterations = 0;
+      frame.step(line);
+      init.exec(frame);
+      while (test.eval(frame)) {
+        if (++iterations > frame.maxLoopIterations()) {
+          throw frame.fault(FaultType.INFINITE_LOOP, line);
+        }
+        body.exec(frame);
+        update.exec(frame);
+        frame.step(line);
+      }
+      frame.loopLine = outerLoop;
+    };
+  }
+
+  /**
+   * {@code for (Enemigo e : list) body}: each enemy of the list in turn goes into {@code slot}. The
+   * list cannot change while a script runs, so its size is read once, as Java's iterator would.
+   */
+  public static Exec forEach(int line, RefEval list, int slot, Exec body) {
+    return frame -> {
+      checkList(frame, list.eval(frame), line);
+      int outerLoop = frame.loopLine;
+      frame.loopLine = line;
+      frame.step(line);
+      int size = frame.api.enemyCount();
+      for (int i = 0; i < size; i++) {
+        if (i >= frame.maxLoopIterations()) {
+          throw frame.fault(FaultType.INFINITE_LOOP, line);
+        }
+        frame.refs[slot] = frame.api.enemyAt(i);
         body.exec(frame);
         frame.step(line);
       }
@@ -158,6 +206,51 @@ public final class Nodes {
 
   public static RefEval target() {
     return frame -> frame.api.target();
+  }
+
+  /**
+   * {@code enemigos()}. A list value only says "the enemies in range"; what is in it is read when
+   * it is used, which is the same thing because the world does not move while a script runs.
+   */
+  public static RefEval enemies() {
+    return frame -> LIST;
+  }
+
+  // ---------------------------------------------------------------- list calls
+
+  /** The value of a non-null list: any value but {@link EnemyHandle#NONE}. */
+  private static final long LIST = 1L;
+
+  private static void checkList(Frame frame, long list, int line) {
+    if (list == EnemyHandle.NONE) {
+      throw frame.fault(FaultType.NULL_POINTER, line);
+    }
+  }
+
+  public static IntEval listSize(RefEval list, int line) {
+    return frame -> {
+      checkList(frame, list.eval(frame), line);
+      return frame.api.enemyCount();
+    };
+  }
+
+  public static BoolEval listIsEmpty(RefEval list, int line) {
+    return frame -> {
+      checkList(frame, list.eval(frame), line);
+      return frame.api.enemyCount() == 0;
+    };
+  }
+
+  /** {@code lista.get(i)}; outside {@code 0..size()-1} raises IndexOutOfBoundsException. */
+  public static RefEval listGet(RefEval list, IntEval index, int line) {
+    return frame -> {
+      checkList(frame, list.eval(frame), line);
+      int i = index.eval(frame);
+      if (i < 0 || i >= frame.api.enemyCount()) {
+        throw frame.fault(FaultType.INDEX_OUT_OF_BOUNDS, line);
+      }
+      return frame.api.enemyAt(i);
+    };
   }
 
   // ---------------------------------------------------------------- enemy calls

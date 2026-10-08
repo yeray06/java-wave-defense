@@ -5,6 +5,8 @@ enum Type {
   INT,
   BOOLEAN,
   ENEMY,
+  /** {@code List<Enemigo>}: a reference, compared and stored like an enemy. */
+  ENEMY_LIST,
   AMMO,
   NULL,
   VOID,
@@ -12,6 +14,6 @@ enum Type {
   ERROR;
 
   boolean isReference() {
-    return this == ENEMY || this == NULL;
+    return this == ENEMY || this == ENEMY_LIST || this == NULL;
   }
 }

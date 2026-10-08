@@ -29,6 +29,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 class JavacAgreementTest {
   private static final String STUB =
       """
+      import java.util.List;
       class Enemigo {
         int vida() { return 1; }
         int velocidad() { return 1; }
@@ -46,6 +47,7 @@ class JavacAgreementTest {
         boolean hayEnemigos() { return false; }
         Enemigo enemigoMasCercano() { return null; }
         Enemigo objetivo() { return null; }
+        List<Enemigo> enemigos() { return List.of(); }
         void apuntar(Enemigo e) {}
         void usarMunicion(Municion m) {}
       }
@@ -90,6 +92,22 @@ class JavacAgreementTest {
         "boolean b = objetivo() == enemigoMasCercano();",
         "int daño = 1_000;",
         "while (true);",
+        "for (int i = 0; i < 3; i++) {\n  disparar();\n}",
+        "for (int i = 10, j = 0; i > j; i -= 2, j++) disparar();",
+        "int a;\nfor (a = 0; a < 2; a++) disparar();\nint b = a;",
+        "for (;;) {\n  disparar();\n}",
+        """
+        Enemigo objetivo = null;
+        for (Enemigo e : enemigos()) {
+          if (objetivo == null || e.distanciaAlNucleo() < objetivo.distanciaAlNucleo()) {
+            objetivo = e;
+          }
+        }
+        """,
+        "List<Enemigo> l = enemigos();\nif (!l.isEmpty() && l.size() > 1) apuntar(l.get(0));",
+        "List<Enemigo> l = null;\nboolean b = l == null;",
+        "for (int i = 0; i < enemigos().size(); i++) apuntar(enemigos().get(i));",
+        "for (int i = 0; i < 2; i++) {\n}\nfor (int i = 0; i < 2; i++) {\n}",
         ";;\n// comentario\n/* otro */",
         "");
   }
@@ -114,6 +132,14 @@ class JavacAgreementTest {
         "int x = 2147483648;",
         "Enemigo e = enemigoMasCercano();\nint v = e.vida;",
         "if (hayEnemigos()) int x = 1;",
+        "for (int x : enemigos()) {\n}",
+        "for (Enemigo e : enemigoMasCercano()) {\n}",
+        "for (int i = 0; i < 3; i++) {\n}\nint j = i;",
+        "for (int i = 0; i < 3; i++) int x = i;",
+        "Enemigo e = enemigos().get(true);",
+        "int n = enemigos().size(1);",
+        "List<Enemigo> l = 3;",
+        "for (int i = 0; i + 1; i++) {\n}",
         "else disparar();");
   }
 
@@ -132,6 +158,14 @@ class JavacAgreementTest {
         "int x = true ? 1 : 2;",
         // Ammo constants are arguments, not variable types (D-07).
         "Municion m = NORMAL;",
+        // Lists of the game are List<Enemigo>; a raw List would give Object, and arrays are out.
+        "List l = enemigos();",
+        "int[] a = {1, 2};",
+        // javac allows comparing a List with an Enemigo (an interface and a non-final class), but
+        // it can never be true.
+        "List<Enemigo> l = enemigos();\nEnemigo e = enemigoMasCercano();\nboolean b = l == e;",
+        // Only size(), get() and isEmpty() of List.
+        "boolean b = enemigos().contains(null);",
         // The sandbox: nothing outside the turret API exists.
         "System.exit(0);");
   }

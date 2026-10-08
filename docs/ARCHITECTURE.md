@@ -334,8 +334,11 @@ rechaza lo que javac rechaza. Las desviaciones están listadas en el test:
   solo como instrucción propia; `break`, `continue`, `switch`, `?:`, `&`,
   `|`, `<<`, conversiones de tipo, `double`, literales hexadecimales,
   octales y con sufijo; variables de tipo `Municion`; `System` y cualquier
-  clase fuera de la API. `return` se trata como parte de «métodos» y los
-  arrays como parte de «for y listas».
+  clase fuera de la API. `return` se trata como parte de «métodos». Arrays
+  (`int[]`, `a[0]`): no existen; las listas del juego son `List<Enemigo>` y
+  salen de `enemigos()` (fase 8). Un `List` sin `<Enemigo>`, comparar una lista
+  con un enemigo (javac lo deja: interfaz frente a clase no final) y los
+  métodos de `List` que no sean `size()`, `get(i)` e `isEmpty()`.
 - **Más permisivo que Java**: no se comprueba el código inalcanzable
   (`while (true) {}` seguido de otra instrucción); en el juego ese bucle lanza
   BucleInfinitoException, que enseña lo mismo.

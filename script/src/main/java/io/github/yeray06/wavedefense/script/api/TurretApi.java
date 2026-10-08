@@ -22,6 +22,18 @@ public interface TurretApi {
   /** Nearest living enemy in range, or {@link EnemyHandle#NONE}. */
   long nearestEnemy();
 
+  /**
+   * How many living enemies are in range. Within one script run the answer does not change: the
+   * world only moves between turret cycles.
+   */
+  int enemyCount();
+
+  /**
+   * The {@code index}-th enemy in range, in the order they came out. The interpreter only calls
+   * this with {@code 0 <= index < enemyCount()}.
+   */
+  long enemyAt(int index);
+
   /** Aimed enemy if it is still alive and in range, otherwise {@link EnemyHandle#NONE}. */
   long target();
 
