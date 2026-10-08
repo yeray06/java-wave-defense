@@ -68,6 +68,26 @@ class PanelsTest {
     return out;
   }
 
+  private static List<TextButton> buttons(Group root, String text) {
+    List<TextButton> out = new ArrayList<>();
+    for (Actor actor : all(root)) {
+      if (actor instanceof TextButton b && b.getText().toString().equals(text)) {
+        out.add(b);
+      }
+    }
+    return out;
+  }
+
+  private static List<String> labels(Group root) {
+    List<String> out = new ArrayList<>();
+    for (Actor actor : all(root)) {
+      if (actor instanceof Label label) {
+        out.add(label.getText().toString());
+      }
+    }
+    return out;
+  }
+
   private static TextButton button(Group root, String text) {
     for (Actor actor : all(root)) {
       if (actor instanceof TextButton b && b.getText().toString().equals(text)) {
@@ -100,6 +120,42 @@ class PanelsTest {
           editor.act(0);
           assertTrue(editor.result().succeeded());
           assertEquals("if (hayEnemigos()) disparar();", loop.script(0));
+        });
+  }
+
+  @Test
+  void withMethodsTheEditorHasALibraryEveryTurretCalls() {
+    withUi(
+        (data, names, skin, stage) -> {
+          Progress progress = Progress.newGame(data).copyWithStars(1000);
+          WaveLoop loop = new WaveLoop(data, progress);
+          EditorPanel editor = new EditorPanel(loop, names, skin, 2);
+          stage.addActor(editor);
+          editor.act(0);
+          String tab = names.texts().get("editor.library.tab");
+          assertTrue(buttons(editor, tab).isEmpty(), "no library before methods");
+
+          io.github.yeray06.wavedefense.sim.progress.Shop shop =
+              new io.github.yeray06.wavedefense.sim.progress.Shop(data);
+          for (Feature f : Feature.values()) {
+            if (data.shop().syntax(f).inMvp()) {
+              shop.buy(progress, f);
+            }
+          }
+          editor.purchased();
+          editor.act(0);
+          editor.document(0).selectAll();
+          editor.document(0).insert("rafaga();");
+          editor.act(0);
+          assertFalse(editor.result().succeeded(), "rafaga() does not exist yet");
+
+          button(editor, tab).setChecked(true);
+          assertEquals(null, editor.result(), "the library is open");
+          editor.libraryDocument().insert("void rafaga() {\n  disparar();\n}");
+          editor.act(0);
+          assertTrue(editor.libraryResult().succeeded());
+          assertEquals("void rafaga() {\n  disparar();\n}", loop.library());
+          assertEquals("rafaga();", loop.script(0), "the turret compiled again against it");
         });
   }
 
@@ -402,6 +458,20 @@ class PanelsTest {
               texts.contains(
                   names.goalLine(Goal.CHALLENGE, data.waves().wave(10).challenge(), false)),
               "the briefing shows the challenge, not met yet");
+          assertFalse(texts.stream().anyMatch(t -> t.contains(names.enemyName(EnemyKind.MUTANT))));
+          briefing.show(14);
+          assertTrue(
+              labels(briefing)
+                  .contains(
+                      names
+                          .texts()
+                          .format(
+                              "mutant.weakness",
+                              data.scriptApi()
+                                  .api()
+                                  .ammoName(data.waves().wave(14).mutantWeakness()))),
+              "the briefing says what the Mutant is weak to");
+          briefing.show(10);
           button(briefing, names.texts().format("hud.deploy", 10))
               .fire(new ChangeListener.ChangeEvent());
           assertEquals(List.of(1), deployed);

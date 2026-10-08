@@ -232,6 +232,9 @@ public final class ShopPanel extends Table {
     relief.setWrap(true);
     content.add(relief).width(420).left().row();
     content.add(new Label(texts.get("shop.card.example"), skin, "small")).left().padTop(10).row();
+    if (data.shop().syntax(feature).exampleInLibrary()) {
+      content.add(new Label(texts.get("shop.example.library"), skin, "small")).left().row();
+    }
     Table code = new Table();
     code.setBackground(skin.getDrawable("row"));
     code.pad(8);
